@@ -1,0 +1,330 @@
+{
+  "name": "Lead Collection Agent - Полная Автоматизация",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "⏰ Ежедневный запуск",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [240, 300],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-agent",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "🔗 Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [240, 500],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "command",
+              "name": "command",
+              "value": "={{ $json.message || 'Собери новые компании по сохранённым запросам' }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "prepare-command",
+      "name": "📋 Подготовка команды",
+      "type": "n8n-nodes-base.set",
+      "position": [460, 400],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "chatId": "@your_telegram_channel",
+        "text": "🤖 <b>Lead Agent запущен</b>\n\n📋 Команда: {{ $json.command }}\n\n⏳ Начинаю выполнение...",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "telegram-start",
+      "name": "📱 Уведомление START",
+      "type": "n8n-nodes-base.telegram",
+      "position": [680, 300],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Выполнение Python агента\nconst { exec } = require('child_process');\nconst util = require('util');\nconst execPromise = util.promisify(exec);\n\nconst command = $input.item.json.command;\nconst agentPath = '/home/user/2026/lead_agent';\n\n// Создаём временный Python скрипт для выполнения команды\nconst pythonScript = `\nimport sys\nsys.path.append('${agentPath}')\nfrom agent import LeadCollectionAgent\n\nagent = LeadCollectionAgent()\nresponse = agent.process_message(\"${command}\")\nprint(response)\n`;\n\n// Сохраняем скрипт во временный файл\nconst fs = require('fs');\nconst tempFile = '/tmp/lead_agent_temp.py';\nfs.writeFileSync(tempFile, pythonScript);\n\ntry {\n  // Выполняем Python скрипт\n  const { stdout, stderr } = await execPromise(\n    `cd ${agentPath} && source venv/bin/activate && python ${tempFile}`,\n    { shell: '/bin/bash', timeout: 300000 }\n  );\n  \n  // Удаляем временный файл\n  fs.unlinkSync(tempFile);\n  \n  return {\n    success: true,\n    command: command,\n    response: stdout,\n    error: stderr || null,\n    timestamp: new Date().toISOString()\n  };\n  \n} catch (error) {\n  // Удаляем временный файл в случае ошибки\n  if (fs.existsSync(tempFile)) {\n    fs.unlinkSync(tempFile);\n  }\n  \n  return {\n    success: false,\n    command: command,\n    response: null,\n    error: error.message,\n    timestamp: new Date().toISOString()\n  };\n}"
+      },
+      "id": "execute-agent",
+      "name": "🤖 Выполнение Агента",
+      "type": "n8n-nodes-base.code",
+      "position": [900, 400],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.success }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-success",
+      "name": "✅ Проверка результата",
+      "type": "n8n-nodes-base.if",
+      "position": [1120, 400],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "chatId": "@your_telegram_channel",
+        "text": "✅ <b>Lead Agent завершил работу</b>\n\n📋 Команда: {{ $json.command }}\n\n📊 Результат:\n{{ $json.response }}\n\n⏰ Время: {{ $json.timestamp }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "telegram-success",
+      "name": "📱 Уведомление SUCCESS",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1340, 300],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "@your_telegram_channel",
+        "text": "❌ <b>Lead Agent: Ошибка</b>\n\n📋 Команда: {{ $json.command }}\n\n⚠️ Ошибка:\n{{ $json.error }}\n\n⏰ Время: {{ $json.timestamp }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "telegram-error",
+      "name": "📱 Уведомление ERROR",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1340, 500],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "17Ll6-lvbJTGix5Y6uwh2Glr8CNT6FktnicRsuOWdhqA"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "ЛОГИ"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $json.timestamp }}",
+            "Command": "={{ $json.command }}",
+            "Success": "={{ $json.success }}",
+            "Response": "={{ $json.response }}",
+            "Error": "={{ $json.error }}"
+          },
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false
+            },
+            {
+              "id": "Command",
+              "displayName": "Command",
+              "required": false
+            },
+            {
+              "id": "Success",
+              "displayName": "Success",
+              "required": false
+            },
+            {
+              "id": "Response",
+              "displayName": "Response",
+              "required": false
+            },
+            {
+              "id": "Error",
+              "displayName": "Error",
+              "required": false
+            }
+          ]
+        }
+      },
+      "id": "log-to-sheets",
+      "name": "📊 Лог в Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [1340, 700],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIALS_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond-webhook",
+      "name": "↩️ Ответ Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1560, 400],
+      "typeVersion": 1
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "⏰ Ежедневный запуск": {
+      "main": [
+        [
+          {
+            "node": "📋 Подготовка команды",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔗 Webhook": {
+      "main": [
+        [
+          {
+            "node": "📋 Подготовка команды",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Подготовка команды": {
+      "main": [
+        [
+          {
+            "node": "📱 Уведомление START",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🤖 Выполнение Агента",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Выполнение Агента": {
+      "main": [
+        [
+          {
+            "node": "✅ Проверка результата",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Проверка результата": {
+      "main": [
+        [
+          {
+            "node": "📱 Уведомление SUCCESS",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📊 Лог в Google Sheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "↩️ Ответ Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📱 Уведомление ERROR",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📊 Лог в Google Sheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "↩️ Ответ Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "tags": [
+    {
+      "name": "Lead Generation",
+      "id": "1"
+    },
+    {
+      "name": "Automation",
+      "id": "2"
+    }
+  ],
+  "meta": {
+    "instanceId": "lead-agent-automation"
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "name": "Lead Collection Agent - Webhook Integration",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-agent",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "🔗 Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "command": "cd /path/to/lead_agent && source venv/bin/activate && python -c \"from agent import LeadCollectionAgent; agent = LeadCollectionAgent(); print(agent.process_message('{{ $json.message }}'))\""
+      },
+      "id": "execute-agent",
+      "name": "🤖 Execute Agent",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"response\": $json.stdout } }}"
+      },
+      "id": "respond-webhook",
+      "name": "✅ Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "@your_telegram_channel",
+        "text": "🤖 Агент получил запрос:\\n\\n{{ $json.message }}\\n\\nОтвет:\\n{{ $json.stdout }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "telegram-notification",
+      "name": "📱 Telegram Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [680, 480]
+    }
+  ],
+  "connections": {
+    "🔗 Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "🤖 Execute Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Execute Agent": {
+      "main": [
+        [
+          {
+            "node": "✅ Respond to Webhook",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📱 Telegram Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

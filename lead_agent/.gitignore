@@ -17,6 +17,7 @@ ENV/
 config/google_credentials.json
 *.json
 !workflow_fixed.json
+!n8n_*.json
 
 # Logs
 logs/*.log

@@ -1,0 +1,68 @@
+{
+  "name": "Lead Agent - Простой Webhook",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-agent-simple",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [240, 300],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "command": "cd /home/user/2026/lead_agent && source venv/bin/activate && python3 -c \"from agent import LeadCollectionAgent; agent = LeadCollectionAgent(); result = agent.process_message('{{ $json.body.message }}'); print(result)\"",
+        "options": {}
+      },
+      "id": "execute-python",
+      "name": "Execute Python Agent",
+      "type": "n8n-nodes-base.executeCommand",
+      "position": [460, 300],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"Agent executed\", \"output\": $json.stdout, \"error\": $json.stderr } }}"
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [680, 300],
+      "typeVersion": 1
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Execute Python Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Python Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
