@@ -372,8 +372,9 @@ class LeadCollectionAgent:
         }
 
     def _tool_add_site_company(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Собрать сайты компаний из Google Maps"""
-        max_queries = params.get("max_queries", 5)
+        """Собрать сайты компаний из Google Maps (200-300 штук, без дублей)"""
+        max_queries = params.get("max_queries", 10)
+        target_count = params.get("target_count", 250)  # Целевое количество сайтов
 
         # Получаем необработанные запросы
         queries = self.sheets.get_queries_with_status(status=0)[:max_queries]
@@ -381,19 +382,41 @@ class LeadCollectionAgent:
         if not queries:
             return {"success": False, "message": "Нет необработанных запросов"}
 
+        # Получаем существующие сайты для проверки дублей
+        try:
+            existing_sites_sheet = self.sheets.get_worksheet(self.sheets.spreadsheet.worksheet('САЙТЫ'))
+            existing_records = existing_sites_sheet.get_all_records()
+            existing_sites = set(record.get('Сайт', '').lower().strip() for record in existing_records if record.get('Сайт'))
+        except:
+            existing_sites = set()
+
         all_sites = []
+        processed_urls = set()
 
         for query in queries:
+            if len(all_sites) >= target_count:
+                break
+
             query_text = query.get('Запрос', '')
             city = query.get('Город', '')
             category = query.get('Тема', '')
             query_id = query.get('ID', '')
 
-            # Парсим Google Maps
+            # Парсим Google Maps с увеличенным лимитом
             places = self.maps_parser.search_places(query_text, city)
 
             # Подготавливаем данные для сохранения
             for place in places:
+                site_url = place.get('сайт', '').lower().strip()
+
+                # Проверяем на дубли
+                if not site_url:
+                    continue
+
+                if site_url in existing_sites or site_url in processed_urls:
+                    logger.debug(f"Пропуск дубликата: {site_url}")
+                    continue
+
                 site_data = {
                     'название': place.get('название', ''),
                     'сайт': place.get('сайт', ''),
@@ -405,6 +428,10 @@ class LeadCollectionAgent:
                     'id_запроса': query_id
                 }
                 all_sites.append(site_data)
+                processed_urls.add(site_url)
+
+                if len(all_sites) >= target_count:
+                    break
 
             # Обновляем статус запроса
             self.sheets.update_query_status(query_id, status=1)
@@ -415,14 +442,14 @@ class LeadCollectionAgent:
             return {
                 "success": success,
                 "count": len(all_sites),
-                "message": f"Собрано {len(all_sites)} сайтов компаний"
+                "message": f"✅ Собрано {len(all_sites)} сайтов компаний (без дублей)\n\n📊 Все сайты добавлены в Google Sheets.\n\n❓ Собрать контактные данные с сайтов?"
             }
 
         return {"success": False, "message": "Сайты не найдены"}
 
     def _tool_scrap_information(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Собрать информацию о компаниях с их сайтов"""
-        max_sites = params.get("max_sites", 10)
+        max_sites = params.get("max_sites", 50)  # Увеличиваем лимит
 
         # Получаем сайты со статусом 0
         sites = self.sheets.get_sites_with_status(status=0)[:max_sites]
@@ -431,30 +458,41 @@ class LeadCollectionAgent:
             return {"success": False, "message": "Нет сайтов для обработки"}
 
         companies = []
+        errors = 0
 
         for site in sites:
             site_url = site.get('Сайт', '')
             if not site_url:
                 continue
 
-            # Парсим информацию
-            company_info = self.scraper.scrape_company_info(site_url)
+            try:
+                # Парсим информацию
+                company_info = self.scraper.scrape_company_info(site_url)
 
-            # Дополняем данными из Google Sheets
-            company_info['id_сайта'] = site.get('ID', '')
+                # Дополняем данными из Google Sheets
+                company_info['id_сайта'] = site.get('ID', '')
 
-            # Пытаемся найти страницу контактов
-            contact_info = self.scraper.scrape_contact_page(site_url)
-            if contact_info:
-                if not company_info['email'] and contact_info.get('email'):
-                    company_info['email'] = contact_info['email']
-                if not company_info['телефон'] and contact_info.get('телефон'):
-                    company_info['телефон'] = contact_info['телефон']
+                # Если название не найдено на сайте, берём из таблицы
+                if not company_info.get('название'):
+                    company_info['название'] = site.get('Название компании', '')
 
-            companies.append(company_info)
+                # Пытаемся найти страницу контактов
+                contact_info = self.scraper.scrape_contact_page(site_url)
+                if contact_info:
+                    if not company_info['email'] and contact_info.get('email'):
+                        company_info['email'] = contact_info['email']
+                    if not company_info['телефон'] and contact_info.get('телефон'):
+                        company_info['телефон'] = contact_info['телефон']
 
-            # Обновляем статус сайта
-            self.sheets.update_site_status(site.get('ID', ''), status=1)
+                companies.append(company_info)
+
+                # Обновляем статус сайта
+                self.sheets.update_site_status(site.get('ID', ''), status=1)
+
+            except Exception as e:
+                logger.error(f"Ошибка при парсинге {site_url}: {e}")
+                errors += 1
+                continue
 
         # Сохраняем компании
         if companies:
@@ -462,75 +500,127 @@ class LeadCollectionAgent:
             return {
                 "success": success,
                 "count": len(companies),
-                "message": f"Собрана информация о {len(companies)} компаниях"
+                "errors": errors,
+                "message": f"✅ Собрана информация о {len(companies)} компаниях\n\n📊 Данные сохранены в Google Sheets (лист КОМПАНИИ)\n{f'⚠️ Ошибок при парсинге: {errors}' if errors > 0 else ''}\n\n❓ Создать коммерческие предложения для компаний?"
             }
 
         return {"success": False, "message": "Не удалось собрать информацию"}
 
     def _tool_generate_mail(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Создать черновики писем для компаний"""
-        max_companies = params.get("max_companies", 10)
+        """Создать черновики персонализированных КП про автоматизацию бизнеса"""
+        max_companies = params.get("max_companies", 30)  # Увеличиваем лимит
 
         # Получаем компании из Google Sheets
-        worksheet = self.sheets.get_worksheet(self.sheets.spreadsheet.worksheet('КОМПАНИИ'))
-        companies = worksheet.get_all_records()[:max_companies]
+        try:
+            worksheet = self.sheets.get_worksheet(self.sheets.spreadsheet.worksheet('КОМПАНИИ'))
+            companies = worksheet.get_all_records()[:max_companies]
+        except Exception as e:
+            logger.error(f"Ошибка получения компаний: {e}")
+            return {"success": False, "message": "Ошибка доступа к данным компаний"}
 
         if not companies:
             return {"success": False, "message": "Нет компаний для создания писем"}
 
         letters = []
+        errors = 0
 
         for company in companies:
             company_name = company.get('Название компании', '')
+            company_site = company.get('Сайт', '')
             email = company.get('Email', '')
             description = company.get('Описание', '')
             services = company.get('Услуги', '')
+            phone = company.get('Телефон', '')
+            address = company.get('Адрес', '')
 
             if not email:
+                logger.debug(f"Пропуск {company_name}: нет email")
                 continue
 
-            # Используем Claude для генерации письма
-            prompt = f"""Создай персонализированное коммерческое письмо для компании:
+            # Используем Claude для анализа компании и создания КП
+            prompt = f"""Ты - эксперт по автоматизации бизнес-процессов. Проанализируй компанию и создай персонализированное коммерческое предложение.
 
+## ИНФОРМАЦИЯ О КОМПАНИИ:
 Название: {company_name}
+Сайт: {company_site}
 Описание: {description}
 Услуги: {services}
+Телефон: {phone}
+Адрес: {address}
 
-Письмо должно быть:
-- Персонализированным
-- Коротким (до 200 слов)
-- Предлагать сотрудничество или услуги
+## ТВОЯ ЗАДАЧА:
 
-Верни JSON с полями: тема, текст"""
+1. **Проанализируй бизнес компании:**
+   - Определи сферу деятельности
+   - Выяви типичные боли и проблемы этой ниши
+   - Определи процессы, которые можно автоматизировать
+
+2. **Создай персонализированное КП про автоматизацию:**
+   - Обращайся напрямую к болям компании
+   - Предложи конкретные решения по автоматизации:
+     * Автоматизация обработки заявок и лидов
+     * CRM и системы учёта клиентов
+     * Автоматические уведомления и рассылки
+     * Интеграция сервисов (Telegram, WhatsApp, Email, 1C, AmoCRM)
+     * Чат-боты для клиентов
+     * Аналитика и отчётность
+     * AI-ассистенты для бизнеса
+   - Укажи выгоды: экономия времени, снижение ошибок, рост продаж
+   - Призыв к действию: бесплатная консультация
+
+3. **Формат письма:**
+   - Тема: короткая и цепляющая (до 50 символов)
+   - Текст: 150-250 слов, структурированный, с конкретными примерами
+   - Тон: профессиональный, но дружелюбный
+   - Без шаблонных фраз, только ценность
+
+Верни результат СТРОГО в JSON формате:
+{{
+  "тема": "Тема письма",
+  "текст": "Текст коммерческого предложения"
+}}"""
 
             try:
                 response = self.client.messages.create(
                     model=CLAUDE_MODEL,
-                    max_tokens=1024,
+                    max_tokens=2048,
                     messages=[{"role": "user", "content": prompt}]
                 )
 
                 import json
                 response_text = response.content[0].text
+
+                # Ищем JSON в ответе
                 start_idx = response_text.find('{')
                 end_idx = response_text.rfind('}') + 1
-                json_text = response_text[start_idx:end_idx]
 
+                if start_idx == -1 or end_idx == 0:
+                    logger.error(f"JSON не найден в ответе для {company_name}")
+                    errors += 1
+                    continue
+
+                json_text = response_text[start_idx:end_idx]
                 letter_data = json.loads(json_text)
 
                 letter = {
                     'название': company_name,
                     'email': email,
-                    'тема': letter_data.get('тема', ''),
+                    'тема': letter_data.get('тема', f'Автоматизация для {company_name}'),
                     'текст': letter_data.get('текст', ''),
                     'статус': 0,
                     'id_компании': company.get('ID', '')
                 }
 
                 letters.append(letter)
+                logger.info(f"Создано КП для {company_name}")
 
+            except json.JSONDecodeError as e:
+                logger.error(f"Ошибка парсинга JSON для {company_name}: {e}")
+                errors += 1
+                continue
             except Exception as e:
                 logger.error(f"Ошибка при генерации письма для {company_name}: {e}")
+                errors += 1
                 continue
 
         # Сохраняем письма
@@ -539,10 +629,11 @@ class LeadCollectionAgent:
             return {
                 "success": success,
                 "count": len(letters),
-                "message": f"Создано {len(letters)} черновиков писем"
+                "errors": errors,
+                "message": f"✅ Создано {len(letters)} персонализированных коммерческих предложений\n\n📧 Все КП сохранены в Google Sheets (лист ПИСЬМА)\n{f'⚠️ Ошибок при генерации: {errors}' if errors > 0 else ''}\n\n🎉 Готово! Письма можно отправлять клиентам."
             }
 
-        return {"success": False, "message": "Не удалось создать письма"}
+        return {"success": False, "message": f"Не удалось создать письма. Ошибок: {errors}"}
 
     def process_message(self, user_message: str) -> str:
         """

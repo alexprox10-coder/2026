@@ -1,0 +1,417 @@
+{
+  "name": "Lead Agent - Interactive Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ]
+      },
+      "id": "telegram-trigger",
+      "name": "Telegram Bot Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 400],
+      "webhookId": "lead-agent-telegram",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "user_message",
+              "name": "user_message",
+              "value": "={{ $json.message.text }}",
+              "type": "string"
+            },
+            {
+              "id": "chat_id",
+              "name": "chat_id",
+              "value": "={{ $json.message.chat.id }}",
+              "type": "number"
+            },
+            {
+              "id": "user_name",
+              "name": "user_name",
+              "value": "={{ $json.message.from.first_name }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "extract-data",
+      "name": "Extract Message Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Выполнение Python Lead Agent\nconst { exec } = require('child_process');\nconst util = require('util');\nconst execPromise = util.promisify(exec);\n\nconst userMessage = $input.item.json.user_message;\nconst agentPath = '/home/user/2026/lead_agent';\n\n// Экранируем кавычки в сообщении\nconst escapedMessage = userMessage.replace(/\"/g, '\\\\\"');\n\n// Python скрипт для вызова агента\nconst pythonScript = `\nimport sys\nimport json\nsys.path.append('${agentPath}')\n\ntry:\n    from agent import LeadCollectionAgent\n    agent = LeadCollectionAgent()\n    response = agent.process_message(\"${escapedMessage}\")\n    print(json.dumps({\"success\": True, \"response\": response}))\nexcept Exception as e:\n    print(json.dumps({\"success\": False, \"error\": str(e)}))\n`;\n\n// Сохраняем во временный файл\nconst fs = require('fs');\nconst tempFile = `/tmp/lead_agent_${Date.now()}.py`;\nfs.writeFileSync(tempFile, pythonScript);\n\ntry {\n  const { stdout, stderr } = await execPromise(\n    `cd ${agentPath} && source venv/bin/activate && python ${tempFile}`,\n    { shell: '/bin/bash', timeout: 300000 }\n  );\n  \n  fs.unlinkSync(tempFile);\n  \n  try {\n    const result = JSON.parse(stdout.trim());\n    return {\n      success: result.success,\n      response: result.response || result.error,\n      user_message: userMessage,\n      timestamp: new Date().toISOString()\n    };\n  } catch (parseError) {\n    return {\n      success: true,\n      response: stdout.trim(),\n      user_message: userMessage,\n      timestamp: new Date().toISOString()\n    };\n  }\n  \n} catch (error) {\n  if (fs.existsSync(tempFile)) {\n    fs.unlinkSync(tempFile);\n  }\n  \n  return {\n    success: false,\n    response: `Ошибка при выполнении агента: ${error.message}`,\n    user_message: userMessage,\n    timestamp: new Date().toISOString()\n  };\n}"
+      },
+      "id": "execute-agent",
+      "name": "Execute Lead Agent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Определяем тип ответа и добавляем кнопки если нужно\nconst response = $input.item.json.response;\nconst userMessage = $input.item.json.user_message.toLowerCase();\n\n// Проверяем нужны ли кнопки\nlet needsButtons = false;\nlet buttonType = '';\n\n// Если в ответе упоминается завершение сбора сайтов\nif (response.includes('сайт') && (response.includes('добавлен') || response.includes('собран') || response.includes('найден'))) {\n  needsButtons = true;\n  buttonType = 'collect_data';\n}\n\n// Если в ответе упоминается завершение сбора данных\nif (response.includes('данные собраны') || response.includes('информация собрана') || response.includes('компани') && response.includes('обработан')) {\n  needsButtons = true;\n  buttonType = 'generate_letters';\n}\n\n// Если в ответе упоминается создание писем\nif (response.includes('письм') && (response.includes('создан') || response.includes('сгенерирован'))) {\n  needsButtons = true;\n  buttonType = 'complete';\n}\n\nreturn {\n  response: response,\n  needs_buttons: needsButtons,\n  button_type: buttonType,\n  chat_id: $('Extract Message Data').item.json.chat_id\n};"
+      },
+      "id": "analyze-response",
+      "name": "Analyze Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.needs_buttons }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-buttons",
+      "name": "Need Buttons?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1120, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.response }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": "={{ \n  $json.button_type === 'collect_data' ? \n  JSON.stringify({\n    inline_keyboard: [[\n      { text: '✅ Собрать контактные данные', callback_data: 'collect_data' },\n      { text: '❌ Пропустить', callback_data: 'skip' }\n    ]]\n  }) :\n  $json.button_type === 'generate_letters' ?\n  JSON.stringify({\n    inline_keyboard: [[\n      { text: '📧 Создать коммерческие предложения', callback_data: 'generate_letters' },\n      { text: '❌ Пропустить', callback_data: 'skip' }\n    ]]\n  }) :\n  $json.button_type === 'complete' ?\n  JSON.stringify({\n    inline_keyboard: [[\n      { text: '🎉 Готово!', callback_data: 'complete' }\n    ]]\n  }) : ''\n}}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "send-with-buttons",
+      "name": "Send with Buttons",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1340, 300],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.response }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "send-simple",
+      "name": "Send Simple Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1340, 500],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "callback_query"
+        ]
+      },
+      "id": "telegram-callback",
+      "name": "Telegram Callback Handler",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 700],
+      "webhookId": "lead-agent-callback",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Обработка нажатия кнопок\nconst callbackData = $input.item.json.callback_query.data;\nconst chatId = $input.item.json.callback_query.message.chat.id;\nconst messageId = $input.item.json.callback_query.message.message_id;\n\nlet command = '';\n\nswitch(callbackData) {\n  case 'collect_data':\n    command = 'Собери информацию с сайтов';\n    break;\n  case 'generate_letters':\n    command = 'Создай коммерческие предложения для компаний';\n    break;\n  case 'skip':\n    command = 'skip';\n    break;\n  case 'complete':\n    command = 'complete';\n    break;\n  default:\n    command = callbackData;\n}\n\nreturn {\n  command: command,\n  chat_id: chatId,\n  message_id: messageId,\n  callback_query_id: $input.item.json.callback_query.id\n};"
+      },
+      "id": "process-callback",
+      "name": "Process Button Click",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 700]
+    },
+    {
+      "parameters": {
+        "queryId": "={{ $json.callback_query_id }}",
+        "additionalFields": {}
+      },
+      "id": "answer-callback",
+      "name": "Answer Callback Query",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [680, 700],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.command }}",
+              "operation": "notEquals",
+              "value2": "skip"
+            },
+            {
+              "value1": "={{ $json.command }}",
+              "operation": "notEquals",
+              "value2": "complete"
+            }
+          ]
+        },
+        "combineOperation": "all"
+      },
+      "id": "check-command",
+      "name": "Should Execute?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 700]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "⏳ Выполняю команду...",
+        "additionalFields": {}
+      },
+      "id": "notify-processing",
+      "name": "Notify Processing",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1120, 600],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Выполнение команды через агента\nconst { exec } = require('child_process');\nconst util = require('util');\nconst execPromise = util.promisify(exec);\n\nconst command = $input.item.json.command;\nconst agentPath = '/home/user/2026/lead_agent';\n\nconst escapedCommand = command.replace(/\"/g, '\\\\\"');\n\nconst pythonScript = `\nimport sys\nimport json\nsys.path.append('${agentPath}')\n\ntry:\n    from agent import LeadCollectionAgent\n    agent = LeadCollectionAgent()\n    response = agent.process_message(\"${escapedCommand}\")\n    print(json.dumps({\"success\": True, \"response\": response}))\nexcept Exception as e:\n    print(json.dumps({\"success\": False, \"error\": str(e)}))\n`;\n\nconst fs = require('fs');\nconst tempFile = `/tmp/lead_agent_callback_${Date.now()}.py`;\nfs.writeFileSync(tempFile, pythonScript);\n\ntry {\n  const { stdout } = await execPromise(\n    `cd ${agentPath} && source venv/bin/activate && python ${tempFile}`,\n    { shell: '/bin/bash', timeout: 300000 }\n  );\n  \n  fs.unlinkSync(tempFile);\n  \n  try {\n    const result = JSON.parse(stdout.trim());\n    return {\n      success: result.success,\n      response: result.response || result.error,\n      chat_id: $input.item.json.chat_id\n    };\n  } catch (parseError) {\n    return {\n      success: true,\n      response: stdout.trim(),\n      chat_id: $input.item.json.chat_id\n    };\n  }\n  \n} catch (error) {\n  if (fs.existsSync(tempFile)) {\n    fs.unlinkSync(tempFile);\n  }\n  \n  return {\n    success: false,\n    response: `Ошибка: ${error.message}`,\n    chat_id: $input.item.json.chat_id\n  };\n}"
+      },
+      "id": "execute-callback-command",
+      "name": "Execute Callback Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 600]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "{{ $json.response }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "send-callback-result",
+      "name": "Send Result",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1560, 600],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "✅ Операция пропущена",
+        "additionalFields": {}
+      },
+      "id": "send-skip",
+      "name": "Send Skip Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1120, 800],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Bot Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Message Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Message Data": {
+      "main": [
+        [
+          {
+            "node": "Execute Lead Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Lead Agent": {
+      "main": [
+        [
+          {
+            "node": "Analyze Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Response": {
+      "main": [
+        [
+          {
+            "node": "Need Buttons?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Need Buttons?": {
+      "main": [
+        [
+          {
+            "node": "Send with Buttons",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Simple Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Callback Handler": {
+      "main": [
+        [
+          {
+            "node": "Process Button Click",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Button Click": {
+      "main": [
+        [
+          {
+            "node": "Answer Callback Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer Callback Query": {
+      "main": [
+        [
+          {
+            "node": "Should Execute?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Execute?": {
+      "main": [
+        [
+          {
+            "node": "Notify Processing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Skip Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Processing": {
+      "main": [
+        [
+          {
+            "node": "Execute Callback Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Callback Command": {
+      "main": [
+        [
+          {
+            "node": "Send Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}
