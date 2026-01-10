@@ -1,0 +1,616 @@
+{
+  "name": "Амурские новости → Telegram (ВСЕ ПОДКЛЮЧЕНО)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 8
+            }
+          ]
+        }
+      },
+      "id": "de62a57e-8dc4-4356-96b4-ef9f85ac307f",
+      "name": "⏰ Каждые 8 часов",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        5824,
+        2384
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "url": "https://portamur.ru/news/rss.php",
+        "options": {
+          "ignoreSSL": true
+        }
+      },
+      "id": "f37a97f5-ab85-423b-a883-cb24986fe348",
+      "name": "📰 ПОРТ-АМУР",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "position": [
+        6048,
+        2096
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "url": "https://ria.ru/export/rss2/archive/index.xml",
+        "options": {
+          "ignoreSSL": true
+        }
+      },
+      "id": "f18df535-e91d-4480-b26f-d489fe42b394",
+      "name": "📰 РИА Новости",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "position": [
+        6048,
+        2288
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "url": "https://www.interfax.ru/rss.asp",
+        "options": {
+          "ignoreSSL": true
+        }
+      },
+      "id": "e57ace95-ab3b-44fa-a27a-d73537a72f25",
+      "name": "📰 Интерфакс",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "position": [
+        6048,
+        2480
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "url": "https://www.vostokmedia.com/news.xml",
+        "options": {
+          "ignoreSSL": true
+        }
+      },
+      "id": "559489c6-fe07-4dfb-af7b-1a7e7ee32a9b",
+      "name": "📰 Восток-Медиа",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "position": [
+        6048,
+        2672
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        6272,
+        2384
+      ],
+      "id": "8ad19586-c715-4972-a6f0-b9c282209b99",
+      "name": "🔗 Объединение RSS"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ $json.title }}",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d83eb22a-a841-4345-94a8-e9e900aed4cf",
+      "name": "✅ Проверка данных",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        6496,
+        2384
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst now = new Date();\nconst yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);\n\nconst validNews = [];\nconst seenURLs = new Set();\nconst seenTitles = new Set();\n\nconst BLACKLIST = [\n  /гороскоп/i, /зодиак/i, /астролог/i, /ретроград/i,\n  /нумеролог/i, /таро/i, /эзотерик/i, /магия/i,\n  /предсказан/i, /гадал/i, /экстрасенс/i\n];\n\nconst GEO_AMUR = [\n  /благовещенск/i, /амурск(ая|ой|ую|ом|ий|ого|ими)/i, \n  /приамурь/i, /зея/i, /белогорск/i, /тында/i, /свободн(ый|ого|ом|ая)/i,\n  /райчихинск/i, /шимановск/i, /сковородино/i\n];\n\nconst CHINA_KEYWORDS = [\n  /китай/i, /кнр/i, /хэйхэ/i, /харбин/i, /пекин/i,\n  /китайск(ий|ая|ие|ого|ую|ими)/i, /поднебесн/i,\n  /погранпереход/i, /безвиз/i,\n  /китайско.{1,20}российск/i, /российско.{1,20}китайск/i\n];\n\nconst BUSINESS_KEYWORDS = [\n  /бизнес/i, /экономик/i, /торговл/i, /экспорт/i, /импорт/i,\n  /инвестиц/i, /предприним/i, /компани/i, /производств/i,\n  /рынок/i, /финанс/i, /банк/i, /строительств/i,\n  /промышленн/i, /логистик/i, /таможн/i,\n  /сельхоз/i, /агро/i, /туризм/i, /контракт/i\n];\n\nlet stats = {\n  total: items.length,\n  old: 0,\n  duplicateURL: 0,\n  duplicateTitle: 0,\n  blacklisted: 0,\n  noGeoNoChina: 0,\n  irrelevant: 0,\n  invalid: 0,\n  kept: 0\n};\n\nconsole.log(`Обработка ${items.length} элементов...`);\n\nfor (const item of items) {\n  try {\n    const data = item.json || {};\n    \n    if (!data.title || !data.link) {\n      stats.invalid++;\n      continue;\n    }\n    \n    const title = String(data.title).trim();\n    const link = String(data.link).trim();\n    const description = String(\n      data.description || \n      data.contentSnippet || \n      data.content || \n      data['content:encoded'] || \n      ''\n    ).trim();\n    const pubDate = data.pubDate || data.isoDate || data.published || '';\n    const source = String(\n      data.creator || \n      data.author || \n      data['dc:creator'] ||\n      data.source?.title ||\n      'Unknown'\n    ).trim();\n    \n    if (pubDate) {\n      const articleDate = new Date(pubDate);\n      if (!isNaN(articleDate.getTime()) && articleDate < yesterday) {\n        stats.old++;\n        continue;\n      }\n    }\n    \n    const normalizedURL = link.toLowerCase().replace(/[?#].*$/, '');\n    if (seenURLs.has(normalizedURL)) {\n      stats.duplicateURL++;\n      continue;\n    }\n    seenURLs.add(normalizedURL);\n    \n    const titleNormalized = title.toLowerCase().replace(/[^а-яёa-z0-9]/g, '').substring(0, 60);\n    if (seenTitles.has(titleNormalized)) {\n      stats.duplicateTitle++;\n      continue;\n    }\n    seenTitles.add(titleNormalized);\n    \n    const cleanText = description\n      .replace(/<[^>]*>/g, ' ')\n      .replace(/&nbsp;/g, ' ')\n      .replace(/&quot;/g, '\"')\n      .replace(/&amp;/g, '&')\n      .replace(/&[a-z]+;/gi, ' ')\n      .replace(/\\s+/g, ' ')\n      .trim()\n      .substring(0, 1500);\n    \n    const fullText = `${title} ${cleanText}`.toLowerCase();\n    \n    if (BLACKLIST.some(regex => regex.test(fullText))) {\n      stats.blacklisted++;\n      continue;\n    }\n    \n    const hasGeo = GEO_AMUR.some(regex => regex.test(fullText));\n    const hasChina = CHINA_KEYWORDS.some(regex => regex.test(fullText));\n    const hasBusiness = BUSINESS_KEYWORDS.some(regex => regex.test(fullText));\n    \n    if (!hasGeo && !hasChina) {\n      stats.noGeoNoChina++;\n      continue;\n    }\n    \n    if ((hasGeo || hasChina) && !hasBusiness) {\n      const IMPORTANT = [\n        /губернатор/i, /правительств/i, /администрац/i, /мэр/i,\n        /бюджет/i, /субсиди/i, /инфраструктур/i, /мост/i\n      ];\n      \n      if (!IMPORTANT.some(regex => regex.test(fullText))) {\n        stats.irrelevant++;\n        continue;\n      }\n    }\n    \n    let relevanceScore = 0;\n    if (hasGeo) relevanceScore += 5;\n    if (hasChina) relevanceScore += 3;\n    if (hasBusiness) relevanceScore += 2;\n    if (hasGeo && hasChina && hasBusiness) relevanceScore += 1;\n    \n    validNews.push({\n      title,\n      link,\n      description: cleanText,\n      pubDate: pubDate || new Date().toISOString(),\n      source,\n      relevanceScore\n    });\n    \n    stats.kept++;\n    \n  } catch (error) {\n    console.error(`Ошибка: ${error.message}`);\n    stats.invalid++;\n  }\n}\n\nvalidNews.sort((a, b) => {\n  if (b.relevanceScore !== a.relevanceScore) {\n    return b.relevanceScore - a.relevanceScore;\n  }\n  return new Date(b.pubDate) - new Date(a.pubDate);\n});\n\nconsole.log('Статистика фильтрации:', stats);\n\nif (validNews.length === 0) {\n  console.warn('Релевантных новостей не найдено');\n  return [{ json: { error: 'No relevant news', stats } }];\n}\n\nconsole.log(`✅ Отобрано ${validNews.length} релевантных новостей`);\nreturn validNews.slice(0, 20).map(news => ({ json: news }));"
+      },
+      "id": "cfbb6a0c-035b-4961-93bf-de0fd6b553e3",
+      "name": "🔍 Фильтр новостей",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        6720,
+        2192
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Проанализируй и выбери топ-5 самых важных новостей из следующего списка:\\n\\n' + JSON.stringify($input.all().map(item => ({ title: item.json.title, description: item.json.description, source: item.json.source, link: item.json.link, relevanceScore: item.json.relevanceScore })), null, 2) + '\\n\\nКритерии отбора:\\n- Актуальность для Благовещенска и Амурской области\\n- Связь с Китаем и российско-китайским сотрудничеством\\n- Важность для бизнеса и региональной экономики\\n- Значимость для предпринимателей\\n\\nВерни ТОЛЬКО валидный JSON без markdown блоков:\\n{\\n  \"posts\": [\\n    {\\n      \"text\": \"<b>📰 Краткий заголовок на русском</b>\\n\\nКраткое описание сути новости на русском (2-3 предложения)\\n\\n🔗 Источник: Название источника\\n📎 <a href=\\\\\"URL\\\\\">Читать полностью</a>\",\\n      \"source\": \"Название источника\",\\n      \"link\": \"Полный URL новости\"\\n    }\\n  ]\\n}\\n\\nВАЖНО:\\n- Поле \"text\" должно быть готовым для отправки в Telegram с HTML-форматированием\\n- Используй теги <b>, <a href=\\\"\\\"> для форматирования\\n- Каждый пост должен быть завершенным сообщением' }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Ты бизнес-аналитик новостей Амурской области.\n\nТвоя задача:\n1. Проанализировать список новостей\n2. Выбрать ТОП-5 самых важных для региональных предпринимателей\n3. Оценить релевантность каждой новости (от 1 до 10)\n4. Создать краткие заголовки и описания на русском языке\n5. Отформатировать текст для Telegram с HTML-тегами\n\nТребования:\n- Все тексты ТОЛЬКО на русском языке\n- Фокус на бизнесе, экономике, российско-китайском сотрудничестве\n- Верни ТОЛЬКО валидный JSON без markdown блоков (```json)\n- Структура должна точно соответствовать указанному формату\n- Поле 'text' должно содержать готовый HTML-текст для Telegram"
+        }
+      },
+      "id": "03439f71-3315-4688-bcbf-c4cb38d92708",
+      "name": "🤖 AI Аналитик",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        7184,
+        2096
+      ],
+      "typeVersion": 3.1
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-5-20250929",
+          "cachedResultName": "Claude Sonnet 4.5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        7120,
+        2336
+      ],
+      "id": "3dabdaa8-8067-44e8-8c7d-bc905a8e76eb",
+      "name": "✨ Anthropic Claude",
+      "credentials": {
+        "anthropicApi": {
+          "id": "FqPSgI0tNpkjQj2R",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\"type\":\"object\",\"properties\":{\"posts\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"text\":{\"type\":\"string\"},\"source\":{\"type\":\"string\"},\"link\":{\"type\":\"string\"}},\"required\":[\"text\",\"source\",\"link\"]}}},\"required\":[\"posts\"]}",
+        "autoFix": true
+      },
+      "id": "f3d81be0-42cb-4624-bc69-db703ea4a32a",
+      "name": "🔧 JSON Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [
+        7088,
+        2528
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "posts",
+        "options": {}
+      },
+      "id": "f5bf709c-d8fe-4021-8a89-d7b8df3e2b8c",
+      "name": "📤 Разделить",
+      "type": "n8n-nodes-base.splitOut",
+      "position": [
+        7456,
+        2096
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "text",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "source",
+              "name": "source",
+              "value": "={{ $json.source }}",
+              "type": "string"
+            },
+            {
+              "id": "link",
+              "name": "link",
+              "value": "={{ $json.link }}",
+              "type": "string"
+            },
+            {
+              "id": "timestamp",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "291af169-880e-4a03-b3c1-8348d6163a71",
+      "name": "📋 Подготовка",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        7680,
+        2096
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "id": "1d36e2e3-02ad-435d-9811-a2fe658f6f94",
+      "name": "⏳ Пауза 3 сек",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        7904,
+        2096
+      ],
+      "typeVersion": 1.1,
+      "webhookId": "delay-posts"
+    },
+    {
+      "parameters": {
+        "chatId": "@blagoveshchensk2026_News",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "10435939-2855-4186-9795-5eae78254cc2",
+      "name": "📱 Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        8128,
+        2000
+      ],
+      "typeVersion": 1.2,
+      "webhookId": "69fe1d27-286d-4a3e-a58f-1aca89aaa0ef",
+      "credentials": {
+        "telegramApi": {
+          "id": "sBegr8MZX7eZ7dIX",
+          "name": "ТГ НОВОСТИ"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Archive"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $json.timestamp }}",
+            "Source": "={{ $json.source }}",
+            "Link": "={{ $json.link }}",
+            "Post_Text": "={{ $json.text }}"
+          },
+          "matchingColumns": [
+            "Link"
+          ],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Link",
+              "displayName": "Link",
+              "required": false,
+              "defaultMatch": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Post_Text",
+              "displayName": "Post_Text",
+              "required": false,
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ef7a6cd8-4eaa-42bd-afab-f6874660a744",
+      "name": "💾 Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        8128,
+        2192
+      ],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0h17UZ4QJ4bHSSHp",
+          "name": "ПАРС ТГ НОВОСТИ"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "7715b002-b7c5-4302-91d5-4448240905dc",
+      "name": "❌ Нет новостей",
+      "type": "n8n-nodes-base.noOp",
+      "position": [
+        6720,
+        2592
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "error"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        6944,
+        2592
+      ],
+      "id": "dfc134eb-9602-4813-a0c3-5110a52d7818",
+      "name": "Aggregate"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "⏰ Каждые 8 часов": {
+      "main": [
+        [
+          {
+            "node": "📰 ПОРТ-АМУР",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📰 РИА Новости",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📰 Интерфакс",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📰 Восток-Медиа",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📰 ПОРТ-АМУР": {
+      "main": [
+        [
+          {
+            "node": "🔗 Объединение RSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📰 РИА Новости": {
+      "main": [
+        [
+          {
+            "node": "🔗 Объединение RSS",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "📰 Интерфакс": {
+      "main": [
+        [
+          {
+            "node": "🔗 Объединение RSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📰 Восток-Медиа": {
+      "main": [
+        [
+          {
+            "node": "🔗 Объединение RSS",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "🔗 Объединение RSS": {
+      "main": [
+        [
+          {
+            "node": "✅ Проверка данных",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Проверка данных": {
+      "main": [
+        [
+          {
+            "node": "🔍 Фильтр новостей",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "❌ Нет новостей",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Фильтр новостей": {
+      "main": [
+        [
+          {
+            "node": "🤖 AI Аналитик",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 AI Аналитик": {
+      "main": [
+        [
+          {
+            "node": "📤 Разделить",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✨ Anthropic Claude": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "🤖 AI Аналитик",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 JSON Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "🤖 AI Аналитик",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 Разделить": {
+      "main": [
+        [
+          {
+            "node": "📋 Подготовка",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Подготовка": {
+      "main": [
+        [
+          {
+            "node": "⏳ Пауза 3 сек",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏳ Пауза 3 сек": {
+      "main": [
+        [
+          {
+            "node": "📱 Telegram",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "💾 Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❌ Нет новостей": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "dad398a0-d2eb-4e70-bc2e-a27c9998a1e5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "765204dad1252b83f02cda2aef408fe630b40079715ac6587529a3064b7e68c7"
+  },
+  "id": "64xfJNqul38Dzb9j",
+  "tags": [
+    {
+      "updatedAt": "2026-01-08T12:22:36.548Z",
+      "createdAt": "2026-01-08T12:22:36.548Z",
+      "id": "LSVf4IIzyeOblok3",
+      "name": "Амурская область"
+    }
+  ]
+}
