@@ -1,0 +1,3808 @@
+{
+  "name": "АГЕНТ ЛИДЫ+КП 2026_v2.0",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -336,
+        32
+      ],
+      "id": "e31d029f-6ed2-42e3-afe5-966a3c8bc194",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_PERPLEXITY_API_KEY_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"sonar-pro\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"ТВОЯ ЗАДАЧА – СГЕНЕРИРОВАТЬ ПОЛНЫЙ СПИСОК ВСЕХ ВОЗМОЖНЫХ ВАРИАЦИЙ ЗАПРОСОВ В ОПРЕДЕЛЁННОМ ФОРМАТЕ, УЛИЦ МОЖЕТ БЫТЬ ОТ 50 ДО 10000, МНЕ НУЖНЫ ВСЕ. ### ИНСТРУКЦИИ ### - ПОЛУЧАЕШЬ НАЗВАНИЕ ГОРОДА – СОБИРАЕШЬ ВСЕ УЛИЦЫ, ПРОСПЕКТЫ, ПЕРЕУЛКИ И ДРУГИЕ ТОПОНИМЫ ЭТОГО ГОРОДА. - ГЕНЕРИРУЕШЬ НЕ МЕНЕЕ 50 ДЛЯ КАЖДОЙ УЛИЦЫ ВАРИАЦИЮ ЗАПРОСА В ФОРМАТЕ: **\\\"город+тематика+название+улицы+проспекта\\\"** - ВОЗВРАЩАЕШЬ СТРОГО СПИСОК В ФОРМАТЕ **БЕЗ КОММЕНТАРИЕВ, БЕЗ ПРИВЕТСТВИЙ, БЕЗ ОБЪЯСНЕНИЙ**. - НЕ ДОБАВЛЯЕШЬ ЛИШНИХ СЛОВ, НЕ СПРАШИВАЕШЬ ДОПОЛНИТЕЛЬНЫХ ВОПРОСОВ. ### ФОРМАТ ВЫВОДА ### \\\"самара+стоматология+улица_ленина\\\",\\\"самара+стоматология+проспект+победы\\\",\\\"самара+стоматология+переулок+горького\\\",\\\"самара+стоматология+набережная+реки+волги\\\" ЧЕГО НЕ ДЕЛАТЬ НЕ СПРАШИВАТЬ ДОПОЛНИТЕЛЬНЫХ ВОПРОСОВ. НЕ ДОБАВЛЯТЬ ПРЕДИСЛОВИЯ, ПРИВЕТСТВИЯ И ОБЪЯСНЕНИЯ. НЕ ИЗМЕНЯТЬ ФОРМАТ ВЫВОДА. НЕ ПРОПУСКАТЬ НАЗВАНИЯ УЛИЦ, ПРОСПЕКТОВ И ДРУГИХ ТОПОНИМОВ ГОРОДА.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.query }}\"\n    }\n  ],\n  \"max_tokens\": 4000,\n  \"temperature\": 0.2,\n  \"top_p\": 0.9,\n  \"search_domain_filter\": [\n    \"perplexity.ai\"\n  ],\n  \"return_images\": false,\n  \"return_related_questions\": false,\n  \"search_recency_filter\": \"month\",\n  \"top_k\": 0,\n  \"stream\": false,\n  \"presence_penalty\": 0,\n  \"frequency_penalty\": 1\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -112,
+        32
+      ],
+      "id": "17c64b95-fbc7-4fe3-b1dc-df292545d8f1",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items\nfor (const item of $input.all()) {\n  // Extract the \"content\" field from the JSON\n  const content = item.json.choices[0].message.content;\n\n  // Remove surrounding quotes and split by commas\n  const contentWithoutQuotes = content.replace(/^\"|\"$/g, ''); // Убираем кавычки в начале и конце\n  const contentArray = contentWithoutQuotes.split('\",\"'); // Разбиваем по запятым и кавычкам\n\n  // Add the extracted data to the JSON as a new field\n  item.json.contentArray = contentArray;\n}\n\n// Return the modified items\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        32
+      ],
+      "id": "63e52789-aec5-4329-8d38-20ec2f985c8e",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "contentArray",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        320,
+        32
+      ],
+      "id": "2bdf40b3-9006-4a1d-86a0-e1a91dd5bacb",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -336,
+        352
+      ],
+      "id": "0f3e1242-cddb-43b2-be40-d03f655a174d",
+      "name": "Loop Over Items",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "mode": "list",
+          "cachedResultName": "Лиды компаний",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1305865408,
+          "mode": "list",
+          "cachedResultName": "Запросы",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=1305865408"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Запросы": "={{ $('Loop Over Items').item.json.contentArray }}",
+            "Статус выполнения": "0"
+          },
+          "matchingColumns": [
+            "Запросы"
+          ],
+          "schema": [
+            {
+              "id": "Запросы",
+              "displayName": "Запросы",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Статус выполнения",
+              "displayName": "Статус выполнения",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        544,
+        352
+      ],
+      "id": "0f7f52ed-a35a-40c5-91fb-854e3cc211e0",
+      "name": "Google Sheets",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hcA6b5dWS2JjEtNT",
+          "name": "ТАБЛИЦА ПАРСЕР ВК + ОТПРАВКА КП"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        352
+      ],
+      "id": "59c36133-49c5-4d6c-b4c1-c683b5c619fd",
+      "name": "Wait",
+      "webhookId": "3bfe8c0f-2cae-4260-84af-c816749e595f"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "mode": "list",
+          "cachedResultName": "Лиды компаний",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1305865408,
+          "mode": "list",
+          "cachedResultName": "Запросы",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=1305865408"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Запросы",
+              "lookupValue": "={{ $json.contentArray }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -112,
+        352
+      ],
+      "id": "7be5bae1-4438-4183-8718-041a6c5a5db7",
+      "name": "Google Sheets1",
+      "retryOnFail": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hcA6b5dWS2JjEtNT",
+          "name": "ТАБЛИЦА ПАРСЕР ВК + ОТПРАВКА КП"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "977f0fa6-5fdc-437c-a0b4-11235ecd9a2f",
+              "leftValue": "={{ $json[\"Запросы\"] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        96,
+        352
+      ],
+      "id": "c8567a34-2dcf-4087-848c-df25d81f7c1c",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "05d3c42b-bfc3-4628-8e94-6e42a56fe3ab",
+              "name": "true",
+              "value": "=Посмотреть на результат можно тут: https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?gid=1305865408#gid=1305865408 Вот запросы которые были собраны: {{ $('Code').item.json.contentArray }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -336,
+        656
+      ],
+      "id": "f6692e4d-030d-446a-a2be-3ea68b0938ab",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "content": "## Цикл записи и проверки запросов",
+        "height": 260,
+        "width": 1260,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        272
+      ],
+      "id": "b143c847-b65b-455f-880e-7ae13a69ee18",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Получение результата",
+        "height": 220,
+        "width": 300,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        592
+      ],
+      "id": "d6b5b641-80a0-4089-af52-15f45a7403f6",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Получение и сборка запросов",
+        "height": 260,
+        "width": 1080,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        -48
+      ],
+      "id": "fb296f8a-e8a7-40ff-a9f9-a0704e900e65",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        320,
+        352
+      ],
+      "id": "b514f548-297f-4d22-ba54-65d78aba6752",
+      "name": "Wait1",
+      "webhookId": "de3a5d6d-0239-40e6-9da2-a0c8ab7a0283"
+    },
+    {
+      "parameters": {
+        "compare": "selectedFields",
+        "fieldsToCompare": "contentArray",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        544,
+        32
+      ],
+      "id": "87cb542d-2c00-477f-970c-60355207af26",
+      "name": "Remove Duplicates"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "mode": "list",
+          "cachedResultName": "Лиды компаний",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1305865408,
+          "mode": "list",
+          "cachedResultName": "Запросы",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=1305865408"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Запросы": "={{ $('Loop Over Items1').item.json[\"Запросы\"] }}",
+            "Статус выполнения": "1"
+          },
+          "matchingColumns": [
+            "Запросы"
+          ],
+          "schema": [
+            {
+              "id": "Запросы",
+              "displayName": "Запросы",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Статус выполнения",
+              "displayName": "Статус выполнения",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1808,
+        640
+      ],
+      "id": "e81d057d-aeb9-4f3e-93d8-b9b46e70a680",
+      "name": "Google Sheets3",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hcA6b5dWS2JjEtNT",
+          "name": "ТАБЛИЦА ПАРСЕР ВК + ОТПРАВКА КП"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Цикл записи и проверки",
+        "height": 280,
+        "width": 1280
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1792,
+        336
+      ],
+      "id": "dff91c17-7527-4bac-95bb-570ef059909b",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1808,
+        176
+      ],
+      "id": "5bd24e44-6478-4636-ac26-16e92930fdaf",
+      "name": "Loop Over Items1",
+      "alwaysOutputData": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "mode": "list",
+          "cachedResultName": "Лиды компаний",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1305865408,
+          "mode": "list",
+          "cachedResultName": "Запросы",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=1305865408"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Статус выполнения",
+              "lookupValue": "0"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2032,
+        -128
+      ],
+      "id": "a416912b-bc4b-48d6-9633-d1098d3a630c",
+      "name": "Google Sheets2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hcA6b5dWS2JjEtNT",
+          "name": "ТАБЛИЦА ПАРСЕР ВК + ОТПРАВКА КП"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "maxItems": 2
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        2240,
+        -128
+      ],
+      "id": "31014adc-315c-4af1-ad14-a51641fe7dcc",
+      "name": "Limit"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c8184c9f-0e84-4265-8c75-3bf4152f5d61",
+              "leftValue": "={{ $json.url }}",
+              "rightValue": "(google|gstatic|ggpht|schema|exemple|whatsapp|telegram|t.me|vk|yclients|instagram|yc|wa)",
+              "operator": {
+                "type": "string",
+                "operation": "notRegex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        2464,
+        176
+      ],
+      "id": "b9b3be43-0862-407e-9153-bc261bd47c64",
+      "name": "Filter",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ce6efe00-8e6b-46a9-95c8-7cac38e7ead5",
+              "leftValue": "={{ $json.url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2688,
+        176
+      ],
+      "id": "fb90f368-d7b9-4d4e-a58f-37e4d1281b23",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "content": "## Получение сайтов компаний по запросу",
+        "height": 240,
+        "width": 640,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        -192
+      ],
+      "id": "93ff8c6a-5104-4550-92a5-12bc1263be32",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "## Получение результата",
+        "height": 220,
+        "width": 300,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        880
+      ],
+      "id": "8b1c87e6-e627-4543-881c-361767223cdb",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## Цикл прохода по запросам для записи и проверки",
+        "height": 700,
+        "width": 1320,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        112
+      ],
+      "id": "7b3fb026-c9f5-438c-802d-ae1faefa8b8b",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2912,
+        416
+      ],
+      "id": "5fb0af9f-ce25-4daa-8676-b736c3670f33",
+      "name": "Wait2",
+      "webhookId": "db725a26-f4a4-4c24-bee7-b96d555c1e75"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d6edd80e-6a2d-46c5-b21d-68ee44bd17d1",
+              "leftValue": "={{ $json[\"Сайт\"] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2240,
+        416
+      ],
+      "id": "b58867f8-f320-4697-8c1a-005baea838d5",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "mode": "list",
+          "cachedResultName": "Лиды компаний",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Компании",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Сайт",
+              "lookupValue": "={{ $json.url }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2032,
+        416
+      ],
+      "id": "ba45a66f-3e21-45f5-910a-a2e2c1d5f68d",
+      "name": "Google Sheets4",
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hcA6b5dWS2JjEtNT",
+          "name": "ТАБЛИЦА ПАРСЕР ВК + ОТПРАВКА КП"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2688,
+        416
+      ],
+      "id": "0564baa2-9266-41f6-8969-7d424370970c",
+      "name": "Wait3",
+      "webhookId": "1440431f-fe0d-4d01-ad62-ee0807ef2b95"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ed08563e-2887-4648-8e07-095bd1582d43",
+              "name": "true",
+              "value": "Сайты компаний собраны, посмотрите на https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?gid=0#gid=0",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1808,
+        928
+      ],
+      "id": "9654b2f2-e11b-466b-a36b-057813ae3c43",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "mode": "list",
+          "cachedResultName": "Лиды компаний",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Компании",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "Сайт": "={{ $('Loop Over Items2').item.json.url }}",
+            "Статус получения данных": "0",
+            "Статус отправки письма": "0",
+            "Черновик письма": "0"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Сайт",
+              "displayName": "Сайт",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Компания",
+              "displayName": "Компания",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Почта",
+              "displayName": "Почта",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Телефон",
+              "displayName": "Телефон",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Описание компании",
+              "displayName": "Описание компании",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Предложение автоматизации",
+              "displayName": "Предложение автоматизации",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Рабор предлооженной автоматизации",
+              "displayName": "Рабор предлооженной автоматизации",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Черновик письма",
+              "displayName": "Черновик письма",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Статус отправки письма",
+              "displayName": "Статус отправки письма",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Статус получения данных",
+              "displayName": "Статус получения данных",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2464,
+        416
+      ],
+      "id": "c51cab35-8b71-4c08-ac79-0b717287a0de",
+      "name": "Google Sheets5",
+      "retryOnFail": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hcA6b5dWS2JjEtNT",
+          "name": "ТАБЛИЦА ПАРСЕР ВК + ОТПРАВКА КП"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": "={{ $node['Loop Over Items2'].context[\"done\"] }}"
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1808,
+        416
+      ],
+      "id": "41ebf29a-8da1-45ae-a6c0-9a3e8d552898",
+      "name": "Loop Over Items2",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "compare": "selectedFields",
+        "fieldsToCompare": "url",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        2912,
+        176
+      ],
+      "id": "abdf064a-f4fb-4f99-ae47-bd19150bfb10",
+      "name": "Remove Duplicates1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json.data\n\nconst regex = /https?:\\/\\/[^\\/]+/g\n\nurls = data.match(regex)\n\nreturn urls.map(url => ({json: {url: url}}))"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        176
+      ],
+      "id": "5ac38738-9cde-4497-9a29-db332685013f",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.google.com/maps/search/{{ $json[\"Запросы\"] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2032,
+        176
+      ],
+      "id": "b2c470a2-cb85-418c-988e-1eb1b7025c15",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -320,
+        1088
+      ],
+      "id": "09fd5d61-10e7-4eaa-aa69-b31651866bcb",
+      "name": "Telegram Trigger",
+      "webhookId": "39c8e357-89f9-4865-8d1a-b2fb3f4ea960",
+      "credentials": {
+        "telegramApi": {
+          "id": "M7LoDmvt8YtkoqRH",
+          "name": "Send_Zakaz_ParsLid_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message.voice.file_id }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "6f52c8d0-01ae-47a9-82bf-01e7eeb8e06f",
+                    "leftValue": "={{ $json.message.text }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -96,
+        1088
+      ],
+      "id": "37800a92-e48a-48ad-97d9-a1c7fa9e064e",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.voice.file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        112,
+        960
+      ],
+      "id": "df6ef7bf-71d0-41d7-b97f-a3215e94c049",
+      "name": "Telegram",
+      "webhookId": "57e6aa07-7f3b-4ad8-b331-3fe31feb5858",
+      "credentials": {
+        "telegramApi": {
+          "id": "M7LoDmvt8YtkoqRH",
+          "name": "Send_Zakaz_ParsLid_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        336,
+        960
+      ],
+      "id": "39445c0e-7040-49dd-baa8-89f425628525",
+      "name": "OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "WLOnzM57aINGQLkt",
+          "name": "OpenAi_ВК_ПАРСЕР_ЛИД"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "=ТЫ – ИНТЕЛЛЕКТУАЛЬНЫЙ АССИСТЕНТ ДЛЯ СБОРА ИНФОРМАЦИИ О КОМПАНИЯХ. ТЫ ОБЛАДАЕШЬ ПОЛНЫМ ДОСТУПОМ К НАБОРУ ИНСТРУМЕНТОВ ДЛЯ ПОИСКА, АНАЛИЗА И ФИКСАЦИИ ДАННЫХ В ЭКСЕЛЬ-ФАЙЛЫ. ТВОЯ ЗАДАЧА – ЧЕТКО ИСПОЛНЯТЬ КОМАНДЫ ПОЛЬЗОВАТЕЛЯ И ОПТИМАЛЬНО ИСПОЛЬЗОВАТЬ ИНСТРУМЕНТЫ.\n\n### ДОСТУПНЫЕ ИНСТРУМЕНТЫ ###\n1. **AgentLeadAddQuery** – СОЗДАЕТ И СОХРАНЯЕТ ЗАПРОСЫ В ЭКСЕЛЬ-ФАЙЛ, ЕСЛИ ПОЛЬЗОВАТЕЛЬ ПОРОСИТ СОБРАТЬ ЗАПРОСЫ, ТЫ ДОЛЖЕН ВЫПОЛНИТЬ ЭТОТ ИНСТРУМЕНТ\n2. **AgentLeadAddSiteCompany** – СОБИРАЕТ САЙТЫ КОМПАНИЙ ИЗ GOOGLE MAPS ПО СОЗДАННЫМ ЗАПРОСАМ\n3. **AgentLeadScrapInformationCompany** – СОБИРАЕТ ДАННЫЕ О КОМПАНИЯХ С ИХ САЙТОВ\n4. **TelegramMessage** – ОТПРАВЛЯЕТ ТЕХНИЧЕСКОЕ СООБЩЕНИЕ О НАЧАЛЕ РАБОТЫ\n5. **QuerySheets** – ВОЗВРАЩАЕТ ЗАПРОСЫ, КОТОРЫЕ ЕЩЁ НЕ ОБРАБАТЫВАЛИСЬ\n6. **SiteCompanySheets** – ВОЗВРАЩАЕТ САЙТЫ КОМПАНИЙ, ПО КОТОРЫМ ЕЩЁ НЕ БЫЛО СБОРА ДАННЫХ\n7. **AgentLeadMailGenerate** - СОЗДАЁТ ЧЕРНОВИК ПИСЬМА И СОХРОНЯЕТ ЕГО В ЭКСЕЛЬ\n\n### ЛОГИКА РАБОТЫ ###\n1. **ОТПРАВКА ТЕХНИЧЕСКОГО СООБЩЕНИЯ В ПЕРВУЮ ОЧЕРЕДЬ**\n   - В первую очередь, перед вызовом инструментов, вызови `TelegramMessage`\n   - Сообщи пользователю, что ты начал выполнять задачу, скажи что тебе понадобится некоторое время, предупреди что процессы долгие\n   - Сразу переходи к поставленной задаче\n\n2. **ПРОВЕРКА НЕОБРАБОТАННЫХ ЗАПРОСОВ**\n   - Если пользователь запрашивает невыполненные запросы, вызови инструмент `QuerySheets`\n   - Проанализируй результат и верни часть запросов со статусом 0\n\n3. **СОЗДАНИЕ НОВЫХ ЗАПРОСОВ**\n   - Если пользователь просит создать новые запросы (например: \"давай соберём стоматологии по Самаре\"), вызови `AgentLeadAddQuery`\n   - Передай запрос в формате: `\"Подготовить запросы на тему {тема}, город {город}\"`\n   - После выполнения инструмента, сообщи пользователю, что запросы успешно созданы\n   - Если пользователь просит собрать ещё запросы, вызови `AgentLeadAddQuery`\n\n4. **СБОР САЙТОВ ПО ЗАПРОСАМ**\n   - Если пользователь просит собрать сайты, вызови `AgentLeadAddSiteCompany`\n   - Просто запусти инструмент и сообщи пользователю, что сбор сайтов начат\n\n5. **СБОР ИНФОРМАЦИИ О КОМПАНИЯХ**\n   - Перед вызовом `AgentLeadScrapInformationCompany` вызрви инструмент SiteCompanySheets, убедись что есть сайты с нулевым статусом получения данных\n   - Если пользователь просит собрать данные о компаниях, вызови `AgentLeadScrapInformationCompany`\n   - Если пользователь просит собрать информацию о компаниях вызови `AgentLeadScrapInformationCompany`\n   - Если пользователь просит собрать информацию с сайтов вызови `AgentLeadScrapInformationCompany` \n   - Просто запусти инструмент, но перед запуском, сообщи пользователю, что сбор данных начат\n\n6. **СОЗДАНИЯ ЧЕРНОВИКА ПИСЬМА**\n   - Если пользователь просит создать письма для компаний вызови `AgentLeadMailGenerate`\n   - Если пользователь просит создать черновик писем по собранным компаниям вызови `AgentLeadMailGenerate`\n   - Просто запусти инструмент `AgentLeadMailGenerate` и сообщи пользователю что создание писем начато\n   \n### Дополнительные задачи ###\n   - Если ты получил ошибку, верни её опиши что произашло, и предложи войти всистему чтобы решить её\n   - Если ты получаешь ошибку обязательно напиши в каком инструменте это произашло\n   - Если пользователь просто пишет привет, предложи ему схему своей работы, при условии если это просто привет, без доп текста, в иных случаях выполняй поставленную задачу\n\n### ЧТО НЕ ДЕЛАТЬ ###\n- **НЕ СПРАШИВАЙ У ПОЛЬЗОВАТЕЛЯ ЛИШНИХ ПОДРОБНОСТЕЙ**, ЕСЛИ ВСЕ ДАННЫЕ УЖЕ ЯСНЫ\n- **НЕ ВЫПОЛНЯЙ ДЕЙСТВИЯ, КОТОРЫЕ НЕ ОПИСАНЫ В ИНСТРУКЦИЯХ**\n- **НЕ ДУМАЙ, ЧТО ЗАПРОСЫ УЖЕ ЕСТЬ – ВСЕГДА ПРОВЕРЯЙ `QuerySheets`**\n- **НЕ ПРОСИ ПОДТВЕРЖДЕНИЯ, ЕСЛИ ПОЛЬЗОВАТЕЛЬ УЖЕ ОТДАЛ КОНКРЕТНУЮ КОМАНДУ**\n- **НЕ СМОТРИ НА ПАМЯТЬ ЕСЛИ ПОЛЬЗОВАТЕЛЬ ПРОСИТ СОБРАТЬ ЕЩЁ ЗАПРОСЫ, ВЫПОЛНИ ЗАДАЧУ**"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        784,
+        1088
+      ],
+      "id": "2e61c11f-c5c6-4995-82bf-3cb21c8daa29",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        464,
+        1440
+      ],
+      "id": "919b3dbb-e57c-4023-ab5b-d824185523a0",
+      "name": "Window Buffer Memory"
+    },
+    {
+      "parameters": {
+        "name": "AgentLeadAddQuery",
+        "description": "Creates a query in an Excel file",
+        "workflowId": {
+          "__rl": true,
+          "value": "rGzisLcNwx9C6O8R",
+          "mode": "list",
+          "cachedResultName": "Agent lead add query"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2,
+      "position": [
+        592,
+        1440
+      ],
+      "id": "f1eaaac3-c318-4e8a-a293-7b97cc495484",
+      "name": "AgentLeadAddQuery"
+    },
+    {
+      "parameters": {
+        "name": "AgentLeadAddSiteCompany",
+        "description": "Collects company websites and adds them to an Excel file",
+        "workflowId": {
+          "__rl": true,
+          "value": "yTGBgPSywgMc0But",
+          "mode": "list",
+          "cachedResultName": "Agent lead add site company"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2,
+      "position": [
+        752,
+        1440
+      ],
+      "id": "2cd26609-bc25-44ed-8394-14061b00b16b",
+      "name": "AgentLeadAddSiteCompany"
+    },
+    {
+      "parameters": {
+        "name": "AgentLeadScrapInformationCompany",
+        "description": "Collects information on companies and writes information into an Excel file",
+        "workflowId": {
+          "__rl": true,
+          "value": "tBIq1jiaRl2lCLxw",
+          "mode": "list",
+          "cachedResultName": "Agent lead scrap information company"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2,
+      "position": [
+        912,
+        1440
+      ],
+      "id": "2996d8d2-3804-47ec-a3a3-d7ef134e8447",
+      "name": "AgentLeadScrapInformationCompany"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Text', `Insert a message for the TelegramMessage tool`, 'string') }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegramTool",
+      "typeVersion": 1.2,
+      "position": [
+        1200,
+        1440
+      ],
+      "id": "89ecbc47-fb2a-4b46-8e36-4f4c876aebdd",
+      "name": "TelegramMessage",
+      "webhookId": "5cb576f5-08fe-48cf-ab71-230187fbf50d",
+      "credentials": {
+        "telegramApi": {
+          "id": "M7LoDmvt8YtkoqRH",
+          "name": "Send_Zakaz_ParsLid_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "mode": "list",
+          "cachedResultName": "Лиды компаний",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1305865408,
+          "mode": "list",
+          "cachedResultName": "Запросы",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=1305865408"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Статус выполнения",
+              "lookupValue": "0"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "position": [
+        1360,
+        1440
+      ],
+      "id": "e0d1577e-d7e4-432c-882a-5a077a4d6810",
+      "name": "QuerySheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hcA6b5dWS2JjEtNT",
+          "name": "ТАБЛИЦА ПАРСЕР ВК + ОТПРАВКА КП"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "mode": "list",
+          "cachedResultName": "Лиды компаний",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Компании",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Статус получения данных",
+              "lookupValue": "0"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "position": [
+        1520,
+        1440
+      ],
+      "id": "dd595122-8f82-4427-961f-451f5f7bf1a6",
+      "name": "SiteCompanySheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hcA6b5dWS2JjEtNT",
+          "name": "ТАБЛИЦА ПАРСЕР ВК + ОТПРАВКА КП"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "anthropic/claude-3.7-sonnet",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        320,
+        1440
+      ],
+      "id": "83e20a12-3cac-4f23-80e6-6e781a80cd05",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "sE5JfGGErGgacfLc",
+          "name": "ПАРСЕР САЙТОВ+КП"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "AgentLeadMailGenerate",
+        "description": "A tool for creating draft letters for companies\n",
+        "workflowId": {
+          "__rl": true,
+          "value": "yiTucUfF0GQc2rze",
+          "mode": "list",
+          "cachedResultName": "Agent lead mail generate"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        1440
+      ],
+      "id": "04eee298-3952-450a-96ee-6158196f9baa",
+      "name": "AgentLeadMailGenerate"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1216,
+        1088
+      ],
+      "id": "5a60a430-7168-4b82-9397-be42fc61777e",
+      "name": "Telegram1",
+      "webhookId": "d4250d56-93e4-4e84-b675-3dab582ef606",
+      "credentials": {
+        "telegramApi": {
+          "id": "M7LoDmvt8YtkoqRH",
+          "name": "Send_Zakaz_ParsLid_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e1c87917-f924-4ef8-b333-984fb5082ef3",
+              "name": "text",
+              "value": "={{ $json.message.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        1184
+      ],
+      "id": "3818af73-a25d-47a0-8bd3-8d112f153739",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        560,
+        1088
+      ],
+      "id": "5bb3e2ec-8ee7-4095-aa18-7582bd493e7d",
+      "name": "Limit1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Компания: {{ $json[\"Компания\"] }}\nОписание компании: {{ $json[\"Описание компании\"] }}\nПредложенеие автоматизации: {{ $json[\"Предложение автоматизации\"] }}\nРабор предлооженной автоматизации: {{ $json[\"Рабор предлооженной автоматизации\"] }}",
+        "options": {
+          "systemMessage": "=ТЫ — ЭКСПЕРТ ПО ПРОДАЖАМ И КОММЕРЧЕСКИМ ПРЕДЛОЖЕНИЯМ, ОБЛАДАЮЩИЙ ГЛУБОКИМИ ЗНАНИЯМИ В ОБЛАСТИ ИНТЕГРАЦИИ ИИ В БИЗНЕС-ПРОЦЕССЫ. ТВОЯ ЗАДАЧА — СОСТАВИТЬ ЧЕРНОВИК ПИСЬМА ДЛЯ КОММЕРЧЕСКОГО ПРЕДЛОЖЕНИЯ В HTML-ФОРМАТЕ, КОТОРОЕ:\n\nПРЕДСТАВИТ УСЛУГИ КОМПАНИИ В НЕФОРМАЛЬНОЙ, ДРУЖЕСКОЙ МАНЕРЕ.\n\nНЕ БУДЕТ СОДЕРЖАТЬ ЦЕН, А СКОНЦЕНТРИРУЕТСЯ НА ЦЕННОСТИ ДЛЯ КЛИЕНТА.\n\nБУДЕТ СТРУКТУРИРОВАНО ТАК, ЧТОБЫ ЛЕГКО ЧИТАЛОСЬ И ВЫЗЫВАЛО ЖЕЛАНИЕ ПРОДОЛЖИТЬ ДИАЛОГ.\n\nНЕНАВЯЗЧИВО ПРИВЕДЕТ КЛИЕНТА К ВСТРЕЧЕ, ГДЕ МЫ МОЖЕМ ДЕТАЛЬНО ОБСУДИТЬ РЕШЕНИЯ.\n\nОРИЕНТИРУЕТСЯ НА ПЕРЕЧЕНЬ УСЛУГ, А ТАКЖЕ УЧИТЫВАЕТ ПРИШЕДШЕЕ ПРЕДЛОЖЕНИЕ ПО АВТОМАТИЗАЦИИ И ЕГО АНАЛИЗ.\n\nОСНОВНЫЕ УСЛУГИ\n\nИнтеграция ИИ-ассистентов в бизнес-процессы (автоматизация рутинных задач, обучение ИИ, интеграция с CRM, ERP, мессенджерами и сайтами).\n\nСоздание ИИ-консультантов и чат-ботов (разработка чат-ботов, самообучаемые боты, поддержка клиентов и продажи).\n\nАвтоматизация отдела продаж (ИИ-продавцы, обработка заявок, квалификация лидов, интеграция с CRM-системами).\n\nТехническая поддержка на базе ИИ (автоматизация обработки запросов, поддержка 24/7).\n\nОбучение и адаптация сотрудников с помощью ИИ (ИИ-тренеры, тестирование и аттестация сотрудников).\n\nАналитика и прогнозирование (анализ данных, прогнозирование продаж, автоматизация отчетности).\n\nРазработка индивидуальных ИИ-решений (создание уникальных моделей под задачи бизнеса, локальное развертывание).\n\nЧЕРНОВИК ПИСЬМА В HTML\n\n<!DOCTYPE html>\n<html>\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Как ИИ поможет вашему бизнесу?</title>\n</head>\n<body style=\"font-family: Arial, sans-serif; line-height: 1.6;\">\n    <p>Привет, {Имя}!</p>\n    <p>Многие компании уже используют ИИ для автоматизации процессов и роста прибыли. Давайте обсудим, какие возможности подходят именно вам.</p>\n    <p>Мы подобрали решения, которые могут упростить вашу работу и повысить эффективность.</p>\n    <p>Готов(а) показать вам несколько успешных кейсов. Когда вам удобно созвониться?</p>\n    <p>С уважением,<br>{Ваше Имя}<br>{Ваша Компания}</p>\n</body>\n</html>\n\nЧЕГО НЕ ДЕЛАТЬ\n\nНЕ ПИСАТЬ НИ ЧЕГО КРОМЕ ПИСМА В HTML ФОРМАТЕ\n\nНИ КАКИХ ПРИВЕТСТВИЙ И ДОПОЛНИТЕЛЬНОГО ТЕКСТА\n\nНЕ ПИСАТЬ В СТИЛЕ КОРПОРАТИВНОГО БЮРОКРАТИЧЕСКОГО ПИСЬМА.\n\nНЕ УКАЗЫВАТЬ СТОИМОСТЬ УСЛУГ В ПИСЬМЕ.\n\nНЕ ДЕЛАТЬ ПРЕДЛОЖЕНИЕ СЛИШКОМ ДЛИННЫМ.\n\nНЕ НАВЯЗЫВАТЬ ПРОДУКТ, А СОЗДАВАТЬ ИНТЕРЕС.\n\nНЕ ИСПОЛЬЗОВАТЬ ОБЩИЕ ФРАЗЫ БЕЗ ПРИМЕРОВ."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        2432,
+        1584
+      ],
+      "id": "2740bcb7-5f1b-483d-b5d0-1d8aa5721f50",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "model": "anthropic/claude-3.7-sonnet",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        2448,
+        1728
+      ],
+      "id": "2abfbb21-0a1a-4840-ab79-7d65a7a22655",
+      "name": "OpenRouter Chat Model1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "sE5JfGGErGgacfLc",
+          "name": "ПАРСЕР САЙТОВ+КП"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "mode": "list",
+          "cachedResultName": "Лиды компаний",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Компании",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Черновик письма",
+              "lookupValue": "0"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2032,
+        1296
+      ],
+      "id": "4101e8a5-2c34-4fad-86f5-2f33419d468c",
+      "name": "Google Sheets6",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hcA6b5dWS2JjEtNT",
+          "name": "ТАБЛИЦА ПАРСЕР ВК + ОТПРАВКА КП"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "maxItems": 20
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        2224,
+        1296
+      ],
+      "id": "0999e63a-7332-4ae1-9902-7411354f0fb3",
+      "name": "Limit2"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "mode": "list",
+          "cachedResultName": "Лиды компаний",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Компании",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "Черновик письма": "={{ $json.output }}",
+            "Сайт": "={{ $('Loop Over Items3').item.json[\"Сайт\"] }}"
+          },
+          "matchingColumns": [
+            "Сайт"
+          ],
+          "schema": [
+            {
+              "id": "Сайт",
+              "displayName": "Сайт",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Компания",
+              "displayName": "Компания",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Почта",
+              "displayName": "Почта",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Телефон",
+              "displayName": "Телефон",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Описание компании",
+              "displayName": "Описание компании",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Предложение автоматизации",
+              "displayName": "Предложение автоматизации",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Рабор предлооженной автоматизации",
+              "displayName": "Рабор предлооженной автоматизации",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Черновик письма",
+              "displayName": "Черновик письма",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Статус отправки письма",
+              "displayName": "Статус отправки письма",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Статус получения данных",
+              "displayName": "Статус получения данных",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2784,
+        1584
+      ],
+      "id": "119f84ed-3ea4-45c9-b6cd-528078c01ebd",
+      "name": "Google Sheets7",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hcA6b5dWS2JjEtNT",
+          "name": "ТАБЛИЦА ПАРСЕР ВК + ОТПРАВКА КП"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8667e254-1dbc-4fad-99ec-4e9a246e2522",
+              "leftValue": "={{ $json[\"Почта\"] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2000,
+        1584
+      ],
+      "id": "6a905bf9-d3d0-48b1-8011-e24bfc1e75a2",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1808,
+        1584
+      ],
+      "id": "e3c3edcf-0002-4150-9c98-e8c20fda8113",
+      "name": "Loop Over Items3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ad085049-c134-4dbe-a14b-ca66ef3d33a8",
+              "name": "true",
+              "value": "Письма для компаний созданы. Посмотрите на https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?gid=0#gid=0",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1808,
+        1984
+      ],
+      "id": "3cc7d4f2-09a6-4989-b691-49ba523ed9eb",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {
+        "content": "## Получение сайтов компаний по запросу",
+        "height": 240,
+        "width": 640,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        1232
+      ],
+      "id": "61eff57b-0552-4254-bf1d-4f22c2180bbf",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "## Получение результата",
+        "height": 220,
+        "width": 300,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        1936
+      ],
+      "id": "27ac8e82-fec2-4c95-8fab-74dacb84c6da",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "content": "## Цикл прохода по запросам для записи и проверки",
+        "height": 340,
+        "width": 1180,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        1536
+      ],
+      "id": "062f842c-7d3a-472e-9b2d-cccdfbeed285",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "mode": "list",
+          "cachedResultName": "Лиды компаний",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Компании",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "Сайт": "={{ $json[\"Сайт\"] }}",
+            "Черновик письма": "Нет почты"
+          },
+          "matchingColumns": [
+            "Сайт"
+          ],
+          "schema": [
+            {
+              "id": "Сайт",
+              "displayName": "Сайт",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Компания",
+              "displayName": "Компания",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Почта",
+              "displayName": "Почта",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Телефон",
+              "displayName": "Телефон",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Описание компании",
+              "displayName": "Описание компании",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Предложение автоматизации",
+              "displayName": "Предложение автоматизации",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Рабор предлооженной автоматизации",
+              "displayName": "Рабор предлооженной автоматизации",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Черновик письма",
+              "displayName": "Черновик письма",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Статус отправки письма",
+              "displayName": "Статус отправки письма",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Статус получения данных",
+              "displayName": "Статус получения данных",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2224,
+        1616
+      ],
+      "id": "672c43f3-c113-49b6-a7dd-8a7db145a31d",
+      "name": "Google Sheets8",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hcA6b5dWS2JjEtNT",
+          "name": "ТАБЛИЦА ПАРСЕР ВК + ОТПРАВКА КП"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Текст для анализа: {{ $('Edit Fields6').item.json.cleanText }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=ТЫ — ВЫСОКОКЛАССНЫЙ ЭКСПЕРТ ПО БИЗНЕС-АВТОМАТИЗАЦИИ И ИНТЕГРАЦИИ ИИ-РЕШЕНИЙ. ТВОЯ ЗАДАЧА — ГЕНЕРИРОВАТЬ КОМПАКТНЫЕ ОПИСАНИЯ КОМПАНИЙ (НЕ БОЛЕЕ 300 СИМВОЛОВ), ОТРАЖАЮЩИЕ ИХ ДЕЯТЕЛЬНОСТЬ, ПРЕИМУЩЕСТВА И СПЕЦИАЛИЗАЦИЮ. ДОПОЛНИТЕЛЬНО ТЫ ПРЕДЛАГАЕШЬ СПИСОК ВОЗМОЖНЫХ АВТОМАТИЗАЦИЙ, КОТОРЫЕ МОГУТ БЫТЬ ПОЛЕЗНЫ КОМПАНИИ.\n\n### ИНСТРУКЦИИ ###\n- СОСТАВЬ ЧЁТКОЕ И КРАТКОЕ ОПИСАНИЕ КОМПАНИИ В РАМКАХ 300 СИМВОЛОВ.\n- УКАЗЫВАЙ СПЕЦИАЛИЗАЦИЮ И ОСНОВНЫЕ ПРЕИМУЩЕСТВА.\n- ОПРЕДЕЛИ, КАКИЕ ТИПЫ АВТОМАТИЗАЦИИ ПОДОЙДУТ ДЛЯ ДАННОЙ КОМПАНИИ.\n- ИСПОЛЬЗУЙ ЦЕПОЧКУ РАССУЖДЕНИЙ ДЛЯ ГЕНЕРАЦИИ ОПТИМАЛЬНЫХ РЕШЕНИЙ.\n\n### ЦЕПОЧКА РАССУЖДЕНИЙ ###\n1. АНАЛИЗ БИЗНЕСА\n  - Определи нишу компании.\n  - Выяви ключевые бизнес-задачи.\n  \n2. ВЫЯВЛЕНИЕ ПОТРЕБНОСТЕЙ\n  - Какие процессы требуют оптимизации?\n  - Где можно повысить эффективность с помощью ИИ?\n  \n3. ПРЕДЛОЖЕНИЕ РЕШЕНИЙ\n  - Подбери соответствующие услуги из каталога.\n  - Добавь идеи по автоматизации, исходя из специфики бизнеса.\n\n4. РАЗБОР ПРЕДЛОЖЕННОЙ АВТОМАТИЗАЦИИ\n  - Проанализируй то что предложил, провести детальный разбор, почему компании нужны все предложенные автоматизации, не менее 600 символов\n\n### ФОРМАТ ОТВЕТА ###\n  \"company_name\": \"[Название компании]\",\n  \"description\": \"[Компактное описание, до 300 символов]\",\n  \"automation_opportunities\": \"[Автоматизация, подходящая компании, Другое подходящее решение, Дополнительные идеи, если есть]\",\n  \"analysis\": \"[Разбор предложенной автоматизации]\"\n\n### ЧТО НЕ НУЖНО ДЕЛАТЬ ###\n- НЕ ГЕНЕРИРУЙ ДЛИННЫЕ ОПИСАНИЯ СВЫШЕ 300 СИМВОЛОВ.\n- НЕ ПРЕДЛАГАЙ РЕШЕНИЯ, КОТОРЫЕ НЕ СООТВЕТСТВУЮТ СПЕЦИФИКЕ БИЗНЕСА.\n- НЕ ПОВТОРЯЙ ОДНИ И ТЕ ЖЕ ВАРИАНТЫ ДЛЯ ВСЕХ КОМПАНИЙ.\n- НЕ ИГНОРИРУЙ ДОПОЛНИТЕЛЬНЫЕ ВОЗМОЖНОСТИ АВТОМАТИЗАЦИИ.\n- ЗАПРЕЩЕНО В ОТВЕТЕ ВОЗВРАЩАТЬ ```json ИЛИ ```json/n/n ИЛИ ```json\\n\n\n### ПРИМЕРЫ ###\n\n#### ПРИМЕР 1\n  \"company_name\": \"TechHelp AI\",\n  \"description\": \"Компания занимается технической поддержкой клиентов 24/7, обеспечивая быстрое решение проблем и высокое качество сервиса.\",\n  \"automation_opportunities\":\"ИИ-ассистенты для обработки запросов, Чат-боты для консультаций, Аналитика обращений и прогнозирование проблем\",\n  \"analysis\": \"Разбор предложенной автоматизации\"\n\n#### ПРИМЕР 2\n  \"company_name\": \"RetailBoost\",\n  \"description\": \"Торговая компания, специализирующаяся на продаже одежды и аксессуаров через интернет-магазины.\",\n  \"automation_opportunities\":\"ИИ-ассистенты для клиентской поддержки, Персонализированные рекомендации товаров, Анализ спроса и прогнозирование продаж\",\n  \"analysis\": \"Разбор предложенной автоматизации\""
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -592,
+        2448
+      ],
+      "id": "443f1b1c-66a6-41ce-bc44-9aab06fca280",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 4,
+        "options": {
+          "clashHandling": {
+            "values": {
+              "resolveClash": "addSuffix"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        672,
+        2240
+      ],
+      "id": "4418177c-8e26-466b-ad00-dd165cf3fb48",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Получаем входные данные\nconst inputData = $input.all();\n\n// Обрабатываем каждый элемент входных данных\nconst result = inputData.map(item => {\n  const text = item.json.text;\n\n  // Регулярные выражения для извлечения данных\n  const companyNameRegex = /\"company_name\":\\s*\"([^\"]+)\"/;\n  const descriptionRegex = /\"description\":\\s*\"([^\"]+)\"/;\n  const automationOpportunitiesRegex = /\"automation_opportunities\":\\s*\"([^\"]+)\"/;\n  const analysisRegex = /\"analysis\":\\s*\"([\\s\\S]*?)\"(?=\\s*(?:\\n|,|}|$))/;\n\n  // Извлекаем название компании\n  const companyNameMatch = text.match(companyNameRegex);\n  const companyName = companyNameMatch ? companyNameMatch[1] : null;\n\n  // Извлекаем описание\n  const descriptionMatch = text.match(descriptionRegex);\n  const description = descriptionMatch ? descriptionMatch[1] : null;\n\n  // Извлекаем возможности автоматизации\n  const automationOpportunitiesMatch = text.match(automationOpportunitiesRegex);\n  const automationOpportunities = automationOpportunitiesMatch\n    ? automationOpportunitiesMatch[1] // Оставляем как строку\n    : null;\n\n  // Извлекаем разбор (анализ, потребности, предложения)\n  const analysisMatch = text.match(analysisRegex);\n  const analysis = analysisMatch ? analysisMatch[1].trim() : null;\n\n  // Возвращаем новый объект с извлечёнными данными\n  return {\n    json: {\n      companyName: companyName,\n      description: description,\n      automationOpportunities: automationOpportunities, // Возвращаем как строку\n      analysis: analysis\n    }\n  };\n});\n\n// Возвращаем результат\nreturn result;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        2496
+      ],
+      "id": "2aeb1eca-275c-481d-a87f-fd7ddf17ce8a",
+      "name": "Code2"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "phones",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -592,
+        2688
+      ],
+      "id": "e1bab12c-e294-462e-9236-c2874a4fb0ba",
+      "name": "Split Out1"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "emails"
+            }
+          ]
+        },
+        "options": {
+          "mergeLists": true
+        }
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -192,
+        2272
+      ],
+      "id": "8c09783a-ffb3-4e74-8a8e-3655e681bada",
+      "name": "Aggregate",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "phones"
+            }
+          ]
+        },
+        "options": {
+          "mergeLists": true
+        }
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -192,
+        2688
+      ],
+      "id": "52c8b800-a57a-47c8-a4ef-0f52230a29e1",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Получаем входные данные\nconst inputData = $input.all();\n\n// Обрабатываем каждый элемент входных данных\nconst result = inputData.map(item => {\n  // Получаем массив телефонов\n  const phonesArray = item.json.phones || [];\n\n  // Преобразуем массив в строку, разделяя элементы запятыми\n  const phonesString = phonesArray.join(', ');\n\n  // Возвращаем результат\n  return {\n    json: {\n      phonesString: phonesString\n    }\n  };\n});\n\n// Возвращаем результат\nreturn result;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        2688
+      ],
+      "id": "2577685f-ef0e-4bc8-a2af-95dc464b1f32",
+      "name": "Code3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Получаем входные данные\nconst inputData = $input.all();\n\n// Обрабатываем каждый элемент входных данных\nconst result = inputData.map(item => {\n  // Получаем массив телефонов\n  const emailsArray = item.json.emails || [];\n\n  // Преобразуем массив в строку, разделяя элементы запятыми\n  const emailsString = emailsArray.join(', ');\n\n  // Возвращаем результат\n  return {\n    json: {\n      emailsString: emailsString\n    }\n  };\n});\n\n// Возвращаем результат\nreturn result;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        2272
+      ],
+      "id": "df713b29-4616-468f-a01d-9ffb3efc6a23",
+      "name": "Code4",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "mode": "list",
+          "cachedResultName": "Лиды компаний",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Компании",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Статус получения данных",
+              "lookupValue": "0"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -400,
+        1568
+      ],
+      "id": "2d4297d3-8677-45a5-9d3b-ecb5883aadc9",
+      "name": "Google Sheets9",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hcA6b5dWS2JjEtNT",
+          "name": "ТАБЛИЦА ПАРСЕР ВК + ОТПРАВКА КП"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "maxItems": 10
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        -176,
+        1568
+      ],
+      "id": "a9bf2629-2727-4861-bf49-03013008e387",
+      "name": "Limit3"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -192,
+        1872
+      ],
+      "id": "fa92168b-aead-4f80-8753-a73f16de0d59",
+      "name": "Loop Over Items4",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json[\"Сайт\"] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        32,
+        1872
+      ],
+      "id": "8bdaf723-4a38-4ae0-884b-938bea14a3a6",
+      "name": "HTTP Request2",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Получаем очищенный текст из предыдущего шага\nconst cleanText = $json.cleanText;\n\n// Регулярное выражение для поиска email\nconst emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.(?!png|jpg|gif|jpeg)[a-zA-Z]{2,}/g;\n\n// Регулярное выражение для поиска телефонов (Россия)\nconst phoneRegex = /(?:\\+7|8|7|\\(\\d{3}\\))[\\s\\-()]*\\d{3}[\\s\\-()]*\\d{2}[\\s\\-()]*\\d{2}|(?:\\+7|8|7)?[\\s\\-()]*\\d{3}[\\s\\-()]*\\d{3}[\\s\\-()]*\\d{2}[\\s\\-()]*\\d{2}/g;\n\n// Извлекаем email\nconst emails = cleanText.match(emailRegex) || [];\n\n// Извлекаем телефоны\nconst phones = cleanText.match(phoneRegex) || [];\n\n// Возвращаем результат\nreturn {\n  json: {\n    emails: emails,\n    phones: phones\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        1872
+      ],
+      "id": "3179f5a7-6752-455a-b693-f4de0b7a4c15",
+      "name": "Code5"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "mode": "list",
+          "cachedResultName": "Лиды компаний",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Компании",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "Компания": "={{ $json.companyName_3 }}",
+            "Описание компании": "={{ $json.description_3 }}",
+            "Почта": "={{ $json.emailsString_2 }}",
+            "Телефон": "={{ $json.phonesString_4 }}",
+            "Статус получения данных": "1",
+            "Предложение автоматизации": "={{ $json.automationOpportunities_3 }}",
+            "Сайт": "={{ $json[\"Сайт_1\"] }}",
+            "Рабор предлооженной автоматизации": "={{ $json.analysis_3 }}"
+          },
+          "matchingColumns": [
+            "Сайт"
+          ],
+          "schema": [
+            {
+              "id": "Сайт",
+              "displayName": "Сайт",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Компания",
+              "displayName": "Компания",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Почта",
+              "displayName": "Почта",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Телефон",
+              "displayName": "Телефон",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Описание компании",
+              "displayName": "Описание компании",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Предложение автоматизации",
+              "displayName": "Предложение автоматизации",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Рабор предлооженной автоматизации",
+              "displayName": "Рабор предлооженной автоматизации",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Черновик письма",
+              "displayName": "Черновик письма",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Статус отправки письма",
+              "displayName": "Статус отправки письма",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Статус получения данных",
+              "displayName": "Статус получения данных",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        880,
+        2256
+      ],
+      "id": "8b2453c3-b5d8-494b-b69b-7b4a613a055f",
+      "name": "Google Sheets10",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hcA6b5dWS2JjEtNT",
+          "name": "ТАБЛИЦА ПАРСЕР ВК + ОТПРАВКА КП"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "72d2cb98-e420-473f-bb1b-20be3e478e84",
+              "name": "true",
+              "value": "Информация о компаниях по сайтам собрана, вот ссылка на документ https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?gid=0#gid=0",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -592,
+        2992
+      ],
+      "id": "38dbce17-98d7-4a07-ad18-7f773cc59b6d",
+      "name": "Edit Fields4"
+    },
+    {
+      "parameters": {
+        "content": "## Цикл записи и проверки сайтов",
+        "height": 1040,
+        "width": 1700,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -640,
+        1808
+      ],
+      "id": "35aad81a-22ca-467c-adc3-ad6c9e1a20d3",
+      "name": "Sticky Note10"
+    },
+    {
+      "parameters": {
+        "content": "## Получение результата",
+        "height": 240,
+        "width": 300,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -640,
+        2912
+      ],
+      "id": "237bb298-f223-4ccd-98e6-cae0fc88c296",
+      "name": "Sticky Note11"
+    },
+    {
+      "parameters": {
+        "content": "## Получение сайтов компаний по запросу",
+        "height": 260,
+        "width": 620,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -640,
+        1488
+      ],
+      "id": "b5d54245-4cfd-4e4b-bd9f-72ac72ed5f99",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "mode": "list",
+          "cachedResultName": "Лиды компаний",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Компании",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "Сайт": "={{ $('Loop Over Items4').item.json[\"Сайт\"] }}",
+            "Статус получения данных": "={{ $json.error.message }}"
+          },
+          "matchingColumns": [
+            "Сайт"
+          ],
+          "schema": [
+            {
+              "id": "Сайт",
+              "displayName": "Сайт",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Компания",
+              "displayName": "Компания",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Почта",
+              "displayName": "Почта",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Телефон",
+              "displayName": "Телефон",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Описание компании",
+              "displayName": "Описание компании",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Черновик письма",
+              "displayName": "Черновик письма",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Статус отправки письма",
+              "displayName": "Статус отправки письма",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Статус получения данных",
+              "displayName": "Статус получения данных",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -416,
+        1872
+      ],
+      "id": "40857ed6-a833-4b81-a059-b5014d88a7f6",
+      "name": "Google Sheets11",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hcA6b5dWS2JjEtNT",
+          "name": "ТАБЛИЦА ПАРСЕР ВК + ОТПРАВКА КП"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "qwen/qwen-plus",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -576,
+        2576
+      ],
+      "id": "5158b5bd-b599-4488-ab89-8f0e746995d9",
+      "name": "OpenRouter Chat Model2",
+      "credentials": {
+        "openRouterApi": {
+          "id": "sE5JfGGErGgacfLc",
+          "name": "ПАРСЕР САЙТОВ+КП"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "emails",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -592,
+        2272
+      ],
+      "id": "a58f2557-96f9-47d6-8403-4c9c167e824b",
+      "name": "Split Out2",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        -416,
+        2688
+      ],
+      "id": "fe79c0e6-5bae-418f-bd2f-f35bd82bf378",
+      "name": "Remove Duplicates2"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        -416,
+        2272
+      ],
+      "id": "e83f605d-9a28-4cce-a35b-0f25287ee8c2",
+      "name": "Remove Duplicates3",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Получаем HTML-код страницы\nconst data = $json.data;\n\n// Очищаем HTML от стилей и скриптов\nconst cleanHTML = data.replace(/<script\\b[^<]*(?:(?!<\\/script>)<[^<]*)*<\\/script>|<style\\b[^<]*(?:(?!<\\/style>)<[^<]*)*<\\/style>/gi, '');\n\n// Извлекаем содержимое тега <body>\nconst bodyMatch = cleanHTML.match(/<body[^>]*>([\\s\\S]*?)<\\/body>/i);\nconst bodyContent = bodyMatch ? bodyMatch[1] : '';\n\n// Получаем чистый текст из <body>\nconst cleanText = bodyContent.replace(/<[^>]+>/g, '').replace(/\\s+/g, ' ').trim();\n\n// Возвращаем результат\nreturn {\n  json: {\n    cleanText: cleanText\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        1872
+      ],
+      "id": "9296b046-9a0f-40f8-ab99-559f125fbafa",
+      "name": "Code6"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3e02f01b-300e-4897-b8a3-cdaa47a2cf8c",
+              "name": "Сайт",
+              "value": "={{ $('Loop Over Items4').item.json[\"Сайт\"] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -592,
+        2096
+      ],
+      "id": "1ae288d7-bdeb-4205-893e-0b3dbf4d20e2",
+      "name": "Edit Fields5"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e9227222-bac5-4f26-8165-a3567d8bd612",
+              "leftValue": "={{ $json.emails }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "e64681f6-67eb-4f09-b456-e0162e1bbefd",
+              "leftValue": "={{ $json.phones }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        688,
+        1872
+      ],
+      "id": "03f79efd-125b-477e-8d16-e28ae242a8b4",
+      "name": "If4"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4bf2f52f-b488-4e8e-9ce9-d18f0c23f8c4",
+              "name": "emails",
+              "value": "={{ $json.emails }}",
+              "type": "array"
+            },
+            {
+              "id": "ea0d5887-c412-4205-a1e7-7ae81e35ce59",
+              "name": "phones",
+              "value": "={{ $json.phones }}",
+              "type": "array"
+            },
+            {
+              "id": "134fb56e-b6a7-4663-ac17-0d721cad00ca",
+              "name": "cleanText",
+              "value": "={{ $('Code6').item.json.cleanText }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        880,
+        1872
+      ],
+      "id": "74144794-6da8-426c-a71f-798afef4545f",
+      "name": "Edit Fields6"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "mode": "list",
+          "cachedResultName": "Лиды компаний",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Компании",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "Сайт": "={{ $('Loop Over Items4').item.json[\"Сайт\"] }}",
+            "Статус получения данных": "=ОШИБКА"
+          },
+          "matchingColumns": [
+            "Сайт"
+          ],
+          "schema": [
+            {
+              "id": "Сайт",
+              "displayName": "Сайт",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Компания",
+              "displayName": "Компания",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Почта",
+              "displayName": "Почта",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Телефон",
+              "displayName": "Телефон",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Описание компании",
+              "displayName": "Описание компании",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Предложение автоматизации",
+              "displayName": "Предложение автоматизации",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Рабор предлооженной автоматизации",
+              "displayName": "Рабор предлооженной автоматизации",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Черновик письма",
+              "displayName": "Черновик письма",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Статус отправки письма",
+              "displayName": "Статус отправки письма",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Статус получения данных",
+              "displayName": "Статус получения данных",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -592,
+        1872
+      ],
+      "id": "a77bc82d-c90b-4eea-949c-8bee5603742e",
+      "name": "Google Sheets12",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hcA6b5dWS2JjEtNT",
+          "name": "ТАБЛИЦА ПАРСЕР ВК + ОТПРАВКА КП"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "query": "Подготовить запросы на тему стоматологии, город Самара"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Remove Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Google Sheets1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Duplicates": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets3": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets2": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Remove Duplicates1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets4": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait3": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets5": {
+      "main": [
+        [
+          {
+            "node": "Wait3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items2": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Google Sheets4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Duplicates1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram": {
+      "main": [
+        [
+          {
+            "node": "OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "main": [
+        [
+          {
+            "node": "Limit1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AgentLeadAddQuery": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AgentLeadAddSiteCompany": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AgentLeadScrapInformationCompany": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TelegramMessage": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "QuerySheets": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SiteCompanySheets": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AgentLeadMailGenerate": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Telegram1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Limit1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets6": {
+      "main": [
+        [
+          {
+            "node": "Limit2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets7": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Google Sheets8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items3": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets8": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code2": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Split Out1": {
+      "main": [
+        [
+          {
+            "node": "Remove Duplicates2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Code4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Code3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code3": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Code4": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Google Sheets9": {
+      "main": [
+        [
+          {
+            "node": "Limit3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit3": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items4": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Code6",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Google Sheets11",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code5": {
+      "main": [
+        [
+          {
+            "node": "If4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets10": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets11": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out2": {
+      "main": [
+        [
+          {
+            "node": "Remove Duplicates3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Duplicates2": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Duplicates3": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code6": {
+      "main": [
+        [
+          {
+            "node": "Code5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields5": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If4": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields6",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Google Sheets12",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields6": {
+      "main": [
+        [
+          {
+            "node": "Split Out1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Split Out2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets12": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "b724827b-cd91-495f-9630-8a2d8cf31de0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b00990746b5667f6a8d70d393236122b76f2f15f3e0879d1dcaac76a73c7dc2a"
+  },
+  "id": "7v3BIO39E10nUXZoLlC_H",
+  "tags": [
+    {
+      "updatedAt": "2025-12-26T04:48:18.224Z",
+      "createdAt": "2025-12-26T04:48:18.224Z",
+      "id": "cxyxveNEoXW8FO5T",
+      "name": "MASK"
+    },
+    {
+      "updatedAt": "2025-12-26T04:48:18.229Z",
+      "createdAt": "2025-12-26T04:48:18.229Z",
+      "id": "zfzjgFVyAEz8a7KV",
+      "name": "scraper"
+    }
+  ]
+}

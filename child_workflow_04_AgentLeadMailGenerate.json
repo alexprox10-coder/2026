@@ -1,0 +1,346 @@
+{
+  "name": "AgentLeadMailGenerate",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        300,
+        300
+      ],
+      "id": "trigger-execute-workflow-301",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "limit-param",
+              "name": "limit",
+              "value": "={{ $json.limit || $json.count || 20 }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        520,
+        300
+      ],
+      "id": "extract-params-302",
+      "name": "Извлечь параметры"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "mode": "list",
+          "cachedResultName": "Лиды компаний"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Компании"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Черновик письма",
+              "lookupValue": "0"
+            }
+          ]
+        },
+        "combineFilters": "AND",
+        "options": {
+          "rangeDefinition": "specifyRangeA1",
+          "range": "A:Z"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        740,
+        300
+      ],
+      "id": "get-companies-303",
+      "name": "Получить компании",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hcA6b5dWS2JjEtNT",
+          "name": "ТАБЛИЦА ПАРСЕР ВК + ОТПРАВКА КП"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-email-exists",
+              "leftValue": "={{ $json['Почта'] || $json.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        960,
+        300
+      ],
+      "id": "check-email-304",
+      "name": "Проверить наличие email"
+    },
+    {
+      "parameters": {
+        "maxItems": "={{ $('Извлечь параметры').item.json.limit }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        1180,
+        200
+      ],
+      "id": "limit-companies-305",
+      "name": "Ограничить количество"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Подсчитываем количество компаний для генерации писем\nconst companies = $input.all().map(item => item.json);\nconst count = companies.length;\n\nreturn {\n  json: {\n    companies_to_generate: count,\n    companies_list: companies.map(c => ({\n      company: c['Компания'] || c.company,\n      email: c['Почта'] || c.email\n    })).filter(c => c.email)\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        200
+      ],
+      "id": "count-companies-306",
+      "name": "Подсчитать компании"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.WEBHOOK_URL_MAIL || 'https://n8n.example.com/webhook-test/generate-mails' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"trigger\": \"generate_mails\",\n  \"limit\": $('Извлечь параметры').item.json.limit,\n  \"companies_count\": $json.companies_to_generate\n} }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1620,
+        200
+      ],
+      "id": "trigger-mail-generation-307",
+      "name": "Запустить генерацию писем",
+      "notes": "Этот узел должен вызвать Цикл 4 из главного workflow. Замените URL на реальный webhook или используйте Execute Workflow."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "success-true",
+              "name": "success",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "message-success",
+              "name": "message",
+              "value": "={{ 'Начата генерация писем КП для ' + $('Подсчитать компании').item.json.companies_to_generate + ' компаний' }}",
+              "type": "string"
+            },
+            {
+              "id": "letters-count",
+              "name": "letters_count",
+              "value": "={{ $('Подсчитать компании').item.json.companies_to_generate }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        1840,
+        200
+      ],
+      "id": "format-success-308",
+      "name": "Успех"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "success-false",
+              "name": "success",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "message-no-emails",
+              "name": "message",
+              "value": "Нет компаний с email адресами для генерации писем",
+              "type": "string"
+            },
+            {
+              "id": "letters-zero",
+              "name": "letters_count",
+              "value": 0,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        1180,
+        400
+      ],
+      "id": "format-no-emails-309",
+      "name": "Нет email адресов"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Извлечь параметры",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Извлечь параметры": {
+      "main": [
+        [
+          {
+            "node": "Получить компании",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Получить компании": {
+      "main": [
+        [
+          {
+            "node": "Проверить наличие email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Проверить наличие email": {
+      "main": [
+        [
+          {
+            "node": "Ограничить количество",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Нет email адресов",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ограничить количество": {
+      "main": [
+        [
+          {
+            "node": "Подсчитать компании",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Подсчитать компании": {
+      "main": [
+        [
+          {
+            "node": "Запустить генерацию писем",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Запустить генерацию писем": {
+      "main": [
+        [
+          {
+            "node": "Успех",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "00000000-0000-0000-0000-000000000005",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "agent-lead-mail-generate-instance-001"
+  },
+  "id": "yiTucUfF0GQc2rze",
+  "tags": [
+    {
+      "id": "agent-tool-tag-004",
+      "name": "AgentTool"
+    }
+  ]
+}
