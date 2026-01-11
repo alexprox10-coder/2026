@@ -1,0 +1,448 @@
+{
+  "name": "Company Data Assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ]
+      },
+      "id": "telegram-trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "company-assistant-webhook",
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "=🤖 Начинаю выполнять задачу: {{ $json.message.text }}\n\n⏳ Процесс может занять некоторое время. Пожалуйста, подождите...",
+        "chatId": "={{ $json.message.chat.id }}",
+        "additionalFields": {}
+      },
+      "id": "telegram-notify-start",
+      "name": "TelegramMessage - Start Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        460,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }}",
+        "options": {
+          "systemMessage": "# ИНТЕЛЛЕКТУАЛЬНЫЙ АССИСТЕНТ ДЛЯ СБОРА ИНФОРМАЦИИ О КОМПАНИЯХ\n\nТЫ – ИНТЕЛЛЕКТУАЛЬНЫЙ АССИСТЕНТ ДЛЯ СБОРА ИНФОРМАЦИИ О КОМПАНИЯХ. ТЫ ОБЛАДАЕШЬ ПОЛНЫМ ДОСТУПОМ К НАБОРУ ИНСТРУМЕНТОВ ДЛЯ ПОИСКА, АНАЛИЗА И ФИКСАЦИИ ДАННЫХ В ЭКСЕЛЬ-ФАЙЛЫ. ТВОЯ ЗАДАЧА – ЧЕТКО ИСПОЛНЯТЬ КОМАНДЫ ПОЛЬЗОВАТЕЛЯ И ОПТИМАЛЬНО ИСПОЛЬЗОВАТЬ ИНСТРУМЕНТЫ.\n\n## ДОСТУПНЫЕ ИНСТРУМЕНТЫ\n\n1. **AgentLeadAddQuery** – СОЗДАЕТ И СОХРАНЯЕТ ЗАПРОСЫ В ЭКСЕЛЬ-ФАЙЛ. ЕСЛИ ПОЛЬЗОВАТЕЛЬ ПОПРОСИТ СОБРАТЬ ЗАПРОСЫ, ТЫ ДОЛЖЕН ВЫПОЛНИТЬ ЭТОТ ИНСТРУМЕНТ\n\n2. **AgentLeadAddSiteCompany** – СОБИРАЕТ САЙТЫ КОМПАНИЙ ИЗ GOOGLE MAPS ПО СОЗДАННЫМ ЗАПРОСАМ\n\n3. **AgentLeadScrapInformationCompany** – СОБИРАЕТ ДАННЫЕ О КОМПАНИЯХ С ИХ САЙТОВ\n\n4. **QuerySheets** – ВОЗВРАЩАЕТ ЗАПРОСЫ, КОТОРЫЕ ЕЩЁ НЕ ОБРАБАТЫВАЛИСЬ (СО СТАТУСОМ 0)\n\n5. **SiteCompanySheets** – ВОЗВРАЩАЕТ САЙТЫ КОМПАНИЙ, ПО КОТОРЫМ ЕЩЁ НЕ БЫЛО СБОРА ДАННЫХ (СО СТАТУСОМ 0)\n\n6. **AgentLeadMailGenerate** – СОЗДАЁТ ЧЕРНОВИКИ ПИСЕМ И СОХРАНЯЕТ ИХ В ЭКСЕЛЬ\n\n## ЛОГИКА РАБОТЫ\n\n### 1. ПРОВЕРКА НЕОБРАБОТАННЫХ ЗАПРОСОВ\n- Если пользователь запрашивает невыполненные запросы, используй функцию get_unprocessed_queries()\n- Проанализируй результат и верни часть запросов со статусом 0\n- Четко сообщи пользователю количество найденных необработанных запросов\n\n### 2. СОЗДАНИЕ НОВЫХ ЗАПРОСОВ\n- Если пользователь просит создать новые запросы (например: \"давай соберём стоматологии по Самаре\"), используй функцию create_queries(topic, city)\n- Передай запрос в формате: topic={тема}, city={город}\n- После выполнения сообщи пользователю, что запросы успешно созданы\n- Если пользователь просит собрать ещё запросы, снова вызови функцию без лишних вопросов\n\n### 3. СБОР САЙТОВ ПО ЗАПРОСАМ\n- Если пользователь просит собрать сайты, используй функцию collect_company_sites()\n- Сообщи пользователю, что сбор сайтов начат\n- Никаких дополнительных подтверждений не требуется\n\n### 4. СБОР ИНФОРМАЦИИ О КОМПАНИЯХ\n- ПЕРЕД вызовом используй функцию get_sites_for_scraping() чтобы проверить наличие сайтов\n- Убедись, что есть сайты с нулевым статусом получения данных (статус 0)\n- Если пользователь просит собрать данные/информацию о компаниях или с сайтов, используй функцию scrape_company_data()\n- Сообщи пользователю, что сбор данных начат\n\n### 5. СОЗДАНИЕ ЧЕРНОВИКОВ ПИСЕМ\n- Если пользователь просит создать письма для компаний или черновики писем, используй функцию generate_email_drafts()\n- Сообщи пользователю, что создание писем начато\n\n## ОБРАБОТКА ОШИБОК\n- Если ты получил ошибку, верни её пользователю\n- Опиши, что произошло\n- ОБЯЗАТЕЛЬНО УКАЖИ, в какой именно функции произошла ошибка\n- Предложи пользователю войти в систему, чтобы решить проблему\n\n## ПРИВЕТСТВИЕ\n- Если пользователь просто пишет \"привет\" (без дополнительного текста), предложи ему схему своей работы\n- Опиши доступные инструменты и возможности\n\n## ПРАВИЛА\n\n❌ НЕ СПРАШИВАЙ У ПОЛЬЗОВАТЕЛЯ ЛИШНИХ ПОДРОБНОСТЕЙ, ЕСЛИ ВСЕ ДАННЫЕ УЖЕ ЯСНЫ\n❌ НЕ ВЫПОЛНЯЙ ДЕЙСТВИЯ, КОТОРЫЕ НЕ ОПИСАНЫ В ИНСТРУКЦИЯХ\n❌ НЕ ПРОСИ ПОДТВЕРЖДЕНИЯ, ЕСЛИ ПОЛЬЗОВАТЕЛЬ УЖЕ ОТДАЛ КОНКРЕТНУЮ КОМАНДУ\n❌ НЕ СМОТРИ НА ПАМЯТЬ, ЕСЛИ ПОЛЬЗОВАТЕЛЬ ПРОСИТ СОБРАТЬ ЕЩЁ ЗАПРОСЫ – ВЫПОЛНИ ЗАДАЧУ НЕМЕДЛЕННО\n\n✅ Будь конкретным и лаконичным\n✅ Всегда сообщай о начале процессов\n✅ Предупреждай о длительности операций\n✅ Четко указывай ошибки и их источник\n✅ Действуй быстро и без лишних вопросов\n\nВАЖНО: СЛЕДУЙ ЭТИМ ИНСТРУКЦИЯМ СТРОГО. НЕ ИМПРОВИЗИРУЙ. ВЫПОЛНЯЙ ТОЛЬКО ТО, ЧТО ОПИСАНО В ЛОГИКЕ РАБОТЫ.\n\nОтвечай ТОЛЬКО на русском языке. Используй вызовы функций для выполнения действий."
+        }
+      },
+      "id": "ai-agent",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        680,
+        300
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "2",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "create_queries",
+        "description": "Создает новые запросы для поиска компаний по теме и городу. Сохраняет их в Excel файл.",
+        "workflowId": "={{ $workflow.id }}",
+        "specifyInputData": true,
+        "inputDataFieldName": "=queryData",
+        "fields": {
+          "values": [
+            {
+              "name": "topic",
+              "type": "string",
+              "description": "Тема для поиска (например: стоматологии, салоны красоты)"
+            },
+            {
+              "name": "city",
+              "type": "string",
+              "description": "Город для поиска (например: Москва, Самара)"
+            }
+          ]
+        }
+      },
+      "id": "tool-create-queries",
+      "name": "Tool: Create Queries",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        900,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "name": "collect_company_sites",
+        "description": "Собирает сайты компаний из Google Maps по созданным запросам",
+        "workflowId": "={{ $workflow.id }}"
+      },
+      "id": "tool-collect-sites",
+      "name": "Tool: Collect Sites",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        900,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "name": "scrape_company_data",
+        "description": "Собирает подробную информацию о компаниях с их сайтов (контакты, email, телефоны, описание)",
+        "workflowId": "={{ $workflow.id }}"
+      },
+      "id": "tool-scrape-data",
+      "name": "Tool: Scrape Company Data",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "name": "get_unprocessed_queries",
+        "description": "Возвращает список запросов, которые ещё не были обработаны (со статусом 0)",
+        "workflowId": "={{ $workflow.id }}"
+      },
+      "id": "tool-get-queries",
+      "name": "Tool: Get Unprocessed Queries",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        900,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "name": "get_sites_for_scraping",
+        "description": "Возвращает список сайтов компаний, по которым ещё не было сбора данных (со статусом 0)",
+        "workflowId": "={{ $workflow.id }}"
+      },
+      "id": "tool-get-sites",
+      "name": "Tool: Get Sites for Scraping",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        900,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "name": "generate_email_drafts",
+        "description": "Создаёт черновики писем для компаний на основе собранных данных и сохраняет их в Excel",
+        "workflowId": "={{ $workflow.id }}"
+      },
+      "id": "tool-generate-emails",
+      "name": "Tool: Generate Email Drafts",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        900,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.output }}",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-response",
+      "name": "Telegram Response",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        1100,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text.toLowerCase() }}",
+              "operation": "equals",
+              "value2": "привет"
+            }
+          ]
+        }
+      },
+      "id": "check-greeting",
+      "name": "Check if Greeting",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        460,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "text": "=👋 Привет! Я интеллектуальный ассистент для сбора информации о компаниях.\n\n📋 **Мои возможности:**\n\n1️⃣ **Создание запросов** - Создаю поисковые запросы по теме и городу\n   _Пример: \"Собери запросы по стоматологиям в Москве\"_\n\n2️⃣ **Сбор сайтов** - Нахожу сайты компаний через Google Maps\n   _Пример: \"Собери сайты по запросам\"_\n\n3️⃣ **Сбор данных** - Извлекаю информацию с сайтов компаний\n   _Пример: \"Собери информацию о компаниях\"_\n\n4️⃣ **Генерация писем** - Создаю черновики писем для компаний\n   _Пример: \"Создай письма для компаний\"_\n\n5️⃣ **Проверка статуса** - Показываю необработанные запросы и сайты\n   _Пример: \"Какие запросы ещё не обработаны?\"_\n\n💡 **Просто напиши мне, что нужно сделать, и я выполню задачу!**",
+        "chatId": "={{ $json.message.chat.id }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "greeting-response",
+      "name": "Greeting Response",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        680,
+        600
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// AgentLeadAddQuery - Создание запросов\n// Здесь должна быть ваша логика создания запросов в Excel\n\nconst topic = $input.item.json.topic || 'не указана';\nconst city = $input.item.json.city || 'не указан';\n\n// Пример: здесь вы можете вызвать Google Sheets API или другой сервис\n// для создания запросов в таблице\n\nreturn {\n  json: {\n    success: true,\n    message: `✅ Запросы успешно созданы!\\n\\n📍 Город: ${city}\\n🏷 Тема: ${topic}\\n\\n⏳ Запросы сохранены в Excel файл.`,\n    topic: topic,\n    city: city,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "exec-create-queries",
+      "name": "Execute: Create Queries",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// AgentLeadAddSiteCompany - Сбор сайтов из Google Maps\n// Здесь должна быть ваша логика сбора сайтов\n\nreturn {\n  json: {\n    success: true,\n    message: '🔍 Начат сбор сайтов компаний из Google Maps...\\n\\n⏳ Процесс может занять несколько минут. Я сообщу, когда закончу.',\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "exec-collect-sites",
+      "name": "Execute: Collect Sites",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// AgentLeadScrapInformationCompany - Сбор данных с сайтов\n// Здесь должна быть ваша логика парсинга сайтов\n\nreturn {\n  json: {\n    success: true,\n    message: '📊 Начат сбор информации о компаниях с их сайтов...\\n\\n⏳ Извлекаю контакты, email, телефоны и описания. Это может занять время.',\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "exec-scrape-data",
+      "name": "Execute: Scrape Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// QuerySheets - Получение необработанных запросов\n// Здесь должна быть ваша логика чтения из Excel/Google Sheets\n\nreturn {\n  json: {\n    success: true,\n    message: '📋 Необработанные запросы:\\n\\n1. Стоматологии Москва (статус: 0)\\n2. Салоны красоты Самара (статус: 0)\\n3. Кафе Санкт-Петербург (статус: 0)\\n\\nВсего: 3 запроса ожидают обработки',\n    count: 3,\n    queries: [\n      { id: 1, topic: 'Стоматологии', city: 'Москва', status: 0 },\n      { id: 2, topic: 'Салоны красоты', city: 'Самара', status: 0 },\n      { id: 3, topic: 'Кафе', city: 'Санкт-Петербург', status: 0 }\n    ],\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "exec-get-queries",
+      "name": "Execute: Get Queries",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// SiteCompanySheets - Получение сайтов для парсинга\n// Здесь должна быть ваша логика чтения из Excel/Google Sheets\n\nreturn {\n  json: {\n    success: true,\n    message: '🌐 Сайты для сбора данных:\\n\\n1. example1.ru (статус: 0)\\n2. example2.ru (статус: 0)\\n3. example3.ru (статус: 0)\\n\\nВсего: 3 сайта готовы к обработке',\n    count: 3,\n    sites: [\n      { id: 1, url: 'example1.ru', status: 0 },\n      { id: 2, url: 'example2.ru', status: 0 },\n      { id: 3, url: 'example3.ru', status: 0 }\n    ],\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "exec-get-sites",
+      "name": "Execute: Get Sites",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// AgentLeadMailGenerate - Генерация черновиков писем\n// Здесь должна быть ваша логика создания писем\n\nreturn {\n  json: {\n    success: true,\n    message: '✉️ Начата генерация черновиков писем...\\n\\n⏳ Создаю персонализированные письма для каждой компании. Скоро будет готово!',\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "exec-generate-emails",
+      "name": "Execute: Generate Emails",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        600
+      ]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "TelegramMessage - Start Notification",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check if Greeting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TelegramMessage - Start Notification": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Telegram Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if Greeting": {
+      "main": [
+        [
+          {
+            "node": "Greeting Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Create Queries": {
+      "main": [
+        [
+          {
+            "node": "Execute: Create Queries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Collect Sites": {
+      "main": [
+        [
+          {
+            "node": "Execute: Collect Sites",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Scrape Company Data": {
+      "main": [
+        [
+          {
+            "node": "Execute: Scrape Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Get Unprocessed Queries": {
+      "main": [
+        [
+          {
+            "node": "Execute: Get Queries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Get Sites for Scraping": {
+      "main": [
+        [
+          {
+            "node": "Execute: Get Sites",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Generate Email Drafts": {
+      "main": [
+        [
+          {
+            "node": "Execute: Generate Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-01-11T00:00:00.000Z",
+  "versionId": "1"
+}
