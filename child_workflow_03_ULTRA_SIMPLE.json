@@ -1,0 +1,53 @@
+{
+  "name": "AgentLeadScrapInformationCompany",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        300,
+        300
+      ],
+      "id": "1",
+      "name": "Execute Workflow Trigger"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "success",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        500,
+        300
+      ],
+      "id": "2",
+      "name": "Set"
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "id": "tBIq1jiaRl2lCLxw"
+}
