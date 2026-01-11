@@ -11,7 +11,7 @@
         300,
         300
       ],
-      "id": "trigger-execute-workflow-201",
+      "id": "trigger-execute-workflow-001",
       "name": "When Executed by Another Workflow"
     },
     {
@@ -19,10 +19,22 @@
         "assignments": {
           "assignments": [
             {
-              "id": "limit-param",
-              "name": "limit",
-              "value": "={{ $json.limit || $json.count || 10 }}",
-              "type": "number"
+              "id": "query-param",
+              "name": "query",
+              "value": "={{ $json.query || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "city-param",
+              "name": "city",
+              "value": "={{ $json.city || 'Хабаровск' }}",
+              "type": "string"
+            },
+            {
+              "id": "theme-param",
+              "name": "theme",
+              "value": "={{ $json.theme || $json.topic || 'недвижимость' }}",
+              "type": "string"
             }
           ]
         },
@@ -34,7 +46,7 @@
         520,
         300
       ],
-      "id": "extract-params-202",
+      "id": "extract-params-002",
       "name": "Извлечь параметры"
     },
     {
@@ -42,22 +54,10 @@
         "assignments": {
           "assignments": [
             {
-              "id": "success-true",
-              "name": "success",
-              "value": true,
-              "type": "boolean"
-            },
-            {
-              "id": "message-text",
-              "name": "message",
-              "value": "={{ 'Запущен сбор информации для ' + $json.limit + ' компаний' }}",
+              "id": "build-query",
+              "name": "query",
+              "value": "={{ $json.query || ($json.city + ', ' + $json.theme + ' - собери все улицы, проспекты и переулки этого города и создай варианты запросов') }}",
               "type": "string"
-            },
-            {
-              "id": "limit-value",
-              "name": "companies_limit",
-              "value": "={{ $json.limit }}",
-              "type": "number"
             }
           ]
         },
@@ -69,7 +69,73 @@
         740,
         300
       ],
-      "id": "format-response-203",
+      "id": "build-query-003",
+      "name": "Подготовить запрос"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Вызываем главный workflow для добавления запросов\n// Главный workflow обработает запрос через Perplexity AI\n\nconst query = $input.item.json.query;\n\nreturn {\n  json: {\n    query: query,\n    status: 'prepared',\n    message: `Запрос подготовлен: ${query}`\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        300
+      ],
+      "id": "process-query-004",
+      "name": "Обработать запрос"
+    },
+    {
+      "parameters": {
+        "workflowId": "={{ '7v3BIO39E10nUXZoLlC_H' }}",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1180,
+        300
+      ],
+      "id": "call-main-workflow-005",
+      "name": "Вызвать главный workflow",
+      "notes": "Вызывает цикл 1 главного workflow для генерации и сохранения запросов"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "success-status",
+              "name": "success",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "message-output",
+              "name": "message",
+              "value": "={{ 'Запросы успешно добавлены для города: ' + $('Извлечь параметры').item.json.city + ', тематика: ' + $('Извлечь параметры').item.json.theme }}",
+              "type": "string"
+            },
+            {
+              "id": "added-count",
+              "name": "added_queries",
+              "value": "={{ $json.data?.added_count || 'неизвестно' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        1400,
+        300
+      ],
+      "id": "format-response-006",
       "name": "Сформировать ответ"
     }
   ],
@@ -90,6 +156,39 @@
       "main": [
         [
           {
+            "node": "Подготовить запрос",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Подготовить запрос": {
+      "main": [
+        [
+          {
+            "node": "Обработать запрос",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Обработать запрос": {
+      "main": [
+        [
+          {
+            "node": "Вызвать главный workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Вызвать главный workflow": {
+      "main": [
+        [
+          {
             "node": "Сформировать ответ",
             "type": "main",
             "index": 0
@@ -102,10 +201,10 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "00000000-0000-0000-0000-000000000004",
+  "versionId": "00000000-0000-0000-0000-000000000002",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "agent-lead-scrap-info-company-instance-001"
+    "instanceId": "agent-lead-scrap-info-instance-003"
   },
   "id": "tBIq1jiaRl2lCLxw",
   "tags": [
