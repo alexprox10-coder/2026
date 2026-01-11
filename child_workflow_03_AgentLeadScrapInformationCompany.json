@@ -39,138 +39,24 @@
     },
     {
       "parameters": {
-        "operation": "read",
-        "documentId": {
-          "__rl": true,
-          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
-          "mode": "list",
-          "cachedResultName": "Лиды компаний"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "gid=0",
-          "mode": "list",
-          "cachedResultName": "Компании"
-        },
-        "filtersUI": {
-          "values": [
-            {
-              "lookupColumn": "Статус получения данных",
-              "lookupValue": "0"
-            }
-          ]
-        },
-        "options": {
-          "rangeDefinition": "specifyRangeA1",
-          "range": "A:Z"
-        }
-      },
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.4,
-      "position": [
-        740,
-        300
-      ],
-      "id": "get-companies-203",
-      "name": "Получить компании",
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "hcA6b5dWS2JjEtNT",
-          "name": "ТАБЛИЦА ПАРСЕР ВК + ОТПРАВКА КП"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "maxItems": "={{ $('Извлечь параметры').item.json.limit }}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.limit",
-      "typeVersion": 1,
-      "position": [
-        960,
-        300
-      ],
-      "id": "limit-companies-204",
-      "name": "Ограничить количество"
-    },
-    {
-      "parameters": {
         "assignments": {
           "assignments": [
             {
-              "id": "companies-count",
-              "name": "companies_to_process",
-              "value": "={{ $input.all().length }}",
-              "type": "number"
-            },
-            {
-              "id": "status-message",
-              "name": "status",
-              "value": "=ready_to_scrape",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.3,
-      "position": [
-        1180,
-        300
-      ],
-      "id": "count-companies-205",
-      "name": "Подсчитать компании"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $env.WEBHOOK_URL || 'https://n8n.example.com/webhook-test/scrape-companies' }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ { \"trigger\": \"scrape\", \"limit\": $('Извлечь параметры').item.json.limit, \"companies_count\": $json.companies_to_process } }}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1400,
-        300
-      ],
-      "id": "trigger-scraping-206",
-      "name": "Запустить сбор данных",
-      "notes": "Этот узел должен вызвать Цикл 3 из главного workflow. Замените URL на реальный webhook или используйте Execute Workflow."
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "success-status",
+              "id": "success-true",
               "name": "success",
               "value": true,
               "type": "boolean"
             },
             {
-              "id": "message-output",
+              "id": "message-text",
               "name": "message",
-              "value": "={{ 'Начат сбор информации для ' + $('Подсчитать компании').item.json.companies_to_process + ' компаний' }}",
+              "value": "={{ 'Запущен сбор информации для ' + $json.limit + ' компаний' }}",
               "type": "string"
             },
             {
-              "id": "companies-processed",
-              "name": "companies_count",
-              "value": "={{ $('Подсчитать компании').item.json.companies_to_process }}",
+              "id": "limit-value",
+              "name": "companies_limit",
+              "value": "={{ $json.limit }}",
               "type": "number"
             }
           ]
@@ -180,10 +66,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.3,
       "position": [
-        1620,
+        740,
         300
       ],
-      "id": "format-response-207",
+      "id": "format-response-203",
       "name": "Сформировать ответ"
     }
   ],
@@ -201,50 +87,6 @@
       ]
     },
     "Извлечь параметры": {
-      "main": [
-        [
-          {
-            "node": "Получить компании",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Получить компании": {
-      "main": [
-        [
-          {
-            "node": "Ограничить количество",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Ограничить количество": {
-      "main": [
-        [
-          {
-            "node": "Подсчитать компании",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Подсчитать компании": {
-      "main": [
-        [
-          {
-            "node": "Запустить сбор данных",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Запустить сбор данных": {
       "main": [
         [
           {
