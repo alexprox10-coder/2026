@@ -1,0 +1,366 @@
+{
+  "name": "🏢 AgentLeadAddQuery - Сбор агентств недвижимости",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agent-lead-query",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger-001",
+      "name": "📥 Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        500,
+        300
+      ],
+      "webhookId": "agent-lead-webhook-001"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "query-param",
+              "name": "query",
+              "value": "={{ $json.body.query || $json.query || 'агентства недвижимости Хабаровск' }}",
+              "type": "string"
+            },
+            {
+              "id": "city-param",
+              "name": "city",
+              "value": "={{ $json.body.city || $json.city || 'Хабаровск' }}",
+              "type": "string"
+            },
+            {
+              "id": "limit-param",
+              "name": "limit",
+              "value": "={{ $json.body.limit || $json.limit || 10 }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "extract-params-001",
+      "name": "📋 Извлечь параметры",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        720,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "anthropic-model-001",
+      "name": "✨ Anthropic Claude",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1,
+      "position": [
+        940,
+        480
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "FqPSgI0tNpkjQj2R",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"agencies\": [\n    {\n      \"name\": \"Название агентства\",\n      \"address\": \"Адрес\",\n      \"phone\": \"Телефон\",\n      \"website\": \"Сайт\",\n      \"rating\": \"Рейтинг\",\n      \"description\": \"Краткое описание\"\n    }\n  ],\n  \"total_found\": 0,\n  \"source\": \"Источник данных\"\n}",
+        "options": {}
+      },
+      "id": "output-parser-001",
+      "name": "🔧 JSON Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        940,
+        660
+      ]
+    },
+    {
+      "parameters": {
+        "text": "=Ты - эксперт по поиску информации о компаниях и агентствах недвижимости.\n\nТвоя задача: найти информацию об агентствах недвижимости для города: {{ $json.city }}\n\nПоисковый запрос: {{ $json.query }}\n\nКоличество результатов: {{ $json.limit }}\n\nИнструкции:\n1. Найди максимально полную информацию об агентствах недвижимости в указанном городе\n2. Для каждого агентства собери:\n   - Название\n   - Адрес офиса\n   - Контактный телефон\n   - Веб-сайт (если есть)\n   - Рейтинг или отзывы (если доступны)\n   - Краткое описание услуг\n\n3. Верни результат в формате JSON со следующей структурой:\n{\n  \"agencies\": [\n    {\n      \"name\": \"Полное название агентства\",\n      \"address\": \"Полный адрес\",\n      \"phone\": \"Телефон\",\n      \"website\": \"URL сайта\",\n      \"rating\": \"Рейтинг или оценка\",\n      \"description\": \"Краткое описание (2-3 предложения)\"\n    }\n  ],\n  \"total_found\": количество найденных агентств,\n  \"source\": \"Укажи источники данных\"\n}\n\nВАЖНО:\n- Включай только реально существующие агентства\n- Проверяй актуальность контактных данных\n- Если информация ограничена, указывай только достоверные данные\n- Не выдумывай несуществующие агентства",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Ты - AI ассистент для поиска и структурирования информации об агентствах недвижимости. Предоставляй только точные и проверенные данные."
+        }
+      },
+      "id": "ai-agent-001",
+      "name": "🤖 AI Поиск агентств",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        940,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "result-output",
+              "name": "result",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "parsed-data",
+              "name": "data",
+              "value": "={{ JSON.parse($json.output) }}",
+              "type": "object"
+            },
+            {
+              "id": "timestamp",
+              "name": "timestamp",
+              "value": "={{ new Date().toISOString() }}",
+              "type": "string"
+            },
+            {
+              "id": "query-info",
+              "name": "query_info",
+              "value": "={{ { query: $('📋 Извлечь параметры').item.json.query, city: $('📋 Извлечь параметры').item.json.city, limit: $('📋 Извлечь параметры').item.json.limit } }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prepare-response-001",
+      "name": "📦 Подготовка ответа",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        1160,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "cachedResultName": "Агентства недвижимости - Лиды"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gid=0",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $json.timestamp }}",
+            "Query": "={{ $json.query_info.query }}",
+            "City": "={{ $json.query_info.city }}",
+            "Total_Found": "={{ $json.data.total_found }}",
+            "Result_JSON": "={{ $json.result }}",
+            "Source": "={{ $json.data.source }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "google-sheets-001",
+      "name": "💾 Сохранить в Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        1380,
+        480
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0h17UZ4QJ4bHSSHp",
+          "name": "ПАРС ТГ НОВОСТИ"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\n  \"success\": true,\n  \"timestamp\": $json.timestamp,\n  \"query\": $json.query_info,\n  \"data\": $json.data,\n  \"message\": \"Данные успешно собраны и сохранены\"\n} }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "webhook-response-001",
+      "name": "✅ Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1600,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-error",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check-001",
+      "name": "❓ Проверка ошибок",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1380,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\n  \"success\": false,\n  \"error\": $json.error || \"Произошла ошибка при обработке запроса\",\n  \"timestamp\": new Date().toISOString()\n} }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "error-response-001",
+      "name": "❌ Ответ об ошибке",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1600,
+        200
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "📥 Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "📋 Извлечь параметры",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Извлечь параметры": {
+      "main": [
+        [
+          {
+            "node": "🤖 AI Поиск агентств",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✨ Anthropic Claude": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "🤖 AI Поиск агентств",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 JSON Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "🤖 AI Поиск агентств",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 AI Поиск агентств": {
+      "main": [
+        [
+          {
+            "node": "📦 Подготовка ответа",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 Подготовка ответа": {
+      "main": [
+        [
+          {
+            "node": "❓ Проверка ошибок",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Проверка ошибок": {
+      "main": [
+        [
+          {
+            "node": "❌ Ответ об ошибке",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "💾 Сохранить в Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 Сохранить в Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "✅ Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "00000000-0000-0000-0000-000000000001",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "agent-lead-workflow-instance-001"
+  },
+  "id": "agent-lead-workflow-001",
+  "tags": []
+}
