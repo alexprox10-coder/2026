@@ -96,12 +96,26 @@
     },
     {
       "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "// Подсчитываем количество компаний для обработки\nconst companies = $input.all().map(item => item.json);\nconst count = companies.length;\n\nreturn {\n  json: {\n    companies_to_process: count,
-    companies_list: companies.map(c => c['Сайт'] || c.site).filter(Boolean)\n  }\n};"
+        "assignments": {
+          "assignments": [
+            {
+              "id": "companies-count",
+              "name": "companies_to_process",
+              "value": "={{ $input.all().length }}",
+              "type": "number"
+            },
+            {
+              "id": "status-message",
+              "name": "status",
+              "value": "=ready_to_scrape",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
       },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
       "position": [
         1180,
         300
@@ -124,7 +138,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ {\n  \"trigger\": \"scrape\",\n  \"limit\": $('Извлечь параметры').item.json.limit,\n  \"companies_count\": $json.companies_to_process\n} }}",
+        "jsonBody": "={{ { \"trigger\": \"scrape\", \"limit\": $('Извлечь параметры').item.json.limit, \"companies_count\": $json.companies_to_process } }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
