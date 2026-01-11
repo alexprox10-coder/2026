@@ -2,19 +2,71 @@
   "name": "AgentLeadScrapInformationCompany",
   "nodes": [
     {
-      "parameters": {},
+      "parameters": {
+        "inputSource": "passthrough"
+      },
       "type": "n8n-nodes-base.executeWorkflowTrigger",
-      "typeVersion": 1,
+      "typeVersion": 1.1,
       "position": [
-        250,
+        300,
         300
       ],
-      "id": "abc123",
-      "name": "Start"
+      "id": "trigger-201",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "success",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "a2",
+              "name": "message",
+              "value": "Workflow executed successfully",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        520,
+        300
+      ],
+      "id": "set-202",
+      "name": "Set Response"
     }
   ],
-  "connections": {},
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Set Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
   "active": false,
-  "settings": {},
-  "id": "tBIq1jiaRl2lCLxw"
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "scrap-info-instance"
+  },
+  "id": "tBIq1jiaRl2lCLxw",
+  "tags": []
 }
