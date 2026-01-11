@@ -1,0 +1,529 @@
+{
+  "name": "Agent lead add query",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        700,
+        220
+      ],
+      "id": "e1d2e308-328c-4400-8081-d8c1bb36d6af",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer "
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"sonar-pro\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"ТВОЯ ЗАДАЧА – СГЕНЕРИРОВАТЬ ПОЛНЫЙ СПИСОК ВСЕХ ВОЗМОЖНЫХ ВАРИАЦИЙ ЗАПРОСОВ В ОПРЕДЕЛЁННОМ ФОРМАТЕ, УЛИЦ МОЖЕТ БЫТЬ ОТ 50 ДО 10000, МНЕ НУЖНЫ ВСЕ. ### ИНСТРУКЦИИ ### - ПОЛУЧАЕШЬ НАЗВАНИЕ ГОРОДА – СОБИРАЕШЬ ВСЕ УЛИЦЫ, ПРОСПЕКТЫ, ПЕРЕУЛКИ И ДРУГИЕ ТОПОНИМЫ ЭТОГО ГОРОДА. - ГЕНЕРИРУЕШЬ НЕ МЕНЕЕ 50 ДЛЯ КАЖДОЙ УЛИЦЫ ВАРИАЦИЮ ЗАПРОСА В ФОРМАТЕ: **\\\"город+тематика+название+улицы+проспекта\\\"** - ВОЗВРАЩАЕШЬ СТРОГО СПИСОК В ФОРМАТЕ **БЕЗ КОММЕНТАРИЕВ, БЕЗ ПРИВЕТСТВИЙ, БЕЗ ОБЪЯСНЕНИЙ**. - НЕ ДОБАВЛЯЕШЬ ЛИШНИХ СЛОВ, НЕ СПРАШИВАЕШЬ ДОПОЛНИТЕЛЬНЫХ ВОПРОСОВ. ### ФОРМАТ ВЫВОДА ### \\\"самара+стоматология+улица_ленина\\\",\\\"самара+стоматология+проспект+победы\\\",\\\"самара+стоматология+переулок+горького\\\",\\\"самара+стоматология+набережная+реки+волги\\\" ЧЕГО НЕ ДЕЛАТЬ НЕ СПРАШИВАТЬ ДОПОЛНИТЕЛЬНЫХ ВОПРОСОВ. НЕ ДОБАВЛЯТЬ ПРЕДИСЛОВИЯ, ПРИВЕТСТВИЯ И ОБЪЯСНЕНИЯ. НЕ ИЗМЕНЯТЬ ФОРМАТ ВЫВОДА. НЕ ПРОПУСКАТЬ НАЗВАНИЯ УЛИЦ, ПРОСПЕКТОВ И ДРУГИХ ТОПОНИМОВ ГОРОДА.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.query }}\"\n    }\n  ],\n  \"max_tokens\": 4000,\n  \"temperature\": 0.2,\n  \"top_p\": 0.9,\n  \"search_domain_filter\": [\n    \"perplexity.ai\"\n  ],\n  \"return_images\": false,\n  \"return_related_questions\": false,\n  \"search_recency_filter\": \"month\",\n  \"top_k\": 0,\n  \"stream\": false,\n  \"presence_penalty\": 0,\n  \"frequency_penalty\": 1\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        220
+      ],
+      "id": "3ef752fe-cb9d-4145-b7f7-d1889e4b54c1",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items\nfor (const item of $input.all()) {\n  // Extract the \"content\" field from the JSON\n  const content = item.json.choices[0].message.content;\n\n  // Remove surrounding quotes and split by commas\n  const contentWithoutQuotes = content.replace(/^\"|\"$/g, ''); // Убираем кавычки в начале и конце\n  const contentArray = contentWithoutQuotes.split('\",\"'); // Разбиваем по запятым и кавычкам\n\n  // Add the extracted data to the JSON as a new field\n  item.json.contentArray = contentArray;\n}\n\n// Return the modified items\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1140,
+        220
+      ],
+      "id": "76904600-90f0-4e3b-b3c4-688cccc99be7",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "contentArray",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        220
+      ],
+      "id": "53b99844-0a87-42d0-b9b8-0d78a64ca51b",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        700,
+        540
+      ],
+      "id": "f88f1cbd-b4c6-4814-95fb-43399cf0a82e",
+      "name": "Loop Over Items",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "mode": "list",
+          "cachedResultName": "Лиды компаний",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1305865408,
+          "mode": "list",
+          "cachedResultName": "Запросы",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=1305865408"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Запросы": "={{ $('Loop Over Items').item.json.contentArray }}",
+            "Статус выполнения": "0"
+          },
+          "matchingColumns": [
+            "Запросы"
+          ],
+          "schema": [
+            {
+              "id": "Запросы",
+              "displayName": "Запросы",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Статус выполнения",
+              "displayName": "Статус выполнения",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1580,
+        540
+      ],
+      "id": "13a8caea-17f2-44b7-8037-2a1a3c5dfc34",
+      "name": "Google Sheets",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4Qvah38VXFq5ER8I",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1760,
+        540
+      ],
+      "id": "f8b8ef59-c9d5-4310-a186-9ca0b70c2bb6",
+      "name": "Wait",
+      "webhookId": "3bfe8c0f-2cae-4260-84af-c816749e595f"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "mode": "list",
+          "cachedResultName": "Лиды компаний",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1305865408,
+          "mode": "list",
+          "cachedResultName": "Запросы",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=1305865408"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Запросы",
+              "lookupValue": "={{ $json.contentArray }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        920,
+        540
+      ],
+      "id": "63e8e7d3-c0fa-415d-9117-fc93c2371556",
+      "name": "Google Sheets1",
+      "retryOnFail": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4Qvah38VXFq5ER8I",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "977f0fa6-5fdc-437c-a0b4-11235ecd9a2f",
+              "leftValue": "={{ $json[\"Запросы\"] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1140,
+        540
+      ],
+      "id": "55efa321-c2fe-4210-8d69-a46f36b31835",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "05d3c42b-bfc3-4628-8e94-6e42a56fe3ab",
+              "name": "true",
+              "value": "=Посмотреть на результат можно тут: https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?gid=1305865408#gid=1305865408 Вот запросы которые были собраны: {{ $('Code').item.json.contentArray }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        700,
+        840
+      ],
+      "id": "d0178a4b-1a67-4924-80a8-8d86068a2ad8",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "content": "## Цикл записи и проверки запросов",
+        "height": 260,
+        "width": 1260,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        460
+      ],
+      "id": "577bb131-9311-44f3-a9a1-51e9421d7cac",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Получение результата",
+        "height": 220,
+        "width": 300,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        780
+      ],
+      "id": "ab3eae6e-05a9-4615-879e-cd680ea75405",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Получение и сборка запросов",
+        "height": 260,
+        "width": 1080,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        140
+      ],
+      "id": "7bad8a7f-bfc5-4432-ad51-461bd665a991",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1360,
+        540
+      ],
+      "id": "e67aba5c-c7a0-4bca-a604-23dc75d4966a",
+      "name": "Wait1",
+      "webhookId": "de3a5d6d-0239-40e6-9da2-a0c8ab7a0283"
+    },
+    {
+      "parameters": {
+        "compare": "selectedFields",
+        "fieldsToCompare": "contentArray",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        1580,
+        220
+      ],
+      "id": "62fc35cd-70b5-47e8-88e8-0b85543df420",
+      "name": "Remove Duplicates"
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "query": "Подготовить запросы на тему стоматологии, город Самара"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Remove Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Google Sheets1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Duplicates": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "056e25e4-ae47-4977-87e7-25ecbfa4d075",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "813452afcbfb0b8400f62e70316975ce1f9093fd797cf772b941bbc049247f99"
+  },
+  "id": "rGzisLcNwx9C6O8R",
+  "tags": [
+    {
+      "createdAt": "2025-02-07T14:41:19.902Z",
+      "updatedAt": "2025-02-07T14:41:19.902Z",
+      "id": "8cCaxKA7JGSfSTNY",
+      "name": "MASK"
+    },
+    {
+      "createdAt": "2025-02-24T12:32:02.569Z",
+      "updatedAt": "2025-02-24T12:32:02.569Z",
+      "id": "2KX16trsWEyCq7lN",
+      "name": "scraper"
+    }
+  ]
+}
