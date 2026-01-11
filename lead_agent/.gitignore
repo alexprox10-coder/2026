@@ -19,6 +19,11 @@ config/google_credentials.json
 !workflow_fixed.json
 !n8n_*.json
 
+# Data files
+data/*.xlsx
+data/*.csv
+data/*.xls
+
 # Logs
 logs/*.log
 *.log

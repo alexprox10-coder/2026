@@ -20,6 +20,7 @@ webdriver-manager>=4.0.2
 # Data Processing
 pandas>=2.2.3
 pytz>=2024.1
+openpyxl>=3.1.2
 
 # Environment
 python-dotenv>=1.0.1
