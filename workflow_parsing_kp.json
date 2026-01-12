@@ -1121,7 +1121,7 @@
         "description": "Creates a query in an Excel file",
         "workflowId": {
           "__rl": true,
-          "value": "rGzisLcNwx9C6O8R",
+          "value": "LC2hDAPDhk5brtWgFAEFf",
           "mode": "list",
           "cachedResultName": "Agent lead add query"
         },
@@ -1149,7 +1149,7 @@
         "description": "Collects company websites and adds them to an Excel file",
         "workflowId": {
           "__rl": true,
-          "value": "yTGBgPSywgMc0But",
+          "value": "DHP8ZGrF-fFTi8eOO_xpC7",
           "mode": "list",
           "cachedResultName": "Agent lead add site company"
         },
@@ -1177,7 +1177,7 @@
         "description": "Collects information on companies and writes information into an Excel file",
         "workflowId": {
           "__rl": true,
-          "value": "tBIq1jiaRl2lCLxw",
+          "value": "L6rAP_leRTz7p69IopIUe",
           "mode": "list",
           "cachedResultName": "Agent lead scrap information company"
         },
@@ -1331,7 +1331,7 @@
         "description": "A tool for creating draft letters for companies\n",
         "workflowId": {
           "__rl": true,
-          "value": "yiTucUfF0GQc2rze",
+          "value": "yiTucUfF06Qc2rze",
           "mode": "list",
           "cachedResultName": "Agent lead mail generate"
         },
