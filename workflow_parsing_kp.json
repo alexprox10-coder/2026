@@ -1118,7 +1118,7 @@
     {
       "parameters": {
         "name": "AgentLeadAddQuery",
-        "description": "Creates a query in an Excel file",
+        "description": "Creates search queries in Excel file. Use this when user asks to find companies in a city/theme. After creating queries, Cycle 2 will automatically find company websites within 10-15 minutes. DO NOT try to search websites yourself - that happens automatically.",
         "workflowId": {
           "__rl": true,
           "value": "LC2hDAPDhk5brtWgFAEFf",
@@ -1146,7 +1146,7 @@
     {
       "parameters": {
         "name": "AgentLeadAddSiteCompany",
-        "description": "Collects company websites and adds them to an Excel file",
+        "description": "INTERNAL USE ONLY - Adds a known company website URL to Excel when URL is already provided. DO NOT use for searching websites. Cycle 2 searches websites automatically every 10 minutes. Only use if user explicitly provides a URL like 'Add site https://example.com for company ABC'",
         "workflowId": {
           "__rl": true,
           "value": "DHP8ZGrF-fFTi8eOO_xpC7",
