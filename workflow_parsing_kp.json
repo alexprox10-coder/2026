@@ -91,17 +91,17 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "value": "1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y",
           "mode": "list",
           "cachedResultName": "Лиды компаний",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": 1305865408,
           "mode": "list",
           "cachedResultName": "Запросы",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=1305865408"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit#gid=1305865408"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -175,17 +175,17 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "value": "1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y",
           "mode": "list",
           "cachedResultName": "Лиды компаний",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": 1305865408,
           "mode": "list",
           "cachedResultName": "Запросы",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=1305865408"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit#gid=1305865408"
         },
         "filtersUI": {
           "values": [
@@ -256,7 +256,7 @@
             {
               "id": "05d3c42b-bfc3-4628-8e94-6e42a56fe3ab",
               "name": "true",
-              "value": "=Посмотреть на результат можно тут: https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?gid=1305865408#gid=1305865408 Вот запросы которые были собраны: {{ $('Code').item.json.contentArray }}",
+              "value": "=Посмотреть на результат можно тут: https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit?gid=1305865408#gid=1305865408 Вот запросы которые были собраны: {{ $('Code').item.json.contentArray }}",
               "type": "string"
             }
           ]
@@ -354,17 +354,17 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "value": "1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y",
           "mode": "list",
           "cachedResultName": "Лиды компаний",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": 1305865408,
           "mode": "list",
           "cachedResultName": "Запросы",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=1305865408"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit#gid=1305865408"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -461,17 +461,17 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "value": "1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y",
           "mode": "list",
           "cachedResultName": "Лиды компаний",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": 1305865408,
           "mode": "list",
           "cachedResultName": "Запросы",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=1305865408"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit#gid=1305865408"
         },
         "filtersUI": {
           "values": [
@@ -679,17 +679,17 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "value": "1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y",
           "mode": "list",
           "cachedResultName": "Лиды компаний",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "Компании",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit#gid=0"
         },
         "filtersUI": {
           "values": [
@@ -738,7 +738,7 @@
             {
               "id": "ed08563e-2887-4648-8e07-095bd1582d43",
               "name": "true",
-              "value": "Сайты компаний собраны, посмотрите на https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?gid=0#gid=0",
+              "value": "Сайты компаний собраны, посмотрите на https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit?gid=0#gid=0",
               "type": "string"
             }
           ]
@@ -759,17 +759,17 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "value": "1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y",
           "mode": "list",
           "cachedResultName": "Лиды компаний",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "Компании",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit#gid=0"
         },
         "columns": {
           "mappingMode": "autoMapInputData",
@@ -1227,17 +1227,17 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "value": "1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y",
           "mode": "list",
           "cachedResultName": "Лиды компаний",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": 1305865408,
           "mode": "list",
           "cachedResultName": "Запросы",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=1305865408"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit#gid=1305865408"
         },
         "filtersUI": {
           "values": [
@@ -1268,17 +1268,17 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "value": "1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y",
           "mode": "list",
           "cachedResultName": "Лиды компаний",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "Компании",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit#gid=0"
         },
         "filtersUI": {
           "values": [
@@ -1453,17 +1453,17 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "value": "1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y",
           "mode": "list",
           "cachedResultName": "Лиды компаний",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "Компании",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit#gid=0"
         },
         "filtersUI": {
           "values": [
@@ -1508,17 +1508,17 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "value": "1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y",
           "mode": "list",
           "cachedResultName": "Лиды компаний",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "Компании",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit#gid=0"
         },
         "columns": {
           "mappingMode": "autoMapInputData",
@@ -1707,7 +1707,7 @@
             {
               "id": "ad085049-c134-4dbe-a14b-ca66ef3d33a8",
               "name": "true",
-              "value": "Письма для компаний созданы. Посмотрите на https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?gid=0#gid=0",
+              "value": "Письма для компаний созданы. Посмотрите на https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit?gid=0#gid=0",
               "type": "string"
             }
           ]
@@ -1776,17 +1776,17 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "value": "1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y",
           "mode": "list",
           "cachedResultName": "Лиды компаний",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "Компании",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit#gid=0"
         },
         "columns": {
           "mappingMode": "autoMapInputData",
@@ -2071,17 +2071,17 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "value": "1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y",
           "mode": "list",
           "cachedResultName": "Лиды компаний",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "Компании",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit#gid=0"
         },
         "filtersUI": {
           "values": [
@@ -2168,17 +2168,17 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "value": "1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y",
           "mode": "list",
           "cachedResultName": "Лиды компаний",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "Компании",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit#gid=0"
         },
         "columns": {
           "mappingMode": "autoMapInputData",
@@ -2330,7 +2330,7 @@
             {
               "id": "72d2cb98-e420-473f-bb1b-20be3e478e84",
               "name": "true",
-              "value": "Информация о компаниях по сайтам собрана, вот ссылка на документ https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?gid=0#gid=0",
+              "value": "Информация о компаниях по сайтам собрана, вот ссылка на документ https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit?gid=0#gid=0",
               "type": "string"
             }
           ]
@@ -2399,17 +2399,17 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "value": "1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y",
           "mode": "list",
           "cachedResultName": "Лиды компаний",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "Компании",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit#gid=0"
         },
         "columns": {
           "mappingMode": "autoMapInputData",
@@ -2710,17 +2710,17 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA",
+          "value": "1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y",
           "mode": "list",
           "cachedResultName": "Лиды компаний",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "Компании",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1c5uhlu79eVVGc_YWR1Af4a67w2JyrEVwSYzkGXG4nGA/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y/edit#gid=0"
         },
         "columns": {
           "mappingMode": "autoMapInputData",
