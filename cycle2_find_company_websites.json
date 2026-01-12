@@ -1,0 +1,414 @@
+{
+  "name": "Цикл 2 - Поиск сайтов компаний",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ],
+      "id": "cycle2-trigger",
+      "name": "Каждые 10 минут"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y",
+          "mode": "list",
+          "cachedResultName": "Лиды компаний"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=1305865408",
+          "mode": "list",
+          "cachedResultName": "Запросы"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Статус выполнения",
+              "lookupValue": "0"
+            }
+          ]
+        },
+        "options": {
+          "rangeDefinition": "specifyRangeA1",
+          "range": "A:B"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        460,
+        300
+      ],
+      "id": "read-queries",
+      "name": "Прочитать запросы"
+    },
+    {
+      "parameters": {
+        "options": {
+          "batchSize": 1
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        680,
+        300
+      ],
+      "id": "loop-queries",
+      "name": "Цикл по запросам"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_PERPLEXITY_API_KEY_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"sonar-pro\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Ты поисковый ассистент. Твоя задача - найти официальные сайты компаний по поисковому запросу. Верни результат СТРОГО в JSON формате без дополнительных комментариев:\\n{\\n  \\\"companies\\\": [\\n    {\\n      \\\"name\\\": \\\"Название компании\\\",\\n      \\\"website\\\": \\\"https://example.com\\\",\\n      \\\"city\\\": \\\"Город\\\"\\n    }\\n  ]\\n}\\nНайди от 3 до 10 компаний. Если не можешь найти - верни пустой массив. НЕ добавляй пояснений, только JSON.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"={{ 'Найди официальные сайты компаний по запросу: ' + $json['Запросы'] }}\"\n    }\n  ],\n  \"max_tokens\": 2000,\n  \"temperature\": 0.1,\n  \"top_p\": 0.9,\n  \"return_images\": false,\n  \"return_related_questions\": false,\n  \"search_recency_filter\": \"month\",\n  \"stream\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        300
+      ],
+      "id": "perplexity-search",
+      "name": "Perplexity - Поиск сайтов"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Perplexity response and extract companies\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  try {\n    // Get response content\n    const content = item.json.choices[0].message.content;\n    \n    // Try to parse JSON from response\n    let jsonData;\n    \n    // Remove markdown code blocks if present\n    const cleanContent = content.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n    \n    try {\n      jsonData = JSON.parse(cleanContent);\n    } catch (e) {\n      // Try to extract JSON from text\n      const jsonMatch = cleanContent.match(/\\{[\\s\\S]*\\}/);\n      if (jsonMatch) {\n        jsonData = JSON.parse(jsonMatch[0]);\n      } else {\n        console.log('Could not parse JSON from response:', cleanContent);\n        continue;\n      }\n    }\n    \n    // Extract companies\n    if (jsonData.companies && Array.isArray(jsonData.companies)) {\n      for (const company of jsonData.companies) {\n        if (company.website && company.name) {\n          results.push({\n            json: {\n              company_name: company.name,\n              website: company.website,\n              city: company.city || 'Не указан',\n              source_query: item.json.query || 'Unknown',\n              found_date: new Date().toISOString(),\n              status: 'new'\n            }\n          });\n        }\n      }\n    }\n  } catch (error) {\n    console.error('Error processing item:', error.message);\n  }\n}\n\nif (results.length === 0) {\n  console.log('No companies found');\n  return [{ json: { error: 'No companies found' } }];\n}\n\nconsole.log(`Found ${results.length} companies`);\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        300
+      ],
+      "id": "parse-results",
+      "name": "Извлечь компании"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-companies",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        300
+      ],
+      "id": "check-results",
+      "name": "Есть результаты?"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y",
+          "mode": "list",
+          "cachedResultName": "Лиды компаний"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Компании"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Название компании": "={{ $json.company_name }}",
+            "Сайт": "={{ $json.website }}",
+            "Город": "={{ $json.city }}",
+            "Запрос": "={{ $json.source_query }}",
+            "Дата добавления": "={{ $json.found_date }}",
+            "Статус": "new"
+          },
+          "matchingColumns": ["Сайт"],
+          "schema": [
+            {
+              "id": "Название компании",
+              "displayName": "Название компании",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Сайт",
+              "displayName": "Сайт",
+              "required": false,
+              "defaultMatch": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Город",
+              "displayName": "Город",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Запрос",
+              "displayName": "Запрос",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Дата добавления",
+              "displayName": "Дата добавления",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Статус",
+              "displayName": "Статус",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        1560,
+        200
+      ],
+      "id": "save-companies",
+      "name": "Сохранить компании"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y",
+          "mode": "list",
+          "cachedResultName": "Лиды компаний"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=1305865408",
+          "mode": "list",
+          "cachedResultName": "Запросы"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Статус выполнения": "1"
+          },
+          "matchingColumns": ["Запросы"],
+          "schema": [
+            {
+              "id": "Запросы",
+              "displayName": "Запросы",
+              "required": false,
+              "defaultMatch": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Статус выполнения",
+              "displayName": "Статус выполнения",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        1780,
+        200
+      ],
+      "id": "update-query-status",
+      "name": "Обновить статус запроса"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        400
+      ],
+      "id": "no-results",
+      "name": "Нет результатов"
+    }
+  ],
+  "connections": {
+    "Каждые 10 минут": {
+      "main": [
+        [
+          {
+            "node": "Прочитать запросы",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Прочитать запросы": {
+      "main": [
+        [
+          {
+            "node": "Цикл по запросам",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Цикл по запросам": {
+      "main": [
+        [
+          {
+            "node": "Perplexity - Поиск сайтов",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perplexity - Поиск сайтов": {
+      "main": [
+        [
+          {
+            "node": "Извлечь компании",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Извлечь компании": {
+      "main": [
+        [
+          {
+            "node": "Есть результаты?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Есть результаты?": {
+      "main": [
+        [
+          {
+            "node": "Сохранить компании",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Нет результатов",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Сохранить компании": {
+      "main": [
+        [
+          {
+            "node": "Обновить статус запроса",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Обновить статус запроса": {
+      "main": [
+        [
+          {
+            "node": "Цикл по запросам",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Нет результатов": {
+      "main": [
+        [
+          {
+            "node": "Цикл по запросам",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1.0.0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "cycle2-find-websites"
+  },
+  "id": "cycle2-auto-generated",
+  "tags": []
+}
