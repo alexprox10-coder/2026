@@ -88,20 +88,42 @@
     },
     {
       "parameters": {
-        "workflowId": "aoLhlM4RwTZeYQs8TqiVN",
-        "options": {
-          "waitForSubWorkflow": true
-        }
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y",
+          "mode": "list",
+          "cachedResultName": "Лиды компаний"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=1305865408",
+          "mode": "list",
+          "cachedResultName": "Запросы"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Запросы": "={{ $json.query }}",
+            "Статус выполнения": "0"
+          }
+        },
+        "options": {}
       },
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.1,
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
       "position": [
         1180,
         300
       ],
-      "id": "call-main-workflow-005",
-      "name": "Вызвать главный workflow",
-      "notes": "Вызывает цикл 1 главного workflow для генерации и сохранения запросов"
+      "id": "add-to-sheets-005",
+      "name": "Добавить запрос в Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hcA6b5dWS2JjEtNT",
+          "name": "ТАБЛИЦА ПАРСЕР ВК + ОТПРАВКА КП"
+        }
+      }
     },
     {
       "parameters": {
@@ -116,13 +138,13 @@
             {
               "id": "message-output",
               "name": "message",
-              "value": "={{ 'Запросы успешно добавлены для города: ' + $('Извлечь параметры').item.json.city + ', тематика: ' + $('Извлечь параметры').item.json.theme }}",
+              "value": "={{ 'Запрос успешно добавлен: ' + $('Подготовить запрос').item.json.query + '. Cycle 2 автоматически найдет сайты компаний в течение 10-15 минут.' }}",
               "type": "string"
             },
             {
-              "id": "added-count",
-              "name": "added_queries",
-              "value": "={{ $json.data?.added_count || 'неизвестно' }}",
+              "id": "query-added",
+              "name": "query_text",
+              "value": "={{ $('Подготовить запрос').item.json.query }}",
               "type": "string"
             }
           ]
@@ -178,14 +200,14 @@
       "main": [
         [
           {
-            "node": "Вызвать главный workflow",
+            "node": "Добавить запрос в Google Sheets",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Вызвать главный workflow": {
+    "Добавить запрос в Google Sheets": {
       "main": [
         [
           {

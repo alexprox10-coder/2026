@@ -12,7 +12,7 @@
 **Проблема:** Использовалось "Название компании" вместо "Компания"
 **Решение:** Унифицировано название колонки - теперь везде "Компания"
 
-### 3. ⭐ Workflow IDs не совпадали (commit следующий)
+### 3. ⭐ Workflow IDs не совпадали (commit 5302eb4)
 **Файл:** `workflow_parsing_kp.json`
 **Проблема:** Все 4 workflow ID были неправильными
 **Решение:** Исправлены все ID на правильные из child workflow файлов
@@ -24,11 +24,23 @@
 | AgentLeadScrapInformationCompany | `L6rAP_leRTz7p69IopIUe` | `tBIq1jiaRl2lCLxw` |
 | AgentLeadMailGenerate | `yiTucUfF06Qc2rze` | `yiTucUfF0GQc2rze` |
 
+### 4. ⭐ AgentLeadAddQuery не добавлял данные в Google Sheets (commit следующий)
+**Файл:** `child_workflow_01_AgentLeadAddQuery.json`
+**Проблема:**
+- Workflow пытался вызвать несуществующий workflow с ID `aoLhlM4RwTZeYQs8TqiVN`
+- Вместо добавления запросов в Google Sheets напрямую
+- Пустая схема параметров в главном workflow
+
+**Решение:**
+- ✅ Заменён узел "Execute Workflow" на "Google Sheets" для прямой записи
+- ✅ Добавлена схема параметров: `query`, `city`, `theme`
+- ✅ Теперь запросы добавляются напрямую в лист "Запросы"
+
 ---
 
 ## ⚠️ ТРЕБУЕТСЯ ИСПРАВИТЬ
 
-### 4. API ключ Perplexity не настроен ⛔ КРИТИЧНО
+### 5. API ключ Perplexity не настроен ⛔ КРИТИЧНО
 **Файл:** `cycle2_find_company_websites.json` (строка 85)
 **Проблема:** Стоит плейсхолдер `"Bearer YOUR_PERPLEXITY_API_KEY_HERE"`
 **Решение:** Заменить на реальный API ключ Perplexity
@@ -133,3 +145,28 @@
 - Короче и проще
 - Уже используется в основном workflow
 - Меньше изменений требуется
+
+---
+
+## 📦 НОВЫЕ ФАЙЛЫ
+
+### Шаблоны Google Sheets (готовы к импорту)
+- **`google_sheets_template_companies.csv`** - шаблон листа "Компании" со всеми колонками
+- **`google_sheets_template_queries.csv`** - шаблон листа "Запросы"
+
+### Документация
+- **`GOOGLE_SHEETS_SETUP.md`** - полная инструкция по настройке Google Sheets
+  - Пошаговая настройка за 5 минут
+  - Описание всех колонок
+  - Как получить Document ID и Sheet gid
+  - Решение проблем
+  - Тесты для проверки
+
+---
+
+## 📝 ИТОГОВЫЕ КОММИТЫ
+
+1. **`552d84b`** - Fix AgentLeadAddSiteCompany schema
+2. **`7518303`** - Fix column names consistency
+3. **`5302eb4`** - Fix all workflow IDs
+4. **`следующий`** - Fix AgentLeadAddQuery + templates + docs
