@@ -1,17 +1,34 @@
 # 🔧 Список исправлений для n8n workflows
 
-## ✅ УЖЕ ИСПРАВЛЕНО (commit 552d84b)
+## ✅ УЖЕ ИСПРАВЛЕНО
 
-### 1. Схема параметров AgentLeadAddSiteCompany
+### 1. Схема параметров AgentLeadAddSiteCompany (commit 552d84b)
 **Файл:** `workflow_parsing_kp.json` (строки 1156-1183)
 **Проблема:** Пустая схема - AI Agent не мог передать параметры URL
 **Решение:** Добавлена схема с полями `site` (обязательное) и `company_name` (необязательное)
+
+### 2. Названия колонок в таблице (commit 7518303)
+**Файл:** `cycle2_find_company_websites.json`
+**Проблема:** Использовалось "Название компании" вместо "Компания"
+**Решение:** Унифицировано название колонки - теперь везде "Компания"
+
+### 3. ⭐ Workflow IDs не совпадали (commit следующий)
+**Файл:** `workflow_parsing_kp.json`
+**Проблема:** Все 4 workflow ID были неправильными
+**Решение:** Исправлены все ID на правильные из child workflow файлов
+
+| Workflow | Старый ID (❌ неверный) | Новый ID (✅ правильный) |
+|----------|------------------------|-------------------------|
+| AgentLeadAddQuery | `LC2hDAPDhk5brtWgFAEFf` | `rGzisLcNwx9C6O8R` |
+| AgentLeadAddSiteCompany | `DHP8ZGrF-fFTi8eOO_xpC7` | `yTGBgPSywgMc0But` |
+| AgentLeadScrapInformationCompany | `L6rAP_leRTz7p69IopIUe` | `tBIq1jiaRl2lCLxw` |
+| AgentLeadMailGenerate | `yiTucUfF06Qc2rze` | `yiTucUfF0GQc2rze` |
 
 ---
 
 ## ⚠️ ТРЕБУЕТСЯ ИСПРАВИТЬ
 
-### 2. API ключ Perplexity не настроен ⛔ КРИТИЧНО
+### 4. API ключ Perplexity не настроен ⛔ КРИТИЧНО
 **Файл:** `cycle2_find_company_websites.json` (строка 85)
 **Проблема:** Стоит плейсхолдер `"Bearer YOUR_PERPLEXITY_API_KEY_HERE"`
 **Решение:** Заменить на реальный API ключ Perplexity
@@ -26,72 +43,6 @@
 3. Или настроить через n8n UI: Settings → Credentials
 
 **Без этого исправления Cycle 2 (автоматический поиск сайтов каждые 10 минут) НЕ РАБОТАЕТ!**
-
----
-
-### 3. Несоответствие названий колонок в Google Sheets ⚠️ ВАЖНО
-**Файлы:**
-- `cycle2_find_company_websites.json` (строка 170)
-- `child_workflow_02_AgentLeadAddSiteCompany.json` (строка 97)
-
-**Проблема:** Разные названия колонки с именем компании:
-- Cycle 2 использует: `"Название компании"`
-- AgentLeadAddSiteCompany использует: `"Компания"`
-
-**Решение:** Выбрать ОДНО название и использовать везде.
-
-#### Вариант A: Использовать "Компания" (рекомендуется)
-Изменить в `cycle2_find_company_websites.json` строку 170:
-```json
-// Было:
-"Название компании": "={{ $json.company_name }}",
-
-// Должно быть:
-"Компания": "={{ $json.company_name }}",
-```
-
-И в строке 180-184 схемы:
-```json
-// Было:
-{
-  "id": "Название компании",
-  "displayName": "Название компании",
-  ...
-}
-
-// Должно быть:
-{
-  "id": "Компания",
-  "displayName": "Компания",
-  ...
-}
-```
-
-#### Вариант B: Использовать "Название компании"
-Изменить в `child_workflow_02_AgentLeadAddSiteCompany.json` строку 97:
-```json
-// Было:
-"Компания": "={{ $json.company_name || '' }}",
-
-// Должно быть:
-"Название компании": "={{ $json.company_name || '' }}",
-```
-
----
-
-### 4. Проверить ID workflows в n8n ℹ️ ВАЖНО
-
-**Файл:** `workflow_parsing_kp.json` (строки 1152)
-
-**Проблема:** ID workflow может не совпадать с вашим n8n instance
-
-Текущий ID: `"value": "DHP8ZGrF-fFTi8eOO_xpC7"`
-
-**Как проверить:**
-1. Откройте n8n
-2. Откройте workflow "AgentLeadAddSiteCompany"
-3. Посмотрите ID в URL: `https://your-n8n.com/workflow/[ID]`
-4. Если ID не совпадает - обновите в файле
 
 ---
 
