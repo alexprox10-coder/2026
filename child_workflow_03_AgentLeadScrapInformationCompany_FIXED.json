@@ -3,23 +3,16 @@
   "nodes": [
     {
       "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "field": "minutes",
-              "minutesInterval": 5
-            }
-          ]
-        }
+        "inputSource": "passthrough"
       },
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
       "position": [
         240,
         400
       ],
-      "id": "schedule-trigger-301",
-      "name": "Каждые 5 минут"
+      "id": "execute-trigger-301",
+      "name": "When Executed by Another Workflow"
     },
     {
       "parameters": {
@@ -375,7 +368,7 @@
   ],
   "pinData": {},
   "connections": {
-    "Каждые 5 минут": {
+    "When Executed by Another Workflow": {
       "main": [
         [
           {
