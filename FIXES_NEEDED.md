@@ -169,4 +169,27 @@
 1. **`552d84b`** - Fix AgentLeadAddSiteCompany schema
 2. **`7518303`** - Fix column names consistency
 3. **`5302eb4`** - Fix all workflow IDs
-4. **`следующий`** - Fix AgentLeadAddQuery + templates + docs
+4. **`d94ae34`** - Fix AgentLeadAddQuery + templates + docs
+
+---
+
+## ⚠️ ДОПОЛНИТЕЛЬНАЯ ПРОБЛЕМА: Rate Limiting
+
+### Симптом:
+Ошибка: **"The service is receiving too many requests from you"** в узле "Google Sheets1"
+
+### Причина:
+Узел "Google Sheets1" избыточно проверяет дубликаты через Google API, хотя уже есть узел "Remove Duplicates"
+
+### Решение:
+См. подробные инструкции в файле: **`FIX_RATE_LIMITING.md`**
+
+**Быстрое решение:** Удалить узлы "Google Sheets1" и "If" из главного workflow - они дублируют функционал "Remove Duplicates" и вызывают rate limiting.
+
+---
+
+## 📚 ДОКУМЕНТАЦИЯ
+
+- **`GOOGLE_SHEETS_SETUP.md`** - Настройка Google Sheets за 5 минут
+- **`FIX_RATE_LIMITING.md`** - Исправление ошибки "too many requests"
+- **`FIXES_NEEDED.md`** (этот файл) - Список всех исправлений
