@@ -1155,9 +1155,29 @@
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
-          "value": {},
+          "value": {
+            "site": "={{ $json.site || $json.url || $json.website }}",
+            "company_name": "={{ $json.company_name || $json.company || $json.name }}"
+          },
           "matchingColumns": [],
-          "schema": [],
+          "schema": [
+            {
+              "id": "site",
+              "displayName": "site",
+              "required": true,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false,
+              "type": "string"
+            },
+            {
+              "id": "company_name",
+              "displayName": "company_name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false,
+              "type": "string"
+            }
+          ],
           "attemptToConvertTypes": false,
           "convertFieldsToString": false
         }
