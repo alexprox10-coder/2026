@@ -167,7 +167,7 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "Название компании": "={{ $json.company_name }}",
+            "Компания": "={{ $json.company_name }}",
             "Сайт": "={{ $json.website }}",
             "Город": "={{ $json.city }}",
             "Запрос": "={{ $json.source_query }}",
@@ -177,8 +177,8 @@
           "matchingColumns": ["Сайт"],
           "schema": [
             {
-              "id": "Название компании",
-              "displayName": "Название компании",
+              "id": "Компания",
+              "displayName": "Компания",
               "required": false,
               "defaultMatch": false,
               "canBeUsedToMatch": false
