@@ -1,0 +1,382 @@
+{
+  "name": "AgentLeadAddQuery_FIXED",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        300,
+        300
+      ],
+      "id": "trigger-execute-workflow-001",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "query-param",
+              "name": "query",
+              "value": "={{ $json.query || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "city-param",
+              "name": "city",
+              "value": "={{ $json.city || 'Москва' }}",
+              "type": "string"
+            },
+            {
+              "id": "theme-param",
+              "name": "theme",
+              "value": "={{ $json.theme || $json.topic || 'строительство' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        520,
+        300
+      ],
+      "id": "extract-params-002",
+      "name": "Извлечь параметры"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "build-search-query",
+              "name": "search_query",
+              "value": "={{ $json.query || ($json.theme + ' компании ' + $json.city) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        740,
+        300
+      ],
+      "id": "build-query-003",
+      "name": "Построить поисковый запрос"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_PERPLEXITY_API_KEY_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"sonar-pro\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Ты поисковый ассистент. Твоя задача - найти компании по запросу и вернуть их данные в JSON формате.\\n\\nВЫХОДНОЙ ФОРМАТ (строго JSON, без комментариев):\\n{\\n  \\\"companies\\\": [\\n    {\\n      \\\"name\\\": \\\"Название компании\\\",\\n      \\\"website\\\": \\\"https://example.com\\\",\\n      \\\"city\\\": \\\"Город\\\",\\n      \\\"phone\\\": \\\"+7 XXX XXX-XX-XX\\\",\\n      \\\"email\\\": \\\"info@example.com\\\",\\n      \\\"description\\\": \\\"Краткое описание деятельности\\\"\\n    }\\n  ]\\n}\\n\\nТРЕБОВАНИЯ:\\n- Найди от 5 до 15 компаний\\n- Укажи РЕАЛЬНЫЕ контакты (телефон и email если найдешь)\\n- Укажи официальный сайт компании\\n- Если данных нет - оставь поле пустым\\n- НЕ добавляй пояснений, только JSON\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"={{ 'Найди компании: ' + $json.search_query }}\"\n    }\n  ],\n  \"max_tokens\": 3000,\n  \"temperature\": 0.1,\n  \"top_p\": 0.9,\n  \"return_images\": false,\n  \"return_related_questions\": false,\n  \"search_recency_filter\": \"month\",\n  \"stream\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        300
+      ],
+      "id": "perplexity-search-004",
+      "name": "Perplexity - Поиск компаний",
+      "notes": "ВАЖНО: Замените YOUR_PERPLEXITY_API_KEY_HERE на ваш реальный API ключ!\n\nАльтернативы если нет Perplexity:\n1. Claude API с WebSearch\n2. OpenAI GPT-4 с function calling\n3. Google Custom Search API"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Извлекаем компании из ответа Perplexity\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  try {\n    // Получаем контент из ответа\n    const content = item.json.choices[0].message.content;\n    \n    // Очищаем от markdown кода если есть\n    const cleanContent = content.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n    \n    // Парсим JSON\n    let jsonData;\n    try {\n      jsonData = JSON.parse(cleanContent);\n    } catch (e) {\n      // Пытаемся извлечь JSON из текста\n      const jsonMatch = cleanContent.match(/\\{[\\s\\S]*\\}/);\n      if (jsonMatch) {\n        jsonData = JSON.parse(jsonMatch[0]);\n      } else {\n        console.log('Не удалось распарсить JSON:', cleanContent);\n        continue;\n      }\n    }\n    \n    // Извлекаем компании\n    if (jsonData.companies && Array.isArray(jsonData.companies)) {\n      for (const company of jsonData.companies) {\n        if (company.name) {\n          results.push({\n            json: {\n              company_name: company.name,\n              website: company.website || '',\n              city: company.city || $('Извлечь параметры').item.json.city || 'Не указан',\n              phone: company.phone || '',\n              email: company.email || '',\n              description: company.description || '',\n              source_query: $('Построить поисковый запрос').item.json.search_query,\n              found_date: new Date().toISOString(),\n              status: 'new'\n            }\n          });\n        }\n      }\n    }\n  } catch (error) {\n    console.error('Ошибка обработки:', error.message);\n  }\n}\n\nif (results.length === 0) {\n  console.log('Компании не найдены');\n  return [{ \n    json: { \n      error: 'Компании не найдены',\n      query: $('Построить поисковый запрос').item.json.search_query\n    } \n  }];\n}\n\nconsole.log(`Найдено компаний: ${results.length}`);\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1180,
+        300
+      ],
+      "id": "extract-companies-005",
+      "name": "Извлечь данные компаний"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-companies-check",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        300
+      ],
+      "id": "check-companies-006",
+      "name": "Компании найдены?"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1dqpNAXH8HmK_kExVa2wMeHAeF35x8-MIXN0xQbNUk8Y",
+          "mode": "list",
+          "cachedResultName": "Лиды компаний"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Компании"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Компания": "={{ $json.company_name }}",
+            "Сайт": "={{ $json.website }}",
+            "Город": "={{ $json.city }}",
+            "Телефон": "={{ $json.phone }}",
+            "Почта": "={{ $json.email }}",
+            "Описание компании": "={{ $json.description }}",
+            "Запрос": "={{ $json.source_query }}",
+            "Дата добавления": "={{ $json.found_date }}",
+            "Статус получения данных": "new"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        1620,
+        200
+      ],
+      "id": "save-companies-007",
+      "name": "Сохранить компании в Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hcA6b5dWS2JjEtNT",
+          "name": "ТАБЛИЦА ПАРСЕР ВК + ОТПРАВКА КП"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "success-result",
+              "name": "success",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "companies-count",
+              "name": "companies_found",
+              "value": "={{ $('Извлечь данные компаний').all().length }}",
+              "type": "number"
+            },
+            {
+              "id": "message-result",
+              "name": "message",
+              "value": "={{ 'Найдено и сохранено компаний: ' + $('Извлечь данные компаний').all().length + '. Запрос: ' + $('Построить поисковый запрос').item.json.search_query }}",
+              "type": "string"
+            },
+            {
+              "id": "companies-data",
+              "name": "companies",
+              "value": "={{ JSON.stringify($('Извлечь данные компаний').all().map(item => item.json)) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        1840,
+        200
+      ],
+      "id": "format-success-008",
+      "name": "Сформировать успешный ответ"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "error-result",
+              "name": "success",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "error-message",
+              "name": "message",
+              "value": "={{ 'Компании не найдены для запроса: ' + $json.query }}",
+              "type": "string"
+            },
+            {
+              "id": "companies-zero",
+              "name": "companies_found",
+              "value": 0,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        1620,
+        400
+      ],
+      "id": "format-error-009",
+      "name": "Сформировать ответ об ошибке"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Извлечь параметры",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Извлечь параметры": {
+      "main": [
+        [
+          {
+            "node": "Построить поисковый запрос",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Построить поисковый запрос": {
+      "main": [
+        [
+          {
+            "node": "Perplexity - Поиск компаний",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perplexity - Поиск компаний": {
+      "main": [
+        [
+          {
+            "node": "Извлечь данные компаний",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Извлечь данные компаний": {
+      "main": [
+        [
+          {
+            "node": "Компании найдены?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Компании найдены?": {
+      "main": [
+        [
+          {
+            "node": "Сохранить компании в Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Сформировать ответ об ошибке",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Сохранить компании в Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Сформировать успешный ответ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "00000000-0000-0000-0000-000000000003",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "agent-lead-add-query-fixed-001"
+  },
+  "id": "AgentLeadAddQuery_FIXED_v1",
+  "tags": [
+    {
+      "id": "agent-tool-tag-001",
+      "name": "AgentTool"
+    },
+    {
+      "id": "fixed-workflow",
+      "name": "Fixed"
+    }
+  ]
+}
