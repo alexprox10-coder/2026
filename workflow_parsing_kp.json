@@ -1357,7 +1357,9 @@
     {
       "parameters": {
         "model": "anthropic/claude-3.7-sonnet",
-        "options": {}
+        "options": {
+          "maxTokens": 4096
+        }
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
       "typeVersion": 1,
@@ -1481,7 +1483,9 @@
     {
       "parameters": {
         "model": "anthropic/claude-3.7-sonnet",
-        "options": {}
+        "options": {
+          "maxTokens": 4096
+        }
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
       "typeVersion": 1,
@@ -2578,7 +2582,9 @@
     {
       "parameters": {
         "model": "qwen/qwen-plus",
-        "options": {}
+        "options": {
+          "maxTokens": 4096
+        }
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
       "typeVersion": 1,
