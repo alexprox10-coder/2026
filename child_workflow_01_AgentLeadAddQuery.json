@@ -3,7 +3,30 @@
   "nodes": [
     {
       "parameters": {
-        "inputSource": "passthrough"
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "query": {
+            "type": "string",
+            "displayName": "query",
+            "description": "Поисковый запрос или тема для поиска компаний",
+            "required": false,
+            "default": ""
+          },
+          "city": {
+            "type": "string",
+            "displayName": "city",
+            "description": "Город для поиска компаний",
+            "required": false,
+            "default": "Хабаровск"
+          },
+          "theme": {
+            "type": "string",
+            "displayName": "theme",
+            "description": "Тематика или индустрия компаний",
+            "required": false,
+            "default": "недвижимость"
+          }
+        }
       },
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
@@ -21,19 +44,19 @@
             {
               "id": "query-param",
               "name": "query",
-              "value": "={{ $json.query || '' }}",
+              "value": "={{ $('When Executed by Another Workflow').item.json.query || '' }}",
               "type": "string"
             },
             {
               "id": "city-param",
               "name": "city",
-              "value": "={{ $json.city || 'Хабаровск' }}",
+              "value": "={{ $('When Executed by Another Workflow').item.json.city || 'Хабаровск' }}",
               "type": "string"
             },
             {
               "id": "theme-param",
               "name": "theme",
-              "value": "={{ $json.theme || $json.topic || 'недвижимость' }}",
+              "value": "={{ $('When Executed by Another Workflow').item.json.theme || $('When Executed by Another Workflow').item.json.topic || 'недвижимость' }}",
               "type": "string"
             }
           ]
