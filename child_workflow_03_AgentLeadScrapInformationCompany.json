@@ -374,8 +374,7 @@
         300
       ],
       "id": "wait-308",
-      "name": "Пауза 3 сек",
-      "webhookId": "wait-hook-308"
+      "name": "Пауза 3 сек"
     },
     {
       "parameters": {
