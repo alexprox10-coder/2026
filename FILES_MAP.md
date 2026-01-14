@@ -2,7 +2,27 @@
 
 ## ✅ НОВЫЕ ИСПРАВЛЕННЫЕ WORKFLOWS (используйте их!)
 
-### 1. child_workflow_02_AgentLeadAddSiteCompany_FIXED.json
+### 1. child_workflow_01_AgentLeadAddQuery_FIXED.json 🆕
+**Статус:** 🆕 НОВЫЙ - АВТОМАТИЧЕСКИЙ ПОИСК!
+**Назначение:** Автоматический поиск сайтов компаний через Google
+**Размер:** ~20 KB
+**Что делает:**
+- Принимает поисковый запрос (отрасль, город, регион)
+- Ищет сайты компаний через Google (SerpAPI)
+- Фильтрует нерелевантные сайты (соцсети, доски объявлений)
+- Автоматически добавляет найденные сайты в CompanySites со статусом 0
+- Возвращает количество найденных сайтов
+
+**Импорт в n8n:**
+```bash
+Файл: child_workflow_01_AgentLeadAddQuery_FIXED.json
+```
+
+**Документация:** [SEARCH_COMPANIES_GUIDE.md](./SEARCH_COMPANIES_GUIDE.md)
+
+---
+
+### 2. child_workflow_02_AgentLeadAddSiteCompany_FIXED.json
 **Статус:** 🆕 НОВЫЙ - ИСПОЛЬЗУЙТЕ ЭТОТ!
 **Назначение:** Добавление сайтов компаний через webhook API
 **Размер:** 13 KB
@@ -20,7 +40,7 @@
 
 ---
 
-### 2. child_workflow_03_AgentLeadScrapInformationCompany_FIXED.json
+### 3. child_workflow_03_AgentLeadScrapInformationCompany_FIXED.json
 **Статус:** 🆕 НОВЫЙ - ИСПОЛЬЗУЙТЕ ЭТОТ!
 **Назначение:** Автоматический сбор данных с сайтов компаний
 **Размер:** 25 KB
@@ -35,6 +55,39 @@
 **Импорт в n8n:**
 ```bash
 Файл: child_workflow_03_AgentLeadScrapInformationCompany_FIXED.json
+```
+
+---
+
+## 🔄 ПОЛНЫЙ ЦИКЛ РАБОТЫ СИСТЕМЫ
+
+### Вариант А: Автоматический поиск (РЕКОМЕНДУЕТСЯ) 🆕
+
+```
+1. child_workflow_01
+   └─ Вы: отправляете запрос (отрасль, город)
+   └─ Система: ищет сайты в Google
+   └─ Результат: сайты добавлены в CompanySites (Status=0)
+
+2. child_workflow_03 (автоматически каждые 6 часов)
+   └─ Система: находит сайты со Status=0
+   └─ Система: собирает данные с помощью AI
+   └─ Результат: контакты в CompanyInformation (Status=2)
+
+3. Готово! 🎉
+   └─ У вас есть: название, ИНН, адрес, телефон, email
+```
+
+### Вариант Б: Ручное добавление
+
+```
+1. child_workflow_02
+   └─ Вы: добавляете URL сайта вручную
+   └─ Результат: сайт добавлен в CompanySites (Status=0)
+
+2. child_workflow_03 (автоматически)
+   └─ Система: собирает данные
+   └─ Результат: контакты в CompanyInformation
 ```
 
 ---
@@ -54,9 +107,13 @@
 | Файл | Описание |
 |------|----------|
 | **README.md** | 🆕 Обзор проекта и быстрый старт |
+| **FILES_MAP.md** | 🆕 ЭТОТ ФАЙЛ - карта всех файлов |
+| **SEARCH_COMPANIES_GUIDE.md** | 🆕 **АВТОПОИСК САЙТОВ** - настройка SerpAPI |
 | **COMPANY_SCRAPER_SYSTEM.md** | 🆕 Архитектура системы сбора данных |
 | **SETUP_INSTRUCTIONS.md** | 🆕 Пошаговая установка и настройка |
-| **FILES_MAP.md** | 🆕 ЭТОТ ФАЙЛ - карта всех файлов |
+| **GOOGLE_SHEETS_SETUP.md** | 🆕 Создание Google таблиц (шаблоны) |
+| **QUICK_FIX_EXISTING_TABLE.md** | 🆕 Адаптация существующей таблицы |
+| **WHERE_TO_FIND_FILES.md** | 🆕 Как найти файлы на GitHub |
 | **WORKFLOW_FIXES.md** | Исправления для новостного workflow |
 
 ---
@@ -68,17 +125,25 @@
 ✅ workflow_fixed.json
 ```
 
-### Вариант 2: Для сбора данных о компаниях
+### Вариант 2: Для сбора данных о компаниях (с автопоиском) 🆕 РЕКОМЕНДУЕТСЯ
 ```
-✅ child_workflow_02_AgentLeadAddSiteCompany_FIXED.json
-✅ child_workflow_03_AgentLeadScrapInformationCompany_FIXED.json
+✅ child_workflow_01_AgentLeadAddQuery_FIXED.json         (автопоиск сайтов)
+✅ child_workflow_02_AgentLeadAddSiteCompany_FIXED.json   (ручное добавление)
+✅ child_workflow_03_AgentLeadScrapInformationCompany_FIXED.json (сбор данных)
 ```
 
-### Вариант 3: Импортировать всё
+### Вариант 3: Только сбор данных (без поиска)
 ```
-✅ workflow_fixed.json
-✅ child_workflow_02_AgentLeadAddSiteCompany_FIXED.json
-✅ child_workflow_03_AgentLeadScrapInformationCompany_FIXED.json
+✅ child_workflow_02_AgentLeadAddSiteCompany_FIXED.json   (добавление сайтов)
+✅ child_workflow_03_AgentLeadScrapInformationCompany_FIXED.json (сбор данных)
+```
+
+### Вариант 4: Импортировать всё
+```
+✅ workflow_fixed.json                                     (новости)
+✅ child_workflow_01_AgentLeadAddQuery_FIXED.json         (автопоиск)
+✅ child_workflow_02_AgentLeadAddSiteCompany_FIXED.json   (ручное добавление)
+✅ child_workflow_03_AgentLeadScrapInformationCompany_FIXED.json (сбор данных)
 ```
 
 ---
