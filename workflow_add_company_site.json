@@ -1,0 +1,479 @@
+{
+  "name": "AgentLeadAddSiteCompany",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "add-company-site",
+        "options": {
+          "rawBody": false
+        },
+        "responseMode": "responseNode"
+      },
+      "id": "webhook-add-site",
+      "name": "📥 Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "add-company-site-webhook",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  try {\n    const data = item.json.body || item.json;\n    \n    let url = String(data.url || '').trim();\n    const companyName = String(data.company_name || '').trim();\n    const source = String(data.source || 'api').trim();\n    \n    // Валидация URL\n    if (!url) {\n      results.push({\n        json: {\n          success: false,\n          error: 'URL is required',\n          code: 'MISSING_URL'\n        }\n      });\n      continue;\n    }\n    \n    // Добавление протокола если отсутствует\n    if (!url.match(/^https?:\\/\\//i)) {\n      url = 'https://' + url;\n    }\n    \n    // Проверка валидности URL\n    try {\n      const urlObj = new URL(url);\n      \n      // Проверка на допустимые протоколы\n      if (!['http:', 'https:'].includes(urlObj.protocol)) {\n        results.push({\n          json: {\n            success: false,\n            error: 'Invalid URL protocol. Only HTTP and HTTPS are allowed',\n            code: 'INVALID_PROTOCOL'\n          }\n        });\n        continue;\n      }\n      \n      // Нормализация URL (удаление trailing slash)\n      url = urlObj.href.replace(/\\/$/, '');\n      \n    } catch (error) {\n      results.push({\n        json: {\n          success: false,\n          error: `Invalid URL format: ${error.message}`,\n          code: 'INVALID_URL'\n        }\n      });\n      continue;\n    }\n    \n    // Успешная валидация\n    results.push({\n      json: {\n        url: url,\n        company_name: companyName || 'Unknown',\n        source: source,\n        created_at: new Date().toISOString(),\n        status: 0,\n        validation: 'passed'\n      }\n    });\n    \n  } catch (error) {\n    results.push({\n      json: {\n        success: false,\n        error: `Processing error: ${error.message}`,\n        code: 'PROCESSING_ERROR'\n      }\n    });\n  }\n}\n\nreturn results;"
+      },
+      "id": "validate-url",
+      "name": "✅ Валидация URL",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        460,
+        300
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "validation-check",
+              "leftValue": "={{ $json.validation }}",
+              "rightValue": "passed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-validation",
+      "name": "✔️ Валидация OK?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        680,
+        300
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "CompanySites"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "URL",
+              "lookupValue": "={{ $json.url }}"
+            }
+          ]
+        },
+        "options": {
+          "valueRenderMode": "UNFORMATTED_VALUE"
+        }
+      },
+      "id": "check-duplicate",
+      "name": "🔍 Проверка дубликатов",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        900,
+        200
+      ],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0h17UZ4QJ4bHSSHp",
+          "name": "ПАРС ТГ НОВОСТИ"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-results",
+              "leftValue": "={{ $json.ID }}",
+              "operator": {
+                "type": "any",
+                "operation": "notExists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-not-exists",
+      "name": "🆕 Не существует?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        1120,
+        200
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "CompanySites"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "URL": "={{ $json.url }}",
+            "Company Name": "={{ $json.company_name }}",
+            "Status": "0",
+            "Created At": "={{ $json.created_at }}",
+            "Updated At": "={{ $json.created_at }}",
+            "Source": "={{ $json.source }}"
+          },
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "URL",
+              "displayName": "URL",
+              "required": true,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": true,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Created At",
+              "displayName": "Created At",
+              "required": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Updated At",
+              "displayName": "Updated At",
+              "required": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "add-to-sheet",
+      "name": "💾 Добавить в Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1340,
+        100
+      ],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0h17UZ4QJ4bHSSHp",
+          "name": "ПАРС ТГ НОВОСТИ"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "success",
+              "name": "success",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "value": "Site added successfully",
+              "type": "string"
+            },
+            {
+              "id": "url",
+              "name": "url",
+              "value": "={{ $('✅ Валидация URL').item.json.url }}",
+              "type": "string"
+            },
+            {
+              "id": "company_name",
+              "name": "company_name",
+              "value": "={{ $('✅ Валидация URL').item.json.company_name }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prepare-success-response",
+      "name": "📋 Успех",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1560,
+        100
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "success",
+              "name": "success",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "value": "Site already exists in database",
+              "type": "string"
+            },
+            {
+              "id": "url",
+              "name": "url",
+              "value": "={{ $('✅ Валидация URL').item.json.url }}",
+              "type": "string"
+            },
+            {
+              "id": "existing_id",
+              "name": "existing_id",
+              "value": "={{ $json.ID }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prepare-duplicate-response",
+      "name": "⚠️ Дубликат",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1340,
+        300
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "response",
+              "name": "response",
+              "value": "={{ $json }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prepare-error-response",
+      "name": "❌ Ошибка валидации",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        900,
+        400
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": "={{ $json.success ? 200 : 400 }}"
+        }
+      },
+      "id": "respond-webhook",
+      "name": "📤 Ответ",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        1780,
+        200
+      ],
+      "typeVersion": 1.1
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "📥 Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "✅ Валидация URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Валидация URL": {
+      "main": [
+        [
+          {
+            "node": "✔️ Валидация OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✔️ Валидация OK?": {
+      "main": [
+        [
+          {
+            "node": "🔍 Проверка дубликатов",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "❌ Ошибка валидации",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Проверка дубликатов": {
+      "main": [
+        [
+          {
+            "node": "🆕 Не существует?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🆕 Не существует?": {
+      "main": [
+        [
+          {
+            "node": "💾 Добавить в Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⚠️ Дубликат",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 Добавить в Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "📋 Успех",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Успех": {
+      "main": [
+        [
+          {
+            "node": "📤 Ответ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚠️ Дубликат": {
+      "main": [
+        [
+          {
+            "node": "📤 Ответ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❌ Ошибка валидации": {
+      "main": [
+        [
+          {
+            "node": "📤 Ответ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "workflow-add-company-site-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [
+    {
+      "name": "Lead Generation",
+      "createdAt": "2026-01-14T09:00:00.000Z"
+    }
+  ]
+}
