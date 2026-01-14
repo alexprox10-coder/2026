@@ -40,54 +40,81 @@
 
 ---
 
-### 3. child_workflow_03_AgentLeadScrapInformationCompany_FIXED.json
-**Статус:** 🆕 НОВЫЙ - ИСПОЛЬЗУЙТЕ ЭТОТ!
-**Назначение:** Автоматический сбор данных с сайтов компаний
-**Размер:** 25 KB
+### 3. child_workflow_03_AgentLeadScrapInformationCompany_FIXED_v2.json 🆕
+**Статус:** 🆕 НОВЫЙ - ПО ЗАПРОСУ!
+**Назначение:** Сбор данных с сайтов компаний **ПО ВАШЕМУ ЗАПРОСУ**
+**Размер:** 30 KB
 **Что делает:**
-- Запускается каждые 6 часов
-- Выбирает сайты со статусом 0
+- Запускается webhook-запросом `/start-scraping` (НЕ автоматически!)
+- Выбирает сайты со статусом 0 (до 20 штук)
 - Загружает HTML
-- Использует AI (Claude) для извлечения данных
+- Использует AI (Google Gemini - бесплатно!) для извлечения данных
 - Сохраняет в базу CompanyInformation
 - Обновляет статус (2=успех, 3=ошибка)
 
 **Импорт в n8n:**
 ```bash
-Файл: child_workflow_03_AgentLeadScrapInformationCompany_FIXED.json
+Файл: child_workflow_03_AgentLeadScrapInformationCompany_FIXED_v2.json
 ```
 
 ---
 
-## 🔄 ПОЛНЫЙ ЦИКЛ РАБОТЫ СИСТЕМЫ
+### 4. child_workflow_04_AgentLeadMailGenerate.json 🆕
+**Статус:** 🆕 НОВЫЙ - ГЕНЕРАЦИЯ ПРЕДЛОЖЕНИЙ!
+**Назначение:** Создание персональных коммерческих предложений
+**Размер:** 25 KB
+**Что делает:**
+- Запускается webhook-запросом `/generate-proposals`
+- Читает компании из CompanyInformation
+- Фильтрует только те, у кого есть email
+- AI генерирует уникальное предложение для каждой компании
+- Сохраняет черновики в EmailDrafts
 
-### Вариант А: Автоматический поиск (РЕКОМЕНДУЕТСЯ) 🆕
+**Импорт в n8n:**
+```bash
+Файл: child_workflow_04_AgentLeadMailGenerate.json
+```
+
+---
+
+## 🔄 ПОЛНЫЙ ЦИКЛ РАБОТЫ СИСТЕМЫ (ВСЕ ПО ЗАПРОСУ!) 🆕
+
+### Вариант А: Полный автоматический поиск → персональные предложения (РЕКОМЕНДУЕТСЯ) 🆕
 
 ```
-1. child_workflow_01
+1. child_workflow_01 (ПО ВАШЕМУ ЗАПРОСУ!)
    └─ Вы: отправляете запрос (отрасль, город)
    └─ Система: ищет сайты в Google
    └─ Результат: сайты добавлены в CompanySites (Status=0)
 
-2. child_workflow_03 (автоматически каждые 6 часов)
-   └─ Система: находит сайты со Status=0
-   └─ Система: собирает данные с помощью AI
+2. child_workflow_03_v2 (ПО ВАШЕМУ ЗАПРОСУ!)
+   └─ Вы: запускаете через webhook /start-scraping
+   └─ Система: собирает данные с помощью AI (Google Gemini)
    └─ Результат: контакты в CompanyInformation (Status=2)
 
-3. Готово! 🎉
-   └─ У вас есть: название, ИНН, адрес, телефон, email
+3. child_workflow_04 (ПО ВАШЕМУ ЗАПРОСУ!)
+   └─ Вы: запускаете через webhook /generate-proposals
+   └─ Система: генерирует персональные предложения
+   └─ Результат: черновики писем в EmailDrafts
+
+4. Готово! 🎉
+   └─ Проверяете черновики → отправляете письма
 ```
 
-### Вариант Б: Ручное добавление
+### Вариант Б: Ручное добавление + обработка
 
 ```
 1. child_workflow_02
    └─ Вы: добавляете URL сайта вручную
    └─ Результат: сайт добавлен в CompanySites (Status=0)
 
-2. child_workflow_03 (автоматически)
-   └─ Система: собирает данные
+2. child_workflow_03_v2 (ПО ЗАПРОСУ!)
+   └─ Вы: запускаете сбор данных
    └─ Результат: контакты в CompanyInformation
+
+3. child_workflow_04 (ПО ЗАПРОСУ!)
+   └─ Вы: генерируете предложения
+   └─ Результат: черновики в EmailDrafts
 ```
 
 ---
@@ -108,6 +135,7 @@
 |------|----------|
 | **README.md** | 🆕 Обзор проекта и быстрый старт |
 | **FILES_MAP.md** | 🆕 ЭТОТ ФАЙЛ - карта всех файлов |
+| **ON_DEMAND_WORKFLOW_GUIDE.md** | 🆕 **СИСТЕМА ПО ЗАПРОСУ** - полный цикл работы! |
 | **SEARCH_COMPANIES_GUIDE.md** | 🆕 **АВТОПОИСК САЙТОВ** - настройка SerpAPI |
 | **COMPANY_SCRAPER_SYSTEM.md** | 🆕 Архитектура системы сбора данных |
 | **SETUP_INSTRUCTIONS.md** | 🆕 Пошаговая установка и настройка |
@@ -125,25 +153,27 @@
 ✅ workflow_fixed.json
 ```
 
-### Вариант 2: Для сбора данных о компаниях (с автопоиском) 🆕 РЕКОМЕНДУЕТСЯ
+### Вариант 2: ПОЛНЫЙ ЦИКЛ - поиск → данные → предложения (РЕКОМЕНДУЕТСЯ) 🆕
 ```
-✅ child_workflow_01_AgentLeadAddQuery_FIXED.json         (автопоиск сайтов)
-✅ child_workflow_02_AgentLeadAddSiteCompany_FIXED.json   (ручное добавление)
-✅ child_workflow_03_AgentLeadScrapInformationCompany_FIXED.json (сбор данных)
+✅ child_workflow_01_AgentLeadAddQuery_FIXED.json                     (автопоиск сайтов)
+✅ child_workflow_02_AgentLeadAddSiteCompany_FIXED.json               (ручное добавление)
+✅ child_workflow_03_AgentLeadScrapInformationCompany_FIXED_v2.json   (сбор данных ПО ЗАПРОСУ)
+✅ child_workflow_04_AgentLeadMailGenerate.json                       (генерация предложений) 🆕
 ```
 
-### Вариант 3: Только сбор данных (без поиска)
+### Вариант 3: Только сбор данных (без поиска и предложений)
 ```
-✅ child_workflow_02_AgentLeadAddSiteCompany_FIXED.json   (добавление сайтов)
-✅ child_workflow_03_AgentLeadScrapInformationCompany_FIXED.json (сбор данных)
+✅ child_workflow_02_AgentLeadAddSiteCompany_FIXED.json               (добавление сайтов)
+✅ child_workflow_03_AgentLeadScrapInformationCompany_FIXED_v2.json   (сбор данных)
 ```
 
 ### Вариант 4: Импортировать всё
 ```
-✅ workflow_fixed.json                                     (новости)
-✅ child_workflow_01_AgentLeadAddQuery_FIXED.json         (автопоиск)
-✅ child_workflow_02_AgentLeadAddSiteCompany_FIXED.json   (ручное добавление)
-✅ child_workflow_03_AgentLeadScrapInformationCompany_FIXED.json (сбор данных)
+✅ workflow_fixed.json                                                (новости)
+✅ child_workflow_01_AgentLeadAddQuery_FIXED.json                     (автопоиск)
+✅ child_workflow_02_AgentLeadAddSiteCompany_FIXED.json               (ручное добавление)
+✅ child_workflow_03_AgentLeadScrapInformationCompany_FIXED_v2.json   (сбор данных)
+✅ child_workflow_04_AgentLeadMailGenerate.json                       (генерация предложений)
 ```
 
 ---
@@ -168,17 +198,27 @@
 1. Откройте n8n
 2. Нажмите "Import from File"
 3. Выберите:
-   - `child_workflow_02_AgentLeadAddSiteCompany_FIXED.json`
-   - `child_workflow_03_AgentLeadScrapInformationCompany_FIXED.json`
+   - `child_workflow_01_AgentLeadAddQuery_FIXED.json` (поиск)
+   - `child_workflow_02_AgentLeadAddSiteCompany_FIXED.json` (ручное добавление)
+   - `child_workflow_03_AgentLeadScrapInformationCompany_FIXED_v2.json` (сбор данных)
+   - `child_workflow_04_AgentLeadMailGenerate.json` (генерация предложений)
 
 ### Шаг 2: Настройка
-1. Создайте Google таблицу (см. SETUP_INSTRUCTIONS.md)
-2. Замените `YOUR_GOOGLE_SHEET_ID_HERE` на ваш ID
-3. Проверьте credentials (Google Sheets, Anthropic)
+1. Создайте Google таблицу с 3 листами (см. GOOGLE_SHEETS_SETUP.md):
+   - CompanySites
+   - CompanyInformation
+   - EmailDrafts 🆕
+2. Замените `YOUR_GOOGLE_SHEET_ID_HERE` на ваш ID во всех workflows
+3. Получите API ключи:
+   - Google Gemini API (бесплатно): https://aistudio.google.com/app/apikey
+   - SerpAPI (100 запросов/месяц бесплатно): https://serpapi.com
+4. Настройте credentials в n8n
 
 ### Шаг 3: Активация
-1. Активируйте оба workflow
-2. Добавьте первый сайт через API
+1. Активируйте все 4 workflows
+2. Запустите первый поиск компаний через webhook
+
+**📖 Подробная инструкция:** См. ON_DEMAND_WORKFLOW_GUIDE.md
 
 ---
 

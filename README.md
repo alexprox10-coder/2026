@@ -21,23 +21,30 @@
 
 ---
 
-### 2. Система сбора данных о компаниях
+### 2. Система сбора лидов и генерации предложений 🆕
 
-**Workflows:**
-- `child_workflow_02_AgentLeadAddSiteCompany_FIXED.json` - AgentLeadAddSiteCompany ✅ **ИСПОЛЬЗУЙТЕ ЭТОТ**
-- `child_workflow_03_AgentLeadScrapInformationCompany_FIXED.json` - AgentLeadScrapInformationCompany ✅ **ИСПОЛЬЗУЙТЕ ЭТОТ**
+**Workflows (все работают ПО ЗАПРОСУ!):**
+- `child_workflow_01_AgentLeadAddQuery_FIXED.json` - Автоматический поиск сайтов компаний ✅
+- `child_workflow_02_AgentLeadAddSiteCompany_FIXED.json` - Ручное добавление сайтов ✅
+- `child_workflow_03_AgentLeadScrapInformationCompany_FIXED_v2.json` - Сбор контактных данных ✅
+- `child_workflow_04_AgentLeadMailGenerate.json` - Генерация персональных предложений ✅ **НОВЫЙ**
 
 **Возможности:**
-- Добавление сайтов компаний через API или вручную
-- Автоматический сбор информации с сайтов компаний
-- AI-извлечение структурированных данных
-- Хранение в Google Sheets
-- Управление статусами обработки
+- 🔍 Автоматический поиск компаний через Google (SerpAPI)
+- 📝 Добавление сайтов компаний через API или вручную
+- 🤖 AI-сбор контактных данных **по вашему запросу** (Google Gemini - бесплатно!)
+- ✉️ Генерация персональных коммерческих предложений
+- 💾 Хранение всех данных в Google Sheets
+- 🎯 Полный контроль: каждый этап запускается когда нужно
 
-**Статус:** ✅ Новый функционал, готов к использованию
+**Полный цикл:** Поиск компаний → Сбор контактов → Персональные предложения → Готовые черновики
+
+**Статус:** ✅ Готова к использованию, работает на бесплатных API
 
 **Документация:**
-- [FILES_MAP.md](./FILES_MAP.md) - 🗺️ **НАЧНИТЕ ЗДЕСЬ** - навигация по файлам
+- [ON_DEMAND_WORKFLOW_GUIDE.md](./ON_DEMAND_WORKFLOW_GUIDE.md) - 🎯 **НАЧНИТЕ ЗДЕСЬ** - полная система по запросу
+- [FILES_MAP.md](./FILES_MAP.md) - 🗺️ навигация по файлам
+- [SEARCH_COMPANIES_GUIDE.md](./SEARCH_COMPANIES_GUIDE.md) - настройка автопоиска
 - [COMPANY_SCRAPER_SYSTEM.md](./COMPANY_SCRAPER_SYSTEM.md) - архитектура системы
 - [SETUP_INSTRUCTIONS.md](./SETUP_INSTRUCTIONS.md) - установка и настройка
 
@@ -52,16 +59,22 @@
 3. Проверьте credentials (Telegram, Google Sheets, Anthropic)
 4. Активируйте workflow
 
-### Для системы сбора данных о компаниях:
+### Для системы сбора лидов (ПОЛНЫЙ ЦИКЛ):
 
-1. **Сначала прочитайте:** [FILES_MAP.md](./FILES_MAP.md) - карта всех файлов проекта
-2. Создайте Google таблицу (инструкция в [SETUP_INSTRUCTIONS.md](./SETUP_INSTRUCTIONS.md))
-3. Импортируйте оба workflow (используйте версии с _FIXED):
-   - `child_workflow_02_AgentLeadAddSiteCompany_FIXED.json`
-   - `child_workflow_03_AgentLeadScrapInformationCompany_FIXED.json`
-4. Замените Google Sheets ID во всех узлах
-5. Активируйте workflows
-6. Добавьте первый сайт через API или вручную
+1. **Сначала прочитайте:** [ON_DEMAND_WORKFLOW_GUIDE.md](./ON_DEMAND_WORKFLOW_GUIDE.md) - полная инструкция 🎯
+2. Получите бесплатные API ключи:
+   - Google Gemini API: https://aistudio.google.com/app/apikey
+   - SerpAPI (100 запросов/месяц): https://serpapi.com
+3. Создайте Google таблицу с 3 листами: CompanySites, CompanyInformation, EmailDrafts
+4. Импортируйте все 4 workflows:
+   - `child_workflow_01_AgentLeadAddQuery_FIXED.json` (поиск)
+   - `child_workflow_02_AgentLeadAddSiteCompany_FIXED.json` (ручное добавление)
+   - `child_workflow_03_AgentLeadScrapInformationCompany_FIXED_v2.json` (сбор данных)
+   - `child_workflow_04_AgentLeadMailGenerate.json` (генерация предложений)
+5. Замените `YOUR_GOOGLE_SHEET_ID_HERE` во всех узлах
+6. Настройте ваши данные в workflow_04 (имя компании, услуги, контакты)
+7. Активируйте все workflows
+8. Запустите первый поиск через webhook `/add-search-query`
 
 ---
 
@@ -70,10 +83,14 @@
 | Файл | Описание |
 |------|----------|
 | [README.md](./README.md) | Этот файл - обзор проекта |
-| [FILES_MAP.md](./FILES_MAP.md) | 🗺️ **НАЧНИТЕ ЗДЕСЬ** - навигация по всем файлам |
+| [ON_DEMAND_WORKFLOW_GUIDE.md](./ON_DEMAND_WORKFLOW_GUIDE.md) | 🎯 **СИСТЕМА ПО ЗАПРОСУ** - полный цикл работы |
+| [FILES_MAP.md](./FILES_MAP.md) | 🗺️ Навигация по всем файлам |
+| [SEARCH_COMPANIES_GUIDE.md](./SEARCH_COMPANIES_GUIDE.md) | 🔍 Настройка автопоиска сайтов |
 | [WORKFLOW_FIXES.md](./WORKFLOW_FIXES.md) | Исправления новостного workflow |
-| [COMPANY_SCRAPER_SYSTEM.md](./COMPANY_SCRAPER_SYSTEM.md) | Архитектура системы сбора данных о компаниях |
+| [COMPANY_SCRAPER_SYSTEM.md](./COMPANY_SCRAPER_SYSTEM.md) | Архитектура системы сбора данных |
 | [SETUP_INSTRUCTIONS.md](./SETUP_INSTRUCTIONS.md) | Пошаговая установка и настройка |
+| [GOOGLE_SHEETS_SETUP.md](./GOOGLE_SHEETS_SETUP.md) | Создание Google таблиц |
+| [QUICK_FIX_EXISTING_TABLE.md](./QUICK_FIX_EXISTING_TABLE.md) | Адаптация существующей таблицы |
 
 ---
 
@@ -81,7 +98,9 @@
 
 - **n8n** - платформа автоматизации
 - **Google Sheets** - база данных
-- **Anthropic Claude Sonnet 4.5** - AI для анализа
+- **Google Gemini API** - AI для извлечения данных (бесплатно!)
+- **Anthropic Claude Sonnet 4.5** - AI для анализа новостей
+- **SerpAPI** - поиск компаний в Google
 - **Telegram API** - публикация новостей
 - **RSS Feeds** - источники новостей
 
@@ -109,9 +128,24 @@
 📱 Telegram + 💾 Google Sheets
 ```
 
-### Система сбора данных о компаниях
+### Система сбора лидов (ВСЕ ПО ЗАПРОСУ!)
 
-**Workflow 1: AgentLeadAddSiteCompany**
+**Workflow 1: AgentLeadAddQuery (Поиск компаний) 🆕**
+```
+📥 Webhook (POST /add-search-query)
+  ↓
+📝 Подготовить поисковые запросы
+  ↓
+🔍 Google Search (SerpAPI)
+  ↓
+🌐 Извлечь сайты, фильтровать (соцсети, доски)
+  ↓
+💾 Добавление в CompanySites (status=0)
+  ↓
+📤 Ответ: найдено X сайтов
+```
+
+**Workflow 2: AgentLeadAddSiteCompany (Ручное добавление)**
 ```
 📥 Webhook (POST /add-company-site)
   ↓
@@ -119,16 +153,16 @@
   ↓
 🔍 Проверка дубликатов
   ↓
-💾 Добавление в Google Sheets (status=0)
+💾 Добавление в CompanySites (status=0)
   ↓
 📤 Ответ API
 ```
 
-**Workflow 2: AgentLeadScrapInformationCompany**
+**Workflow 3: AgentLeadScrapInformationCompany_v2 (Сбор данных) 🆕**
 ```
-⏰ Таймер (6 часов)
+📥 Webhook (POST /start-scraping) - ПО ЗАПРОСУ!
   ↓
-📋 Получить сайты (status=0)
+📋 Получить сайты (status=0, лимит 20)
   ↓
 📝 Обновить status → 1
   ↓
@@ -136,26 +170,64 @@
   ↓
 🧹 Очистить HTML
   ↓
-🤖 AI извлечение данных
+🤖 AI извлечение данных (Google Gemini)
   ↓
 💾 Сохранить в CompanyInformation
   ↓
 ✅ Обновить status → 2 (успех) или 3 (ошибка)
 ```
 
+**Workflow 4: AgentLeadMailGenerate (Генерация предложений) 🆕**
+```
+📥 Webhook (POST /generate-proposals) - ПО ЗАПРОСУ!
+  ↓
+📋 Получить компании из CompanyInformation
+  ↓
+📧 Фильтр: только с email
+  ↓
+🤖 AI генерирует для каждой компании:
+   ├─ Персональную тему письма
+   └─ Уникальный текст предложения
+  ↓
+💾 Сохранить черновики в EmailDrafts
+  ↓
+📤 Ответ: создано X черновиков
+```
+
 ---
 
 ## 🎯 Примеры использования
 
-### Добавление сайта компании через API:
+### 1. Поиск компаний в Google:
 
 ```bash
-curl -X POST https://your-n8n-instance.com/webhook/add-company-site \
+curl -X POST https://your-n8n.com/webhook/add-search-query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "агентство недвижимости",
+    "city": "Благовещенск",
+    "region": "Амурская область"
+  }'
+```
+
+**Ответ:**
+```json
+{
+  "success": true,
+  "websites_found": 15,
+  "message": "Search completed"
+}
+```
+
+### 2. Ручное добавление сайта:
+
+```bash
+curl -X POST https://your-n8n.com/webhook/add-company-site \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://amur-company.ru",
     "company_name": "Амурская компания",
-    "source": "api"
+    "source": "manual"
   }'
 ```
 
@@ -164,24 +236,43 @@ curl -X POST https://your-n8n-instance.com/webhook/add-company-site \
 {
   "success": true,
   "message": "Site added successfully",
-  "url": "https://amur-company.ru",
-  "company_name": "Амурская компания"
+  "url": "https://amur-company.ru"
 }
 ```
 
-### Массовый импорт сайтов:
+### 3. Запуск сбора данных:
 
-1. Подготовьте CSV:
-```csv
-URL,Company Name,Source
-https://company1.ru,Компания 1,import
-https://company2.ru,Компания 2,import
-https://company3.ru,Компания 3,import
+```bash
+curl -X POST https://your-n8n.com/webhook/start-scraping \
+  -H "Content-Type: application/json" \
+  -d '{}'
 ```
 
-2. Импортируйте в Google Sheets (лист CompanySites)
-3. Установите Status = 0 для всех строк
-4. Workflow автоматически обработает их
+**Ответ:**
+```json
+{
+  "success": true,
+  "companies_processed": 15,
+  "message": "Scraping completed"
+}
+```
+
+### 4. Генерация персональных предложений:
+
+```bash
+curl -X POST https://your-n8n.com/webhook/generate-proposals \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+**Ответ:**
+```json
+{
+  "success": true,
+  "emails_generated": 12,
+  "message": "Proposals generated successfully"
+}
+```
 
 ---
 
@@ -259,6 +350,15 @@ MIT License - свободное использование и модифика�
 ---
 
 ## 📅 История версий
+
+### v2.0 (2026-01-14) 🆕
+- ✅ **ПОЛНЫЙ ЦИКЛ:** поиск → сбор данных → персональные предложения
+- ✅ Автоматический поиск компаний через Google (SerpAPI)
+- ✅ Генерация персональных коммерческих предложений с AI
+- ✅ Система работает **ПО ЗАПРОСУ** (webhook triggers)
+- ✅ Переход на Google Gemini API (бесплатная альтернатива Claude)
+- ✅ Добавлен лист EmailDrafts для черновиков писем
+- ✅ Обновлена вся документация с примерами API запросов
 
 ### v1.0 (2026-01-14)
 - ✅ Исправлен workflow агрегации новостей
