@@ -56,17 +56,16 @@
 
 ---
 
-### 3. child_workflow_03_AgentLeadScrapInformationCompany_FIXED_v2.json 🆕
-**Статус:** 🆕 НОВЫЙ - ПО ЗАПРОСУ!
+### 3a. child_workflow_03_AgentLeadScrapInformationCompany_FIXED_v2.json
+**Статус:** Использует Google Gemini (требует LangChain)
 **Назначение:** Сбор данных с сайтов компаний **ПО ВАШЕМУ ЗАПРОСУ**
 **Размер:** 30 KB
 **Что делает:**
 - Запускается webhook-запросом `/start-scraping` (НЕ автоматически!)
 - Выбирает сайты со статусом 0 (до 20 штук)
 - Загружает HTML
-- Использует AI (Google Gemini - бесплатно!) для извлечения данных
+- Использует AI (Google Gemini) для извлечения данных
 - Сохраняет в базу CompanyInformation
-- Обновляет статус (2=успех, 3=ошибка)
 
 **Импорт в n8n:**
 ```bash
@@ -75,21 +74,61 @@
 
 ---
 
-### 4. child_workflow_04_AgentLeadMailGenerate.json 🆕
-**Статус:** 🆕 НОВЫЙ - ГЕНЕРАЦИЯ ПРЕДЛОЖЕНИЙ!
+### 3b. child_workflow_03_AgentLeadScrapInformationCompany_Perplexity.json ⭐ РЕКОМЕНДУЕТСЯ!
+**Статус:** 🆕 PERPLEXITY AI - ПРОЩЕ И ДЕШЕВЛЕ!
+**Назначение:** Сбор данных с Perplexity AI
+**Размер:** 25 KB
+**Что делает:**
+- ✅ **ПРОЩЕ**: не нужны LangChain ноды
+- ✅ **$5 бесплатных кредитов** = ~5000 компаний!
+- ✅ Стоимость: $0.20 за 1M токенов
+- Работает точно так же как версия с Gemini
+- Простой HTTP Request вместо сложного LangChain
+
+**Импорт в n8n:**
+```bash
+Файл: child_workflow_03_AgentLeadScrapInformationCompany_Perplexity.json
+```
+
+**Документация:** [PERPLEXITY_API_SETUP.md](./PERPLEXITY_API_SETUP.md) ⭐ НАЧНИТЕ ЗДЕСЬ!
+
+---
+
+### 4a. child_workflow_04_AgentLeadMailGenerate.json
+**Статус:** Использует Google Gemini (требует LangChain)
 **Назначение:** Создание персональных коммерческих предложений
 **Размер:** 25 KB
 **Что делает:**
 - Запускается webhook-запросом `/generate-proposals`
 - Читает компании из CompanyInformation
 - Фильтрует только те, у кого есть email
-- AI генерирует уникальное предложение для каждой компании
+- AI (Gemini) генерирует уникальное предложение для каждой компании
 - Сохраняет черновики в EmailDrafts
 
 **Импорт в n8n:**
 ```bash
 Файл: child_workflow_04_AgentLeadMailGenerate.json
 ```
+
+---
+
+### 4b. child_workflow_04_AgentLeadMailGenerate_Perplexity.json ⭐ РЕКОМЕНДУЕТСЯ!
+**Статус:** 🆕 PERPLEXITY AI - ПРОЩЕ!
+**Назначение:** Генерация предложений с Perplexity AI
+**Размер:** 22 KB
+**Что делает:**
+- ✅ **ПРОЩЕ**: простой HTTP Request
+- ✅ **Включено в $5 кредитов!**
+- ✅ Лучше понимает контекст для писем
+- Создает персональные предложения
+- HTML форматирование писем
+
+**Импорт в n8n:**
+```bash
+Файл: child_workflow_04_AgentLeadMailGenerate_Perplexity.json
+```
+
+**Документация:** [PERPLEXITY_API_SETUP.md](./PERPLEXITY_API_SETUP.md)
 
 ---
 
@@ -152,7 +191,8 @@
 | **README.md** | 🆕 Обзор проекта и быстрый старт |
 | **FILES_MAP.md** | 🆕 ЭТОТ ФАЙЛ - карта всех файлов |
 | **ON_DEMAND_WORKFLOW_GUIDE.md** | 🆕 **СИСТЕМА ПО ЗАПРОСУ** - полный цикл работы! |
-| **GOOGLE_CUSTOM_SEARCH_SETUP.md** | 🆕 ⭐ **БЕСПЛАТНЫЙ ПОИСК** - настройка Google Custom Search (РЕКОМЕНДУЕТСЯ!) |
+| **PERPLEXITY_API_SETUP.md** | 🆕 ⭐ **PERPLEXITY AI** - простая настройка AI (РЕКОМЕНДУЕТСЯ!) |
+| **GOOGLE_CUSTOM_SEARCH_SETUP.md** | 🆕 ⭐ **БЕСПЛАТНЫЙ ПОИСК** - настройка Google Custom Search |
 | **SEARCH_COMPANIES_GUIDE.md** | 🆕 **АВТОПОИСК САЙТОВ** - настройка SerpAPI (платный) |
 | **COMPANY_SCRAPER_SYSTEM.md** | 🆕 Архитектура системы сбора данных |
 | **SETUP_INSTRUCTIONS.md** | 🆕 Пошаговая установка и настройка |
@@ -170,12 +210,24 @@
 ✅ workflow_fixed.json
 ```
 
-### Вариант 2: ПОЛНЫЙ ЦИКЛ - поиск → данные → предложения (РЕКОМЕНДУЕТСЯ) 🆕
+### Вариант 2A: ПОЛНЫЙ ЦИКЛ с Perplexity AI (САМЫЙ ПРОСТОЙ!) ⭐⭐⭐
 ```
-✅ child_workflow_01_AgentLeadAddQuery_GoogleCSE.json                 (автопоиск БЕСПЛАТНО!) ⭐
+✅ child_workflow_01_AgentLeadAddQuery_GoogleCSE.json                 (автопоиск БЕСПЛАТНО!)
 ✅ child_workflow_02_AgentLeadAddSiteCompany_FIXED.json               (ручное добавление)
-✅ child_workflow_03_AgentLeadScrapInformationCompany_FIXED_v2.json   (сбор данных ПО ЗАПРОСУ)
-✅ child_workflow_04_AgentLeadMailGenerate.json                       (генерация предложений) 🆕
+✅ child_workflow_03_AgentLeadScrapInformationCompany_Perplexity.json (сбор данных с Perplexity) ⭐
+✅ child_workflow_04_AgentLeadMailGenerate_Perplexity.json            (генерация с Perplexity) ⭐
+```
+**Почему выбрать этот вариант:**
+- ✅ Простая настройка (без LangChain)
+- ✅ $5 бесплатных кредитов = ~5000 компаний
+- ✅ Отличное качество
+
+### Вариант 2B: ПОЛНЫЙ ЦИКЛ с Google Gemini (требует LangChain)
+```
+✅ child_workflow_01_AgentLeadAddQuery_GoogleCSE.json                 (автопоиск БЕСПЛАТНО!)
+✅ child_workflow_02_AgentLeadAddSiteCompany_FIXED.json               (ручное добавление)
+✅ child_workflow_03_AgentLeadScrapInformationCompany_FIXED_v2.json   (сбор данных с Gemini)
+✅ child_workflow_04_AgentLeadMailGenerate.json                       (генерация с Gemini)
 ```
 
 ### Вариант 3: Только сбор данных (без поиска и предложений)
@@ -226,9 +278,13 @@
    - CompanyInformation
    - EmailDrafts 🆕
 2. Замените `YOUR_GOOGLE_SHEET_ID_HERE` на ваш ID во всех workflows
-3. Получите API ключи (ВСЕ БЕСПЛАТНО!):
-   - Google Custom Search API: См. GOOGLE_CUSTOM_SEARCH_SETUP.md ⭐
-   - Google Gemini API: https://aistudio.google.com/app/apikey
+3. Получите API ключи:
+   - **Вариант А (РЕКОМЕНДУЕТСЯ):**
+     - Google Custom Search: См. GOOGLE_CUSTOM_SEARCH_SETUP.md (100/день бесплатно)
+     - **Perplexity AI:** См. PERPLEXITY_API_SETUP.md ⭐ ($5 кредитов = 5000 компаний!)
+   - **Вариант Б:**
+     - Google Custom Search: См. GOOGLE_CUSTOM_SEARCH_SETUP.md
+     - Google Gemini API: https://aistudio.google.com/app/apikey
 4. Настройте credentials в n8n
 
 ### Шаг 3: Активация
