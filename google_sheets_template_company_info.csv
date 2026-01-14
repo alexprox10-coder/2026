@@ -1,0 +1,2 @@
+ID,Site ID,Company Name,INN,Address,Phone,Email,Description,Products/Services,Contact Person,Scraped At,Raw Data
+1,1,Пример Компания,1234567890,г. Благовещенск ул. Примерная 1,+7 (999) 123-45-67,info@example.ru,Пример описания компании,Услуги и товары,Иванов Иван Иванович,2026-01-14T10:00:00.000Z,"{""example"":""data""}"
