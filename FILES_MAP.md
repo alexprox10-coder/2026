@@ -2,16 +2,32 @@
 
 ## ✅ НОВЫЕ ИСПРАВЛЕННЫЕ WORKFLOWS (используйте их!)
 
-### 1. child_workflow_01_AgentLeadAddQuery_FIXED.json 🆕
-**Статус:** 🆕 НОВЫЙ - АВТОМАТИЧЕСКИЙ ПОИСК!
-**Назначение:** Автоматический поиск сайтов компаний через Google
+### 1a. child_workflow_01_AgentLeadAddQuery_GoogleCSE.json 🆕 ⭐ РЕКОМЕНДУЕТСЯ!
+**Статус:** 🆕 БЕСПЛАТНЫЙ ВАРИАНТ!
+**Назначение:** Автоматический поиск через Google Custom Search API
 **Размер:** ~20 KB
 **Что делает:**
+- ✅ **БЕСПЛАТНО** - 100 запросов в день навсегда!
+- ✅ Без кредитной карты
 - Принимает поисковый запрос (отрасль, город, регион)
-- Ищет сайты компаний через Google (SerpAPI)
-- Фильтрует нерелевантные сайты (соцсети, доски объявлений)
-- Автоматически добавляет найденные сайты в CompanySites со статусом 0
-- Возвращает количество найденных сайтов
+- Ищет сайты компаний через официальный Google API
+- Фильтрует нерелевантные сайты
+- Добавляет найденные сайты в CompanySites со статусом 0
+
+**Импорт в n8n:**
+```bash
+Файл: child_workflow_01_AgentLeadAddQuery_GoogleCSE.json
+```
+
+**Документация:** [GOOGLE_CUSTOM_SEARCH_SETUP.md](./GOOGLE_CUSTOM_SEARCH_SETUP.md) ⭐ НАЧНИТЕ ЗДЕСЬ!
+
+---
+
+### 1b. child_workflow_01_AgentLeadAddQuery_FIXED.json (альтернатива)
+**Статус:** Использует SerpAPI ($50/мес)
+**Назначение:** Автоматический поиск сайтов компаний через Google
+**Размер:** ~20 KB
+**Примечание:** Требует платный SerpAPI, используйте версию GoogleCSE вместо этой!
 
 **Импорт в n8n:**
 ```bash
@@ -136,7 +152,8 @@
 | **README.md** | 🆕 Обзор проекта и быстрый старт |
 | **FILES_MAP.md** | 🆕 ЭТОТ ФАЙЛ - карта всех файлов |
 | **ON_DEMAND_WORKFLOW_GUIDE.md** | 🆕 **СИСТЕМА ПО ЗАПРОСУ** - полный цикл работы! |
-| **SEARCH_COMPANIES_GUIDE.md** | 🆕 **АВТОПОИСК САЙТОВ** - настройка SerpAPI |
+| **GOOGLE_CUSTOM_SEARCH_SETUP.md** | 🆕 ⭐ **БЕСПЛАТНЫЙ ПОИСК** - настройка Google Custom Search (РЕКОМЕНДУЕТСЯ!) |
+| **SEARCH_COMPANIES_GUIDE.md** | 🆕 **АВТОПОИСК САЙТОВ** - настройка SerpAPI (платный) |
 | **COMPANY_SCRAPER_SYSTEM.md** | 🆕 Архитектура системы сбора данных |
 | **SETUP_INSTRUCTIONS.md** | 🆕 Пошаговая установка и настройка |
 | **GOOGLE_SHEETS_SETUP.md** | 🆕 Создание Google таблиц (шаблоны) |
@@ -155,7 +172,7 @@
 
 ### Вариант 2: ПОЛНЫЙ ЦИКЛ - поиск → данные → предложения (РЕКОМЕНДУЕТСЯ) 🆕
 ```
-✅ child_workflow_01_AgentLeadAddQuery_FIXED.json                     (автопоиск сайтов)
+✅ child_workflow_01_AgentLeadAddQuery_GoogleCSE.json                 (автопоиск БЕСПЛАТНО!) ⭐
 ✅ child_workflow_02_AgentLeadAddSiteCompany_FIXED.json               (ручное добавление)
 ✅ child_workflow_03_AgentLeadScrapInformationCompany_FIXED_v2.json   (сбор данных ПО ЗАПРОСУ)
 ✅ child_workflow_04_AgentLeadMailGenerate.json                       (генерация предложений) 🆕
@@ -170,7 +187,7 @@
 ### Вариант 4: Импортировать всё
 ```
 ✅ workflow_fixed.json                                                (новости)
-✅ child_workflow_01_AgentLeadAddQuery_FIXED.json                     (автопоиск)
+✅ child_workflow_01_AgentLeadAddQuery_GoogleCSE.json                 (автопоиск БЕСПЛАТНО!) ⭐
 ✅ child_workflow_02_AgentLeadAddSiteCompany_FIXED.json               (ручное добавление)
 ✅ child_workflow_03_AgentLeadScrapInformationCompany_FIXED_v2.json   (сбор данных)
 ✅ child_workflow_04_AgentLeadMailGenerate.json                       (генерация предложений)
@@ -198,7 +215,7 @@
 1. Откройте n8n
 2. Нажмите "Import from File"
 3. Выберите:
-   - `child_workflow_01_AgentLeadAddQuery_FIXED.json` (поиск)
+   - `child_workflow_01_AgentLeadAddQuery_GoogleCSE.json` (поиск БЕСПЛАТНО!) ⭐
    - `child_workflow_02_AgentLeadAddSiteCompany_FIXED.json` (ручное добавление)
    - `child_workflow_03_AgentLeadScrapInformationCompany_FIXED_v2.json` (сбор данных)
    - `child_workflow_04_AgentLeadMailGenerate.json` (генерация предложений)
@@ -209,9 +226,9 @@
    - CompanyInformation
    - EmailDrafts 🆕
 2. Замените `YOUR_GOOGLE_SHEET_ID_HERE` на ваш ID во всех workflows
-3. Получите API ключи:
-   - Google Gemini API (бесплатно): https://aistudio.google.com/app/apikey
-   - SerpAPI (100 запросов/месяц бесплатно): https://serpapi.com
+3. Получите API ключи (ВСЕ БЕСПЛАТНО!):
+   - Google Custom Search API: См. GOOGLE_CUSTOM_SEARCH_SETUP.md ⭐
+   - Google Gemini API: https://aistudio.google.com/app/apikey
 4. Настройте credentials в n8n
 
 ### Шаг 3: Активация
