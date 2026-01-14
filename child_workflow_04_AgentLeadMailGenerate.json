@@ -1,0 +1,379 @@
+{
+  "name": "AgentLeadMailGenerate",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-proposals",
+        "options": {
+          "rawBody": false
+        },
+        "responseMode": "responseNode"
+      },
+      "id": "webhook-trigger",
+      "name": "📥 Webhook - Generate Proposals",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        240,
+        400
+      ],
+      "webhookId": "generate-proposals-webhook",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "CompanyInformation"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {
+          "valueRenderMode": "UNFORMATTED_VALUE"
+        }
+      },
+      "id": "get-companies",
+      "name": "📋 Получить компании",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        460,
+        400
+      ],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0h17UZ4QJ4bHSSHp",
+          "name": "ПАРС ТГ НОВОСТИ"
+        }
+      },
+      "notes": "Получает все компании с собранными данными"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-email",
+              "leftValue": "={{ $json.Email }}",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filter-has-email",
+      "name": "✉️ Есть email?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        680,
+        400
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.item.json;\n\nconst yourCompanyInfo = {\n  name: 'Ваша Компания',\n  service: 'ваша услуга/продукт',\n  benefits: 'ключевые преимущества',\n  contactPerson: 'Ваше Имя',\n  position: 'Ваша Должность',\n  phone: '+7 (999) 123-45-67',\n  website: 'https://your-company.ru'\n};\n\nconst templateData = {\n  // Данные получателя\n  recipient_company: item['Company Name'] || 'Компания',\n  recipient_contact: item['Contact Person'] || 'Уважаемый(ая) коллега',\n  recipient_email: item['Email'],\n  recipient_phone: item['Phone'],\n  recipient_address: item['Address'],\n  recipient_description: item['Description'],\n  recipient_services: item['Products/Services'],\n  \n  // Данные вашей компании\n  sender_company: yourCompanyInfo.name,\n  sender_service: yourCompanyInfo.service,\n  sender_benefits: yourCompanyInfo.benefits,\n  sender_contact: yourCompanyInfo.contactPerson,\n  sender_position: yourCompanyInfo.position,\n  sender_phone: yourCompanyInfo.phone,\n  sender_website: yourCompanyInfo.website,\n  \n  // Мета-данные\n  site_id: item['Site ID'],\n  generated_at: new Date().toISOString()\n};\n\nreturn { json: templateData };"
+      },
+      "id": "prepare-template-data",
+      "name": "📝 Подготовить данные для шаблона",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        900,
+        300
+      ],
+      "typeVersion": 2,
+      "notes": "Измените данные yourCompanyInfo на свои!"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Создай персональное коммерческое предложение для компании.\\n\\nИнформация о получателе:\\n- Компания: ' + $json.recipient_company + '\\n- Контактное лицо: ' + $json.recipient_contact + '\\n- Деятельность: ' + $json.recipient_description + '\\n- Услуги/товары: ' + $json.recipient_services + '\\n- Адрес: ' + $json.recipient_address + '\\n\\nИнформация об отправителе:\\n- Компания: ' + $json.sender_company + '\\n- Услуга/продукт: ' + $json.sender_service + '\\n- Преимущества: ' + $json.sender_benefits + '\\n- Контакт: ' + $json.sender_contact + ', ' + $json.sender_position + '\\n- Телефон: ' + $json.sender_phone + '\\n- Сайт: ' + $json.sender_website + '\\n\\nСоздай профессиональное коммерческое предложение:\\n\\n1. ТЕМА ПИСЬМА (subject): Краткая и цепляющая (до 60 символов)\\n2. ТЕКСТ ПИСЬМА (body): \\n   - Персонализированное обращение\\n   - Показать понимание специфики их бизнеса\\n   - Четко объяснить ценность предложения\\n   - Конкретные выгоды для их компании\\n   - Призыв к действию\\n   - Профессиональная подпись\\n\\nВерни JSON:\\n{\\n  \"subject\": \"Тема письма\",\\n  \"body\": \"Текст письма в формате HTML\"\\n}\\n\\nТребования:\\n- Текст на русском языке\\n- HTML форматирование (p, br, strong, ul, li)\\n- Длина: 200-300 слов\\n- Тон: профессиональный, дружелюбный' }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Ты эксперт по созданию персонализированных коммерческих предложений B2B.\n\nТвоя задача:\n1. Проанализировать информацию о компании-получателе\n2. Создать уникальное предложение, учитывающее их специфику\n3. Подчеркнуть конкретные выгоды для их бизнеса\n4. Сделать письмо привлекательным и побуждающим к действию\n\nСтиль:\n- Профессиональный, но не формальный\n- Персонализированный\n- Ориентированный на выгоды получателя\n- Четкий call-to-action"
+        }
+      },
+      "id": "ai-generate-proposal",
+      "name": "🤖 AI Генерация предложения",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        1120,
+        300
+      ],
+      "typeVersion": 3.1
+    },
+    {
+      "parameters": {
+        "model": "gemini-1.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        500
+      ],
+      "id": "ai-model-gemini",
+      "name": "✨ Google Gemini",
+      "credentials": {
+        "googleGeminiApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\"type\":\"object\",\"properties\":{\"subject\":{\"type\":\"string\"},\"body\":{\"type\":\"string\"}},\"required\":[\"subject\",\"body\"]}",
+        "autoFix": true
+      },
+      "id": "json-parser",
+      "name": "🔧 JSON Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [
+        1040,
+        700
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "site_id",
+              "name": "site_id",
+              "value": "={{ $('📝 Подготовить данные для шаблона').item.json.site_id }}",
+              "type": "string"
+            },
+            {
+              "id": "company_name",
+              "name": "company_name",
+              "value": "={{ $('📝 Подготовить данные для шаблона').item.json.recipient_company }}",
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "name": "email",
+              "value": "={{ $('📝 Подготовить данные для шаблона').item.json.recipient_email }}",
+              "type": "string"
+            },
+            {
+              "id": "subject",
+              "name": "subject",
+              "value": "={{ $json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "body",
+              "name": "body",
+              "value": "={{ $json.body }}",
+              "type": "string"
+            },
+            {
+              "id": "generated_at",
+              "name": "generated_at",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "status",
+              "name": "status",
+              "value": "draft",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prepare-email-data",
+      "name": "📧 Подготовить email",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1340,
+        300
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "EmailDrafts"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Site ID": "={{ $json.site_id }}",
+            "Company Name": "={{ $json.company_name }}",
+            "Email": "={{ $json.email }}",
+            "Subject": "={{ $json.subject }}",
+            "Body": "={{ $json.body }}",
+            "Generated At": "={{ $json.generated_at }}",
+            "Status": "={{ $json.status }}"
+          },
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "save-draft",
+      "name": "💾 Сохранить в EmailDrafts",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1560,
+        300
+      ],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0h17UZ4QJ4bHSSHp",
+          "name": "ПАРС ТГ НОВОСТИ"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "id": "pause-between-generation",
+      "name": "⏳ Пауза 2 сек",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        1780,
+        300
+      ],
+      "typeVersion": 1.1,
+      "webhookId": "email-gen-pause"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "success",
+              "name": "success",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "value": "Proposals generated successfully",
+              "type": "string"
+            },
+            {
+              "id": "emails_generated",
+              "name": "emails_generated",
+              "value": "={{ $('📧 Подготовить email').itemCount }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "final-response",
+      "name": "📊 Финальный ответ",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        2000,
+        400
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-webhook",
+      "name": "📤 Ответ",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        2220,
+        400
+      ],
+      "typeVersion": 1.1
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "📥 Webhook - Generate Proposals": {
+      "main": [[{"node": "📋 Получить компании", "type": "main", "index": 0}]]
+    },
+    "📋 Получить компании": {
+      "main": [[{"node": "✉️ Есть email?", "type": "main", "index": 0}]]
+    },
+    "✉️ Есть email?": {
+      "main": [[{"node": "📝 Подготовить данные для шаблона", "type": "main", "index": 0}], []]
+    },
+    "📝 Подготовить данные для шаблона": {
+      "main": [[{"node": "🤖 AI Генерация предложения", "type": "main", "index": 0}]]
+    },
+    "🤖 AI Генерация предложения": {
+      "main": [[{"node": "📧 Подготовить email", "type": "main", "index": 0}]]
+    },
+    "✨ Google Gemini": {
+      "ai_languageModel": [[{"node": "🤖 AI Генерация предложения", "type": "ai_languageModel", "index": 0}]]
+    },
+    "🔧 JSON Parser": {
+      "ai_outputParser": [[{"node": "🤖 AI Генерация предложения", "type": "ai_outputParser", "index": 0}]]
+    },
+    "📧 Подготовить email": {
+      "main": [[{"node": "💾 Сохранить в EmailDrafts", "type": "main", "index": 0}]]
+    },
+    "💾 Сохранить в EmailDrafts": {
+      "main": [[{"node": "⏳ Пауза 2 сек", "type": "main", "index": 0}]]
+    },
+    "⏳ Пауза 2 сек": {
+      "main": [[{"node": "📊 Финальный ответ", "type": "main", "index": 0}]]
+    },
+    "📊 Финальный ответ": {
+      "main": [[{"node": "📤 Ответ", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "workflow-mail-generate-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [
+    {
+      "name": "Lead Generation",
+      "createdAt": "2026-01-14T13:00:00.000Z"
+    },
+    {
+      "name": "Email Marketing",
+      "createdAt": "2026-01-14T13:00:00.000Z"
+    }
+  ]
+}

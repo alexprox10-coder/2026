@@ -1,0 +1,685 @@
+{
+  "name": "AgentLeadScrapInformationCompany_OnDemand",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "start-scraping",
+        "options": {
+          "rawBody": false
+        },
+        "responseMode": "responseNode"
+      },
+      "id": "webhook-trigger",
+      "name": "📥 Webhook - Start Scraping",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        240,
+        400
+      ],
+      "webhookId": "start-scraping-webhook",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "CompanySites"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status",
+              "lookupValue": "0"
+            }
+          ]
+        },
+        "options": {
+          "valueRenderMode": "UNFORMATTED_VALUE"
+        }
+      },
+      "id": "get-pending-sites",
+      "name": "📋 Получить сайты (статус=0)",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        460,
+        400
+      ],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0h17UZ4QJ4bHSSHp",
+          "name": "ПАРС ТГ НОВОСТИ"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-sites",
+              "leftValue": "={{ $json.ID }}",
+              "operator": {
+                "type": "any",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-has-sites",
+      "name": "❓ Есть сайты?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        680,
+        400
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all().slice(0, 20);\nconsole.log(`🔄 Обработка ${items.length} сайтов`);\nreturn items.map(item => ({\n  json: {\n    ...item.json,\n    processing_started: new Date().toISOString()\n  }\n}));"
+      },
+      "id": "limit-batch",
+      "name": "🔢 Ограничить пакет (макс 20)",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        900,
+        300
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "CompanySites"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "1",
+            "Updated At": "={{ $json.processing_started }}"
+          },
+          "matchingColumns": [
+            "ID"
+          ],
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Updated At",
+              "displayName": "Updated At",
+              "required": false,
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "update-status-processing",
+      "name": "📝 Статус → 1 (обработка)",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1120,
+        300
+      ],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0h17UZ4QJ4bHSSHp",
+          "name": "ПАРС ТГ НОВОСТИ"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.URL }}",
+        "options": {
+          "timeout": 30000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": true,
+              "maxRedirects": 5
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "neverError": true
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
+          ]
+        }
+      },
+      "id": "fetch-html",
+      "name": "🌐 Загрузить HTML",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1340,
+        300
+      ],
+      "typeVersion": 4.2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-success",
+              "leftValue": "={{ $json.error }}",
+              "operator": {
+                "type": "any",
+                "operation": "notExists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-fetch-success",
+      "name": "✅ Загрузка успешна?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        1560,
+        300
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  try {\n    const html = item.json;\n    const metadata = item.json;\n    \n    let cleanText = String(html)\n      .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n      .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n      .replace(/<[^>]+>/g, ' ')\n      .replace(/&nbsp;/g, ' ')\n      .replace(/&quot;/g, '\"')\n      .replace(/&amp;/g, '&')\n      .replace(/&[a-z]+;/gi, ' ')\n      .replace(/\\s+/g, ' ')\n      .trim();\n    \n    cleanText = cleanText.substring(0, 15000);\n    \n    results.push({\n      json: {\n        site_id: metadata.ID,\n        url: metadata.URL,\n        company_name: metadata['Company Name'],\n        html_text: cleanText,\n        fetch_time: new Date().toISOString()\n      }\n    });\n    \n  } catch (error) {\n    console.error(`Ошибка обработки HTML: ${error.message}`);\n  }\n}\n\nreturn results;"
+      },
+      "id": "clean-html",
+      "name": "🧹 Очистить HTML",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1780,
+        200
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Проанализируй текст сайта компании и извлеки следующую информацию:\\n\\n' + $json.html_text + '\\n\\nИзвлеки данные:\\n- company_name: Название компании\\n- inn: ИНН (если есть)\\n- address: Адрес\\n- phone: Телефон(ы)\\n- email: Email\\n- description: Краткое описание деятельности (2-3 предложения)\\n- products_services: Основные товары/услуги (список)\\n- contact_person: Контактное лицо (если указано)\\n\\nВерни ТОЛЬКО валидный JSON без markdown блоков.' }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Ты эксперт по извлечению информации о компаниях с их веб-сайтов.\n\nТвоя задача:\n1. Проанализировать текст сайта компании\n2. Найти и извлечь ключевую информацию\n3. Вернуть структурированный JSON\n\nТребования:\n- Все тексты на русском языке\n- Если данные не найдены - возвращай пустые строки\n- Номера телефонов в формате +7 (XXX) XXX-XX-XX\n- Email в валидном формате"
+        }
+      },
+      "id": "ai-extract-data",
+      "name": "🤖 AI Извлечение данных",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        2000,
+        200
+      ],
+      "typeVersion": 3.1
+    },
+    {
+      "parameters": {
+        "model": "gemini-1.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        400
+      ],
+      "id": "ai-model-gemini",
+      "name": "✨ Google Gemini",
+      "credentials": {
+        "googleGeminiApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\"type\":\"object\",\"properties\":{\"company_name\":{\"type\":\"string\"},\"inn\":{\"type\":\"string\"},\"address\":{\"type\":\"string\"},\"phone\":{\"type\":\"string\"},\"email\":{\"type\":\"string\"},\"description\":{\"type\":\"string\"},\"products_services\":{\"type\":\"string\"},\"contact_person\":{\"type\":\"string\"}},\"required\":[\"company_name\"]}",
+        "autoFix": true
+      },
+      "id": "json-parser",
+      "name": "🔧 JSON Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [
+        1920,
+        600
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "site_id",
+              "name": "site_id",
+              "value": "={{ $('🧹 Очистить HTML').item.json.site_id }}",
+              "type": "string"
+            },
+            {
+              "id": "url",
+              "name": "url",
+              "value": "={{ $('🧹 Очистить HTML').item.json.url }}",
+              "type": "string"
+            },
+            {
+              "id": "company_name",
+              "name": "company_name",
+              "value": "={{ $json.company_name || $('🧹 Очистить HTML').item.json.company_name || 'Unknown' }}",
+              "type": "string"
+            },
+            {
+              "id": "inn",
+              "name": "inn",
+              "value": "={{ $json.inn || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "address",
+              "name": "address",
+              "value": "={{ $json.address || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "phone",
+              "name": "phone",
+              "value": "={{ $json.phone || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "name": "email",
+              "value": "={{ $json.email || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "description",
+              "name": "description",
+              "value": "={{ $json.description || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "products_services",
+              "name": "products_services",
+              "value": "={{ $json.products_services || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "contact_person",
+              "name": "contact_person",
+              "value": "={{ $json.contact_person || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "scraped_at",
+              "name": "scraped_at",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "raw_data",
+              "name": "raw_data",
+              "value": "={{ JSON.stringify($json) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prepare-company-data",
+      "name": "📋 Подготовка данных",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        2220,
+        200
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "CompanyInformation"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Site ID": "={{ $json.site_id }}",
+            "Company Name": "={{ $json.company_name }}",
+            "INN": "={{ $json.inn }}",
+            "Address": "={{ $json.address }}",
+            "Phone": "={{ $json.phone }}",
+            "Email": "={{ $json.email }}",
+            "Description": "={{ $json.description }}",
+            "Products/Services": "={{ $json.products_services }}",
+            "Contact Person": "={{ $json.contact_person }}",
+            "Scraped At": "={{ $json.scraped_at }}",
+            "Raw Data": "={{ $json.raw_data }}"
+          },
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "save-company-info",
+      "name": "💾 Сохранить в CompanyInformation",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        2440,
+        200
+      ],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0h17UZ4QJ4bHSSHp",
+          "name": "ПАРС ТГ НОВОСТИ"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "id": "pause-between-requests",
+      "name": "⏳ Пауза 3 сек",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        2660,
+        200
+      ],
+      "typeVersion": 1.1,
+      "webhookId": "scraper-pause"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "CompanySites"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "2",
+            "Updated At": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [
+            "ID"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "update-status-success",
+      "name": "✅ Статус → 2 (успех)",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        2880,
+        200
+      ],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0h17UZ4QJ4bHSSHp",
+          "name": "ПАРС ТГ НОВОСТИ"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.item;\n\nreturn {\n  json: {\n    site_id: item.json.ID,\n    url: item.json.URL,\n    error_message: item.json.error?.message || 'Failed to fetch HTML',\n    error_time: new Date().toISOString()\n  }\n};"
+      },
+      "id": "prepare-error-data",
+      "name": "❌ Подготовка ошибки",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1780,
+        400
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "CompanySites"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "3",
+            "Updated At": "={{ $json.error_time }}"
+          },
+          "matchingColumns": [
+            "ID"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "update-status-error",
+      "name": "⚠️ Статус → 3 (ошибка)",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        2000,
+        400
+      ],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0h17UZ4QJ4bHSSHp",
+          "name": "ПАРС ТГ НОВОСТИ"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "no-sites-noop",
+      "name": "🚫 Нет сайтов",
+      "type": "n8n-nodes-base.noOp",
+      "position": [
+        900,
+        500
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "success",
+              "name": "success",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "value": "Scraping completed",
+              "type": "string"
+            },
+            {
+              "id": "companies_processed",
+              "name": "companies_processed",
+              "value": "={{ $('📋 Подготовка данных').itemCount }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "final-response",
+      "name": "📊 Финальный ответ",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        3100,
+        300
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-webhook",
+      "name": "📤 Ответ",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        3320,
+        300
+      ],
+      "typeVersion": 1.1
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "📥 Webhook - Start Scraping": {
+      "main": [[{"node": "📋 Получить сайты (статус=0)", "type": "main", "index": 0}]]
+    },
+    "📋 Получить сайты (статус=0)": {
+      "main": [[{"node": "❓ Есть сайты?", "type": "main", "index": 0}]]
+    },
+    "❓ Есть сайты?": {
+      "main": [[{"node": "🔢 Ограничить пакет (макс 20)", "type": "main", "index": 0}], [{"node": "🚫 Нет сайтов", "type": "main", "index": 0}]]
+    },
+    "🔢 Ограничить пакет (макс 20)": {
+      "main": [[{"node": "📝 Статус → 1 (обработка)", "type": "main", "index": 0}]]
+    },
+    "📝 Статус → 1 (обработка)": {
+      "main": [[{"node": "🌐 Загрузить HTML", "type": "main", "index": 0}]]
+    },
+    "🌐 Загрузить HTML": {
+      "main": [[{"node": "✅ Загрузка успешна?", "type": "main", "index": 0}]]
+    },
+    "✅ Загрузка успешна?": {
+      "main": [[{"node": "🧹 Очистить HTML", "type": "main", "index": 0}], [{"node": "❌ Подготовка ошибки", "type": "main", "index": 0}]]
+    },
+    "🧹 Очистить HTML": {
+      "main": [[{"node": "🤖 AI Извлечение данных", "type": "main", "index": 0}]]
+    },
+    "🤖 AI Извлечение данных": {
+      "main": [[{"node": "📋 Подготовка данных", "type": "main", "index": 0}]]
+    },
+    "✨ Google Gemini": {
+      "ai_languageModel": [[{"node": "🤖 AI Извлечение данных", "type": "ai_languageModel", "index": 0}]]
+    },
+    "🔧 JSON Parser": {
+      "ai_outputParser": [[{"node": "🤖 AI Извлечение данных", "type": "ai_outputParser", "index": 0}]]
+    },
+    "📋 Подготовка данных": {
+      "main": [[{"node": "💾 Сохранить в CompanyInformation", "type": "main", "index": 0}]]
+    },
+    "💾 Сохранить в CompanyInformation": {
+      "main": [[{"node": "⏳ Пауза 3 сек", "type": "main", "index": 0}]]
+    },
+    "⏳ Пауза 3 сек": {
+      "main": [[{"node": "✅ Статус → 2 (успех)", "type": "main", "index": 0}]]
+    },
+    "✅ Статус → 2 (успех)": {
+      "main": [[{"node": "📊 Финальный ответ", "type": "main", "index": 0}]]
+    },
+    "❌ Подготовка ошибки": {
+      "main": [[{"node": "⚠️ Статус → 3 (ошибка)", "type": "main", "index": 0}]]
+    },
+    "⚠️ Статус → 3 (ошибка)": {
+      "main": [[{"node": "📊 Финальный ответ", "type": "main", "index": 0}]]
+    },
+    "🚫 Нет сайтов": {
+      "main": [[{"node": "📊 Финальный ответ", "type": "main", "index": 0}]]
+    },
+    "📊 Финальный ответ": {
+      "main": [[{"node": "📤 Ответ", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "workflow-scrap-on-demand-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [
+    {
+      "name": "Lead Generation",
+      "createdAt": "2026-01-14T12:30:00.000Z"
+    }
+  ]
+}
