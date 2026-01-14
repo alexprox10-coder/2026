@@ -24,8 +24,8 @@
 ### 2. Система сбора данных о компаниях
 
 **Workflows:**
-- `workflow_add_company_site.json` - AgentLeadAddSiteCompany
-- `workflow_scrap_company_info.json` - AgentLeadScrapInformationCompany
+- `child_workflow_02_AgentLeadAddSiteCompany_FIXED.json` - AgentLeadAddSiteCompany ✅ **ИСПОЛЬЗУЙТЕ ЭТОТ**
+- `child_workflow_03_AgentLeadScrapInformationCompany_FIXED.json` - AgentLeadScrapInformationCompany ✅ **ИСПОЛЬЗУЙТЕ ЭТОТ**
 
 **Возможности:**
 - Добавление сайтов компаний через API или вручную
@@ -37,6 +37,7 @@
 **Статус:** ✅ Новый функционал, готов к использованию
 
 **Документация:**
+- [FILES_MAP.md](./FILES_MAP.md) - 🗺️ **НАЧНИТЕ ЗДЕСЬ** - навигация по файлам
 - [COMPANY_SCRAPER_SYSTEM.md](./COMPANY_SCRAPER_SYSTEM.md) - архитектура системы
 - [SETUP_INSTRUCTIONS.md](./SETUP_INSTRUCTIONS.md) - установка и настройка
 
@@ -53,13 +54,14 @@
 
 ### Для системы сбора данных о компаниях:
 
-1. Создайте Google таблицу (инструкция в [SETUP_INSTRUCTIONS.md](./SETUP_INSTRUCTIONS.md))
-2. Импортируйте оба workflow:
-   - `workflow_add_company_site.json`
-   - `workflow_scrap_company_info.json`
-3. Замените Google Sheets ID во всех узлах
-4. Активируйте workflows
-5. Добавьте первый сайт через API или вручную
+1. **Сначала прочитайте:** [FILES_MAP.md](./FILES_MAP.md) - карта всех файлов проекта
+2. Создайте Google таблицу (инструкция в [SETUP_INSTRUCTIONS.md](./SETUP_INSTRUCTIONS.md))
+3. Импортируйте оба workflow (используйте версии с _FIXED):
+   - `child_workflow_02_AgentLeadAddSiteCompany_FIXED.json`
+   - `child_workflow_03_AgentLeadScrapInformationCompany_FIXED.json`
+4. Замените Google Sheets ID во всех узлах
+5. Активируйте workflows
+6. Добавьте первый сайт через API или вручную
 
 ---
 
@@ -68,6 +70,7 @@
 | Файл | Описание |
 |------|----------|
 | [README.md](./README.md) | Этот файл - обзор проекта |
+| [FILES_MAP.md](./FILES_MAP.md) | 🗺️ **НАЧНИТЕ ЗДЕСЬ** - навигация по всем файлам |
 | [WORKFLOW_FIXES.md](./WORKFLOW_FIXES.md) | Исправления новостного workflow |
 | [COMPANY_SCRAPER_SYSTEM.md](./COMPANY_SCRAPER_SYSTEM.md) | Архитектура системы сбора данных о компаниях |
 | [SETUP_INSTRUCTIONS.md](./SETUP_INSTRUCTIONS.md) | Пошаговая установка и настройка |
