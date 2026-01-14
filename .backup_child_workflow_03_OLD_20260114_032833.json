@@ -37,9 +37,7 @@
             }
           ]
         },
-        "options": {
-          "limit": 10
-        }
+        "options": {}
       },
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.4,
@@ -106,61 +104,6 @@
     },
     {
       "parameters": {
-        "url": "={{ $json.Сайт }}",
-        "options": {
-          "timeout": 10000,
-          "redirect": {
-            "redirect": {
-              "followRedirects": true,
-              "maxRedirects": 5
-            }
-          }
-        }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1100,
-        300
-      ],
-      "id": "fetch-html-311",
-      "name": "Загрузить HTML сайта",
-      "continueOnFail": true
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "check-html-success",
-              "leftValue": "={{ $json.error }}",
-              "rightValue": "",
-              "operator": {
-                "type": "any",
-                "operation": "notExists"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        1300,
-        300
-      ],
-      "id": "check-html-loaded-312",
-      "name": "HTML загружен?"
-    },
-    {
-      "parameters": {
         "method": "POST",
         "url": "https://api.anthropic.com/v1/messages",
         "sendHeaders": true,
@@ -182,17 +125,17 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"claude-3-5-sonnet-20241022\",\n  \"max_tokens\": 2048,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Проанализируй HTML код сайта компании и извлеки следующую информацию:\\n\\n1. Телефон (все найденные номера через запятую)\\n2. Email (все найденные email через запятую)\\n3. Краткое описание компании (1-2 предложения)\\n\\nHTML код (первые 15000 символов):\\n\\n{{ $('Загрузить HTML сайта').item.json.data.substring(0, 15000) }}\\n\\nВерни результат СТРОГО в JSON формате:\\n{\\n  \\\"phone\\\": \\\"телефон или пусто\\\",\\n  \\\"email\\\": \\\"email или пусто\\\",\\n  \\\"description\\\": \\\"описание\\\"\\n}\\n\\nВАЖНО:\\n- Если не найдено - пустая строка\\n- Только JSON, без комментариев\\n- Ищи телефон в форматах: +7, 8, (код) номер\\n- Ищи email с @\\n- Описание из meta description или заголовков\"\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"model\": \"claude-3-5-sonnet-20241022\",\n  \"max_tokens\": 2048,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Посети сайт {{ $json.Сайт }} и извлеки следующую информацию о компании:\\n\\n1. Телефон (все найденные номера через запятую)\\n2. Email (все найденные email через запятую)\\n3. Краткое описание компании (1-2 предложения о чем компания)\\n\\nВерни результат СТРОГО в JSON формате без дополнительных пояснений:\\n{\\n  \\\"phone\\\": \\\"телефон или пусто\\\",\\n  \\\"email\\\": \\\"email или пусто\\\",\\n  \\\"description\\\": \\\"описание компании\\\"\\n}\\n\\nВАЖНО:\\n- Если данные не найдены, пиши пустую строку\\n- Не добавляй комментариев, только JSON\\n- Ищи контакты на главной странице и странице 'Контакты'\\n- Для описания используй информацию из раздела 'О компании' или главной страницы\"\n    }\n  ]\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1500,
-        200
+        1120,
+        300
       ],
       "id": "claude-scrape-305",
-      "name": "Claude - Парсинг HTML",
+      "name": "Claude - Парсинг сайта",
       "credentials": {
         "anthropicApi": {
           "id": "FqPSgI0tNpkjQj2R",
@@ -207,24 +150,11 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1700,
-        200
+        1340,
+        300
       ],
       "id": "extract-data-306",
       "name": "Извлечь данные"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Обработка ошибки загрузки сайта\nconst previousData = $('Цикл по компаниям').item.json;\n\nreturn {\n  json: {\n    row_number: previousData.row_number || 0,\n    website: previousData.Сайт || previousData.website || '',\n    company_name: previousData.Компания || previousData.company_name || '',\n    phone: '',\n    email: '',\n    description: 'Ошибка загрузки сайта',\n    status: 1\n  }\n};"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1500,
-        400
-      ],
-      "id": "handle-error-313",
-      "name": "Обработка ошибки"
     },
     {
       "parameters": {
@@ -350,7 +280,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.4,
       "position": [
-        1900,
+        1560,
         300
       ],
       "id": "update-sheet-307",
@@ -370,7 +300,7 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        2100,
+        1780,
         300
       ],
       "id": "wait-308",
@@ -384,31 +314,19 @@
             {
               "id": "success-msg",
               "name": "message",
-              "value": "={{ 'Обработана компания: ' + $json.company_name + ' (' + $json.website + ')' }}",
+              "value": "={{ 'Обработана компания: ' + $('Извлечь данные').item.json.company_name + ' (' + $('Извлечь данные').item.json.website + ')' }}",
               "type": "string"
             },
             {
               "id": "phone-found",
               "name": "phone",
-              "value": "={{ $json.phone }}",
+              "value": "={{ $('Извлечь данные').item.json.phone }}",
               "type": "string"
             },
             {
               "id": "email-found",
               "name": "email",
-              "value": "={{ $json.email }}",
-              "type": "string"
-            },
-            {
-              "id": "company-name",
-              "name": "company_name",
-              "value": "={{ $json.company_name }}",
-              "type": "string"
-            },
-            {
-              "id": "website-url",
-              "name": "website",
-              "value": "={{ $json.website }}",
+              "value": "={{ $('Извлечь данные').item.json.email }}",
               "type": "string"
             }
           ]
@@ -418,7 +336,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.3,
       "position": [
-        2300,
+        2000,
         300
       ],
       "id": "log-success-309",
@@ -431,13 +349,7 @@
             {
               "id": "no-companies",
               "name": "message",
-              "value": "Нет компаний для обработки (все уже обработаны или статус не равен 0)",
-              "type": "string"
-            },
-            {
-              "id": "status-field",
-              "name": "status",
-              "value": "no_companies",
+              "value": "Нет компаний для обработки (все уже обработаны)",
               "type": "string"
             }
           ]
@@ -452,33 +364,6 @@
       ],
       "id": "no-companies-310",
       "name": "Нет компаний"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Собрать статистику по обработанным компаниям\nconst allItems = $input.all();\n\nlet totalProcessed = 0;\nlet withPhone = 0;\nlet withEmail = 0;\nlet failed = 0;\n\nconst companies = [];\n\nfor (const item of allItems) {\n  if (item.json.company_name) {\n    totalProcessed++;\n    if (item.json.phone) withPhone++;\n    if (item.json.email) withEmail++;\n    if (item.json.description === 'Ошибка загрузки сайта') failed++;\n    \n    companies.push({\n      name: item.json.company_name,\n      website: item.json.website,\n      phone: item.json.phone || 'не найден',\n      email: item.json.email || 'не найден'\n    });\n  }\n}\n\nreturn {\n  json: {\n    status: 'success',\n    message: `Обработано компаний: ${totalProcessed}. С телефоном: ${withPhone}. С email: ${withEmail}. Ошибок: ${failed}.`,\n    total_processed: totalProcessed,\n    with_phone: withPhone,\n    with_email: withEmail,\n    failed: failed,\n    companies: companies\n  }\n};"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2500,
-        300
-      ],
-      "id": "aggregate-results-314",
-      "name": "Собрать статистику"
-    },
-    {
-      "parameters": {
-        "respondWith": "allIncomingItems",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        2700,
-        400
-      ],
-      "id": "respond-webhook-315",
-      "name": "Вернуть результат"
     }
   ],
   "pinData": {},
@@ -527,50 +412,14 @@
       "main": [
         [
           {
-            "node": "Загрузить HTML сайта",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Собрать статистику",
+            "node": "Claude - Парсинг сайта",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Загрузить HTML сайта": {
-      "main": [
-        [
-          {
-            "node": "HTML загружен?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "HTML загружен?": {
-      "main": [
-        [
-          {
-            "node": "Claude - Парсинг HTML",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Обработка ошибки",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Claude - Парсинг HTML": {
+    "Claude - Парсинг сайта": {
       "main": [
         [
           {
@@ -582,17 +431,6 @@
       ]
     },
     "Извлечь данные": {
-      "main": [
-        [
-          {
-            "node": "Обновить Google Sheets",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Обработка ошибки": {
       "main": [
         [
           {
@@ -635,35 +473,13 @@
           }
         ]
       ]
-    },
-    "Нет компаний": {
-      "main": [
-        [
-          {
-            "node": "Вернуть результат",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Собрать статистику": {
-      "main": [
-        [
-          {
-            "node": "Вернуть результат",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
     }
   },
   "active": true,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "2",
+  "versionId": "1",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "scrap-info-instance"
