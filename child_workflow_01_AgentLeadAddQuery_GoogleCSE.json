@@ -1,0 +1,368 @@
+{
+  "name": "AgentLeadAddQuery (Google Custom Search)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "add-search-query",
+        "options": {
+          "rawBody": false
+        },
+        "responseMode": "responseNode"
+      },
+      "id": "webhook-add-query",
+      "name": "📥 Webhook - Add Query",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "add-search-query-webhook",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  try {\n    const data = item.json.body || item.json;\n    \n    const query = String(data.query || '').trim();\n    const city = String(data.city || 'Благовещенск').trim();\n    const region = String(data.region || 'Амурская область').trim();\n    const industry = String(data.industry || 'недвижимость').trim();\n    \n    if (!query) {\n      results.push({\n        json: {\n          success: false,\n          error: 'Query is required',\n          code: 'MISSING_QUERY'\n        }\n      });\n      continue;\n    }\n    \n    // Формируем поисковые запросы\n    const searchQueries = [\n      `${query} ${city} ${region} сайт`,\n      `${industry} ${city} ${region} контакты`,\n      `${query} ${city} официальный сайт`,\n      `${industry} компании ${city}`\n    ];\n    \n    results.push({\n      json: {\n        original_query: query,\n        city: city,\n        region: region,\n        industry: industry,\n        search_queries: searchQueries,\n        created_at: new Date().toISOString(),\n        status: 'pending'\n      }\n    });\n    \n  } catch (error) {\n    results.push({\n      json: {\n        success: false,\n        error: `Processing error: ${error.message}`,\n        code: 'PROCESSING_ERROR'\n      }\n    });\n  }\n}\n\nreturn results;"
+      },
+      "id": "prepare-queries",
+      "name": "📝 Подготовить запросы",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        460,
+        300
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "query",
+              "name": "query",
+              "value": "={{ $json.search_queries[0] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "split-queries",
+      "name": "📤 Split Queries",
+      "type": "n8n-nodes-base.splitOut",
+      "position": [
+        680,
+        300
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://www.googleapis.com/customsearch/v1",
+        "authentication": "none",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "YOUR_GOOGLE_API_KEY_HERE"
+            },
+            {
+              "name": "cx",
+              "value": "YOUR_CUSTOM_SEARCH_ENGINE_ID_HERE"
+            },
+            {
+              "name": "q",
+              "value": "={{ $json.query }}"
+            },
+            {
+              "name": "lr",
+              "value": "lang_ru"
+            },
+            {
+              "name": "gl",
+              "value": "ru"
+            },
+            {
+              "name": "num",
+              "value": "10"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "search-google",
+      "name": "🔍 Google Custom Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        900,
+        300
+      ],
+      "typeVersion": 4.2,
+      "notes": "Требует Google Custom Search API:\n1. API Key: https://console.cloud.google.com/apis/credentials\n2. Search Engine ID: https://programmablesearchengine.google.com\n\nБесплатно: 100 запросов/день",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  try {\n    const data = item.json;\n    \n    // Проверяем, есть ли результаты поиска\n    // Google Custom Search API возвращает items[], а не organic_results[]\n    if (!data.items || !Array.isArray(data.items)) {\n      console.log('No search results found');\n      \n      // Проверяем на ошибку API\n      if (data.error) {\n        console.error('API Error:', data.error.message);\n      }\n      \n      continue;\n    }\n    \n    // Извлекаем сайты из результатов\n    for (const result of data.items) {\n      const url = result.link;\n      const title = result.title || 'Unknown';\n      const snippet = result.snippet || '';\n      \n      if (!url) continue;\n      \n      // Фильтруем нерелевантные домены\n      const excludeDomains = [\n        'vk.com', 'facebook.com', 'instagram.com', 'youtube.com',\n        'avito.ru', '2gis.ru', 'yandex.ru', 'google.com',\n        'wikipedia.org', 'otzovik.com', 'irecommend.ru',\n        'zoon.ru', 'flamp.ru', 'yell.ru'\n      ];\n      \n      const hostname = new URL(url).hostname.replace('www.', '');\n      if (excludeDomains.some(domain => hostname.includes(domain))) {\n        continue;\n      }\n      \n      results.push({\n        json: {\n          url: url,\n          company_name: title,\n          description: snippet,\n          source: 'google_custom_search',\n          search_query: data.queries?.request?.[0]?.searchTerms || '',\n          found_at: new Date().toISOString(),\n          status: 0\n        }\n      });\n    }\n    \n  } catch (error) {\n    console.error(`Error processing search results: ${error.message}`);\n  }\n}\n\nconsole.log(`Found ${results.length} websites`);\nreturn results;"
+      },
+      "id": "extract-websites",
+      "name": "🌐 Extract Websites",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1120,
+        300
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "CompanySites"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "URL": "={{ $json.url }}",
+            "Company Name": "={{ $json.company_name }}",
+            "Status": "0",
+            "Created At": "={{ $json.found_at }}",
+            "Updated At": "={{ $json.found_at }}",
+            "Source": "={{ $json.source }}"
+          },
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "URL",
+              "displayName": "URL",
+              "required": true,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": true,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Created At",
+              "displayName": "Created At",
+              "required": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Updated At",
+              "displayName": "Updated At",
+              "required": false,
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "save-to-sheets",
+      "name": "💾 Save to CompanySites",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1340,
+        300
+      ],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "success",
+              "name": "success",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "value": "Search completed, websites added to database",
+              "type": "string"
+            },
+            {
+              "id": "websites_found",
+              "name": "websites_found",
+              "value": "={{ $('🌐 Extract Websites').itemCount }}",
+              "type": "number"
+            },
+            {
+              "id": "query",
+              "name": "query",
+              "value": "={{ $('📝 Подготовить запросы').item.json.original_query }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prepare-response",
+      "name": "📋 Prepare Response",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1560,
+        300
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": "200"
+        }
+      },
+      "id": "respond-webhook",
+      "name": "📤 Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        1780,
+        300
+      ],
+      "typeVersion": 1.1
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "📥 Webhook - Add Query": {
+      "main": [
+        [
+          {
+            "node": "📝 Подготовить запросы",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Подготовить запросы": {
+      "main": [
+        [
+          {
+            "node": "📤 Split Queries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 Split Queries": {
+      "main": [
+        [
+          {
+            "node": "🔍 Google Custom Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Google Custom Search": {
+      "main": [
+        [
+          {
+            "node": "🌐 Extract Websites",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌐 Extract Websites": {
+      "main": [
+        [
+          {
+            "node": "💾 Save to CompanySites",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 Save to CompanySites": {
+      "main": [
+        [
+          {
+            "node": "📋 Prepare Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Prepare Response": {
+      "main": [
+        [
+          {
+            "node": "📤 Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "workflow-search-companies-google-cse-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "Lead Generation",
+      "createdAt": "2026-01-14T12:00:00.000Z"
+    },
+    {
+      "name": "Google Custom Search",
+      "createdAt": "2026-01-14T12:00:00.000Z"
+    }
+  ]
+}
