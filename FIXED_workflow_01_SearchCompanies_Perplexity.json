@@ -1,0 +1,189 @@
+{
+  "name": "01 - Поиск компаний (Perplexity AI)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "search-companies",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [240, 300],
+      "webhookId": "search-companies-webhook",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "// Получаем данные из запроса\nconst query = $input.item.json.query || '';\nconst city = $input.item.json.city || 'Благовещенск';\nconst region = $input.item.json.region || 'Амурская область';\n\nif (!query) {\n  return {\n    json: {\n      error: true,\n      message: 'Запрос обязателен'\n    }\n  };\n}\n\n// Формируем поисковый запрос\nconst searchQuery = `Найди 10 сайтов компаний: ${query} в городе ${city}, ${region}. Верни список URL сайтов компаний в формате JSON массива: [{\"url\": \"https://site1.ru\", \"name\": \"Название компании\", \"description\": \"краткое описание\"}, ...]. Не включай социальные сети (vk.com, instagram.com и т.д.), маркетплейсы (avito, 2gis), справочники. Только официальные сайты компаний.`;\n\nreturn {\n  json: {\n    search_query: searchQuery,\n    original_query: query,\n    city: city,\n    region: region\n  }\n};"
+      },
+      "id": "prepare-query",
+      "name": "Подготовить запрос",
+      "type": "n8n-nodes-base.code",
+      "position": [460, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer YOUR_PERPLEXITY_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'llama-3.1-sonar-large-128k-online',\n  messages: [\n    {\n      role: 'system',\n      content: 'Ты поисковый ассистент. Твоя задача - найти сайты компаний по запросу пользователя и вернуть их в JSON формате. Используй онлайн поиск для актуальных результатов. Возвращай ТОЛЬКО валидный JSON массив без дополнительного текста и без markdown блоков. Формат: [{\"url\":\"https://site.ru\",\"name\":\"Название\",\"description\":\"описание\"}]'\n    },\n    {\n      role: 'user',\n      content: $json.search_query\n    }\n  ],\n  temperature: 0.3,\n  max_tokens: 2000\n}) }}",
+        "options": {}
+      },
+      "id": "perplexity-search",
+      "name": "Perplexity AI Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [680, 300],
+      "typeVersion": 4.2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Парсинг ответа от Perplexity AI\nconst response = $input.item.json;\nconst results = [];\n\ntry {\n  // Получаем ответ от AI\n  let aiContent = response.choices?.[0]?.message?.content || '[]';\n  \n  // Удаляем markdown блоки если есть\n  aiContent = aiContent.replace(/```json\\n?/g, '').replace(/```/g, '').trim();\n  \n  // Парсим JSON\n  let companies = [];\n  try {\n    companies = JSON.parse(aiContent);\n  } catch (parseError) {\n    console.error('Parse error:', parseError.message);\n    console.log('AI Content:', aiContent);\n    \n    // Пытаемся найти JSON массив в тексте\n    const jsonMatch = aiContent.match(/\\[\\{[^\\]]+\\}\\]/);\n    if (jsonMatch) {\n      companies = JSON.parse(jsonMatch[0]);\n    }\n  }\n  \n  // Проверяем что получили массив\n  if (!Array.isArray(companies)) {\n    companies = [];\n  }\n  \n  // Обрабатываем каждую компанию\n  for (const company of companies) {\n    let url = company.url || '';\n    \n    // Пропускаем невалидные URL\n    if (!url) continue;\n    \n    // Добавляем https:// если отсутствует\n    if (!url.match(/^https?:\\/\\//i)) {\n      url = 'https://' + url;\n    }\n    \n    // Фильтруем нерелевантные домены\n    const excludeDomains = [\n      'vk.com', 'facebook.com', 'instagram.com', 'youtube.com',\n      'avito.ru', '2gis.ru', 'yandex.ru', 'google.com',\n      'wikipedia.org', 'zoon.ru', 'flamp.ru', 'yell.ru'\n    ];\n    \n    try {\n      const hostname = new URL(url).hostname.replace('www.', '');\n      if (excludeDomains.some(d => hostname.includes(d))) {\n        continue;\n      }\n      \n      results.push({\n        json: {\n          url: url,\n          company_name: company.name || 'Unknown',\n          description: company.description || '',\n          source: 'perplexity_ai',\n          created_at: new Date().toISOString(),\n          status: 0\n        }\n      });\n    } catch (e) {\n      console.error('URL parse error:', e.message);\n      continue;\n    }\n  }\n  \n} catch (error) {\n  console.error('Error processing Perplexity response:', error.message);\n}\n\nif (results.length === 0) {\n  return [{\n    json: {\n      no_results: true,\n      message: 'Компании не найдены'\n    }\n  }];\n}\n\nreturn results;"
+      },
+      "id": "extract-sites",
+      "name": "Извлечь сайты",
+      "type": "n8n-nodes-base.code",
+      "position": [900, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "id": "has-url",
+              "leftValue": "={{ $json.url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-has-results",
+      "name": "Есть результаты?",
+      "type": "n8n-nodes-base.if",
+      "position": [1120, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "=YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "CompanySites"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "URL": "={{ $json.url }}",
+            "Company Name": "={{ $json.company_name }}",
+            "Status": "0",
+            "Created At": "={{ $json.created_at }}",
+            "Updated At": "={{ $json.created_at }}",
+            "Source": "perplexity_ai"
+          }
+        },
+        "options": {}
+      },
+      "id": "save-to-sheets",
+      "name": "Сохранить в Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [1340, 200],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Найдено ' + $('Извлечь сайты').all().length + ' компаний', count: $('Извлечь сайты').all().length } }}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Ответ - Успех",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1560, 200],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, message: 'Компании не найдены' } }}",
+        "options": {}
+      },
+      "id": "respond-no-results",
+      "name": "Ответ - Нет результатов",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1340, 400],
+      "typeVersion": 1.1
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Подготовить запрос", "type": "main", "index": 0}]]
+    },
+    "Подготовить запрос": {
+      "main": [[{"node": "Perplexity AI Search", "type": "main", "index": 0}]]
+    },
+    "Perplexity AI Search": {
+      "main": [[{"node": "Извлечь сайты", "type": "main", "index": 0}]]
+    },
+    "Извлечь сайты": {
+      "main": [[{"node": "Есть результаты?", "type": "main", "index": 0}]]
+    },
+    "Есть результаты?": {
+      "main": [
+        [{"node": "Сохранить в Google Sheets", "type": "main", "index": 0}],
+        [{"node": "Ответ - Нет результатов", "type": "main", "index": 0}]
+      ]
+    },
+    "Сохранить в Google Sheets": {
+      "main": [[{"node": "Ответ - Успех", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "workflow-01-search-perplexity"
+}
