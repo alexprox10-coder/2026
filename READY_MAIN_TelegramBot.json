@@ -1,0 +1,553 @@
+{
+  "name": "ГЛАВНЫЙ - Telegram Bot с AI Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"]
+      },
+      "id": "telegram-trigger",
+      "name": "📱 Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "position": [240, 400],
+      "webhookId": "telegram-bot-trigger",
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "message_text",
+              "name": "message_text",
+              "value": "={{ $json.message.text || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "chat_id",
+              "name": "chat_id",
+              "value": "={{ $json.message.chat.id }}",
+              "type": "number"
+            },
+            {
+              "id": "user_id",
+              "name": "user_id",
+              "value": "={{ $json.message.from.id }}",
+              "type": "number"
+            },
+            {
+              "id": "username",
+              "name": "username",
+              "value": "={{ $json.message.from.username || $json.message.from.first_name }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "extract-message",
+      "name": "📝 Извлечь сообщение",
+      "type": "n8n-nodes-base.set",
+      "position": [460, 400],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "caseSensitive": false,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-text",
+              "leftValue": "={{ $json.message_text }}",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-has-text",
+      "name": "💬 Есть текст?",
+      "type": "n8n-nodes-base.if",
+      "position": [680, 400],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "={{ $json.message_text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Ты - AI ассистент для поиска и сбора информации о компаниях.\n\nТвои функции:\n1. ПОИСК КОМПАНИЙ - используй инструмент 'search_companies' когда пользователь просит найти компании по запросу (например: 'найди агентства недвижимости в Благовещенске')\n2. ДОБАВЛЕНИЕ САЙТА - используй 'add_company_site' когда пользователь даёт конкретный URL сайта компании\n3. СБОР ДАННЫХ - используй 'scrape_company_data' когда пользователь просит собрать информацию с найденных сайтов\n4. ГЕНЕРАЦИЯ ПИСЕМ - используй 'generate_emails' когда пользователь просит создать коммерческие предложения\n\nПРИМЕРЫ ЗАПРОСОВ:\n- \"найди строительные компании в Благовещенске\" → search_companies\n- \"добавь сайт https://example.com\" → add_company_site\n- \"собери данные с сайтов\" → scrape_company_data\n- \"создай письма для компаний\" → generate_emails\n\nОтвечай кратко и по делу на русском языке."
+        }
+      },
+      "id": "ai-agent",
+      "name": "🤖 AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [900, 300],
+      "typeVersion": 1.7
+    },
+    {
+      "parameters": {
+        "name": "search_companies",
+        "description": "Ищет компании по запросу используя Google Custom Search. Параметры: query (что ищем), city (город), region (регион), industry (отрасль). Возвращает найденные сайты компаний.",
+        "method": "POST",
+        "url": "={{ $('📋 Настройки').item.json.webhook_search }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  query: $parameter['query'],\n  city: $parameter['city'] || 'Благовещенск',\n  region: $parameter['region'] || 'Амурская область',\n  industry: $parameter['industry'] || ''\n}) }}",
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "query",
+              "description": "Поисковый запрос (например: 'агентство недвижимости')",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "city",
+              "description": "Город поиска",
+              "type": "string",
+              "required": false
+            },
+            {
+              "name": "region",
+              "description": "Регион поиска",
+              "type": "string",
+              "required": false
+            },
+            {
+              "name": "industry",
+              "description": "Отрасль компаний",
+              "type": "string",
+              "required": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "tool-search",
+      "name": "🔍 Tool: Search Companies",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "position": [680, 180],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "name": "add_company_site",
+        "description": "Добавляет URL сайта компании в базу данных. Параметры: url (адрес сайта), company_name (название компании - необязательно). Возвращает статус добавления.",
+        "method": "POST",
+        "url": "={{ $('📋 Настройки').item.json.webhook_add }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  url: $parameter['url'],\n  company_name: $parameter['company_name'] || '',\n  source: 'telegram_bot'\n}) }}",
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "url",
+              "description": "URL сайта компании",
+              "type": "string",
+              "required": true
+            },
+            {
+              "name": "company_name",
+              "description": "Название компании (необязательно)",
+              "type": "string",
+              "required": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "tool-add-site",
+      "name": "➕ Tool: Add Site",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "position": [680, 220],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "name": "scrape_company_data",
+        "description": "Собирает контактные данные компаний с их сайтов (телефон, email, адрес, описание). Работает с сайтами со статусом 0 в базе. Возвращает количество обработанных компаний.",
+        "method": "POST",
+        "url": "={{ $('📋 Настройки').item.json.webhook_scrape }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={}",
+        "placeholderDefinitions": {
+          "values": []
+        },
+        "options": {}
+      },
+      "id": "tool-scrape",
+      "name": "📊 Tool: Scrape Data",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "position": [680, 260],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "name": "generate_emails",
+        "description": "Генерирует персонализированные коммерческие предложения для компаний в базе данных. Создаёт email с темой и текстом. Возвращает количество сгенерированных писем.",
+        "method": "POST",
+        "url": "={{ $('📋 Настройки').item.json.webhook_generate }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={}",
+        "placeholderDefinitions": {
+          "values": []
+        },
+        "options": {}
+      },
+      "id": "tool-generate",
+      "name": "✉️ Tool: Generate Emails",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "position": [680, 300],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "modelName": "gpt-4o-mini",
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "id": "openai-model",
+      "name": "🧠 OpenAI GPT-4o Mini",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [680, 140],
+      "typeVersion": 1.2,
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('📝 Извлечь сообщение').item.json.chat_id }}"
+      },
+      "id": "memory",
+      "name": "💭 Память разговора",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [680, 100],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "webhook_search",
+              "name": "webhook_search",
+              "value": "https://YOUR-N8N-URL/webhook/add-search-query",
+              "type": "string"
+            },
+            {
+              "id": "webhook_add",
+              "name": "webhook_add",
+              "value": "https://YOUR-N8N-URL/webhook/add-company-site",
+              "type": "string"
+            },
+            {
+              "id": "webhook_scrape",
+              "name": "webhook_scrape",
+              "value": "https://YOUR-N8N-URL/webhook/start-scraping",
+              "type": "string"
+            },
+            {
+              "id": "webhook_generate",
+              "name": "webhook_generate",
+              "value": "https://YOUR-N8N-URL/webhook/generate-proposals",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "config-webhooks",
+      "name": "📋 Настройки",
+      "type": "n8n-nodes-base.set",
+      "position": [460, 180],
+      "typeVersion": 3.4,
+      "notes": "⚠️ ВАЖНО: Замените все URL на ваши webhook URLs из child workflows!"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "response_text",
+              "name": "response_text",
+              "value": "={{ $json.output || 'Произошла ошибка при обработке запроса.' }}",
+              "type": "string"
+            },
+            {
+              "id": "chat_id",
+              "name": "chat_id",
+              "value": "={{ $('📝 Извлечь сообщение').item.json.chat_id }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prepare-response",
+      "name": "📤 Подготовить ответ",
+      "type": "n8n-nodes-base.set",
+      "position": [1120, 300],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.response_text }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-telegram",
+      "name": "📨 Отправить в Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1340, 300],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chat_id }}",
+        "text": "Пожалуйста, отправьте текстовое сообщение.",
+        "additionalFields": {}
+      },
+      "id": "send-error",
+      "name": "⚠️ Нет текста",
+      "type": "n8n-nodes-base.telegram",
+      "position": [900, 500],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "📱 Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "📝 Извлечь сообщение",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Извлечь сообщение": {
+      "main": [
+        [
+          {
+            "node": "💬 Есть текст?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📋 Настройки",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💬 Есть текст?": {
+      "main": [
+        [
+          {
+            "node": "🤖 AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⚠️ Нет текста",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 AI Agent": {
+      "main": [
+        [
+          {
+            "node": "📤 Подготовить ответ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Tool: Search Companies": {
+      "ai_tool": [
+        [
+          {
+            "node": "🤖 AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "➕ Tool: Add Site": {
+      "ai_tool": [
+        [
+          {
+            "node": "🤖 AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Tool: Scrape Data": {
+      "ai_tool": [
+        [
+          {
+            "node": "🤖 AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✉️ Tool: Generate Emails": {
+      "ai_tool": [
+        [
+          {
+            "node": "🤖 AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧠 OpenAI GPT-4o Mini": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "🤖 AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💭 Память разговора": {
+      "ai_memory": [
+        [
+          {
+            "node": "🤖 AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 Подготовить ответ": {
+      "main": [
+        [
+          {
+            "node": "📨 Отправить в Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "telegram-bot-main-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "Lead Generation",
+      "createdAt": "2026-01-15T10:00:00.000Z"
+    },
+    {
+      "name": "Telegram Bot",
+      "createdAt": "2026-01-15T10:00:00.000Z"
+    }
+  ]
+}
