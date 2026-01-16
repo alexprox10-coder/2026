@@ -1,0 +1,221 @@
+{
+  "name": "04 - Генерация писем (Perplexity AI)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-emails",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [240, 400],
+      "webhookId": "generate-emails-webhook",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "=YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "CompanyInformation"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {}
+      },
+      "id": "get-companies",
+      "name": "Получить компании",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [460, 400],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "id": "has-email",
+              "leftValue": "={{ $json.Email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filter-has-email",
+      "name": "Есть Email?",
+      "type": "n8n-nodes-base.if",
+      "position": [680, 400],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "// !!! ВАЖНО: Измените данные вашей компании здесь !!!\nconst YOUR_COMPANY = {\n  name: 'Ваша Компания ООО',\n  service: 'комплексные IT решения для бизнеса',\n  contact: 'Иван Иванов',\n  position: 'Коммерческий директор',\n  phone: '+7 (999) 123-45-67',\n  email: 'info@yourcompany.ru'\n};\n\nconst company = $input.item.json;\n\nreturn {\n  json: {\n    site_id: company['Site ID'],\n    recipient_company: company['Company Name'],\n    recipient_email: company['Email'],\n    recipient_phone: company['Phone'],\n    recipient_address: company['Address'],\n    recipient_description: company['Description'],\n    sender_company: YOUR_COMPANY.name,\n    sender_service: YOUR_COMPANY.service,\n    sender_contact: YOUR_COMPANY.contact,\n    sender_position: YOUR_COMPANY.position,\n    sender_phone: YOUR_COMPANY.phone,\n    sender_email: YOUR_COMPANY.email\n  }\n};"
+      },
+      "id": "prepare-template",
+      "name": "⚠️ НАСТРОЙТЕ ДАННЫЕ КОМПАНИИ",
+      "type": "n8n-nodes-base.code",
+      "position": [900, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer YOUR_PERPLEXITY_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'llama-3.1-sonar-small-128k-online',\n  messages: [\n    {\n      role: 'system',\n      content: 'Создай профессиональное коммерческое предложение B2B на русском языке. Верни ТОЛЬКО JSON без markdown блоков. Формат: {\"subject\":\"тема письма\",\"body\":\"текст письма в HTML\"}. Текст должен быть персонализированным, профессиональным, с конкретными выгодами для получателя.'\n    },\n    {\n      role: 'user',\n      content: `Создай коммерческое предложение:\\n\\nКомпания-получатель: ${$json.recipient_company}\\nОписание: ${$json.recipient_description}\\nАдрес: ${$json.recipient_address}\\n\\nОтправитель: ${$json.sender_company}\\nУслуга: ${$json.sender_service}\\nКонтакт: ${$json.sender_contact}, ${$json.sender_position}\\nEmail: ${$json.sender_email}\\nТелефон: ${$json.sender_phone}`\n    }\n  ],\n  temperature: 0.7,\n  max_tokens: 1000\n}) }}",
+        "options": {}
+      },
+      "id": "perplexity-ai",
+      "name": "Perplexity AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1120, 300],
+      "typeVersion": 4.2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Парсинг ответа от Perplexity AI\nconst response = $input.item.json;\nconst templateData = $('⚠️ НАСТРОЙТЕ ДАННЫЕ КОМПАНИИ').item.json;\n\nlet emailData = {};\n\ntry {\n  let aiContent = response.choices?.[0]?.message?.content || '{}';\n  aiContent = aiContent.replace(/```json\\n?/g, '').replace(/```/g, '').trim();\n  emailData = JSON.parse(aiContent);\n} catch (e) {\n  // Fallback если AI не вернул валидный JSON\n  emailData = {\n    subject: `Коммерческое предложение от ${templateData.sender_company}`,\n    body: `<p>Уважаемые коллеги из ${templateData.recipient_company}!</p><p>Предлагаем рассмотреть сотрудничество.</p><p>С уважением,<br>${templateData.sender_contact}</p>`\n  };\n}\n\nreturn {\n  json: {\n    site_id: templateData.site_id,\n    company_name: templateData.recipient_company,\n    email: templateData.recipient_email,\n    subject: emailData.subject,\n    body: emailData.body,\n    generated_at: new Date().toISOString()\n  }\n};"
+      },
+      "id": "parse-email",
+      "name": "Парсинг письма",
+      "type": "n8n-nodes-base.code",
+      "position": [1340, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "=YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "EmailDrafts"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Site ID": "={{ $json.site_id }}",
+            "Company Name": "={{ $json.company_name }}",
+            "Email": "={{ $json.email }}",
+            "Subject": "={{ $json.subject }}",
+            "Body": "={{ $json.body }}",
+            "Generated At": "={{ $json.generated_at }}",
+            "Status": "draft"
+          }
+        },
+        "options": {}
+      },
+      "id": "save-email",
+      "name": "Сохранить письмо",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [1560, 300],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Создано писем: ' + $('Парсинг письма').all().length, count: $('Парсинг письма').all().length } }}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Ответ - Успех",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1780, 300],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, message: 'Нет компаний с email' } }}",
+        "options": {}
+      },
+      "id": "respond-no-emails",
+      "name": "Ответ - Нет компаний",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [900, 500],
+      "typeVersion": 1.1
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Получить компании", "type": "main", "index": 0}]]
+    },
+    "Получить компании": {
+      "main": [[{"node": "Есть Email?", "type": "main", "index": 0}]]
+    },
+    "Есть Email?": {
+      "main": [
+        [{"node": "⚠️ НАСТРОЙТЕ ДАННЫЕ КОМПАНИИ", "type": "main", "index": 0}],
+        [{"node": "Ответ - Нет компаний", "type": "main", "index": 0}]
+      ]
+    },
+    "⚠️ НАСТРОЙТЕ ДАННЫЕ КОМПАНИИ": {
+      "main": [[{"node": "Perplexity AI", "type": "main", "index": 0}]]
+    },
+    "Perplexity AI": {
+      "main": [[{"node": "Парсинг письма", "type": "main", "index": 0}]]
+    },
+    "Парсинг письма": {
+      "main": [[{"node": "Сохранить письмо", "type": "main", "index": 0}]]
+    },
+    "Сохранить письмо": {
+      "main": [[{"node": "Ответ - Успех", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "workflow-04-generate-emails"
+}

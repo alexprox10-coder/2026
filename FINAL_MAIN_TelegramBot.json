@@ -1,0 +1,526 @@
+{
+  "name": "ГЛАВНЫЙ - Telegram Бот",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"]
+      },
+      "id": "telegram-trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "position": [240, 400],
+      "webhookId": "telegram-bot-main",
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "text",
+              "name": "text",
+              "value": "={{ $json.message.text || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "chat_id",
+              "name": "chat_id",
+              "value": "={{ $json.message.chat.id }}",
+              "type": "number"
+            },
+            {
+              "id": "text_lower",
+              "name": "text_lower",
+              "value": "={{ ($json.message.text || '').toLowerCase() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "extract-data",
+      "name": "Извлечь данные",
+      "type": "n8n-nodes-base.set",
+      "position": [460, 400],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "id": "search-keywords",
+                    "leftValue": "={{ $json.text_lower }}",
+                    "rightValue": "найти|найди|поиск|search",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "поиск"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "id": "add-keywords",
+                    "leftValue": "={{ $json.text_lower }}",
+                    "rightValue": "добавить|добавь|добавить сайт|add",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "добавить"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "id": "scrape-keywords",
+                    "leftValue": "={{ $json.text_lower }}",
+                    "rightValue": "собрать|собери|данные|информация|scrape",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "сбор"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "id": "generate-keywords",
+                    "leftValue": "={{ $json.text_lower }}",
+                    "rightValue": "создать|создай|письма|email|генер",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "генерация"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "switch-command",
+      "name": "Определить команду",
+      "type": "n8n-nodes-base.switch",
+      "position": [680, 400],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "webhook_search",
+              "name": "webhook_search",
+              "value": "https://YOUR-N8N-URL/webhook/search-companies",
+              "type": "string"
+            },
+            {
+              "id": "webhook_add",
+              "name": "webhook_add",
+              "value": "https://YOUR-N8N-URL/webhook/add-site",
+              "type": "string"
+            },
+            {
+              "id": "webhook_scrape",
+              "name": "webhook_scrape",
+              "value": "https://YOUR-N8N-URL/webhook/scrape-data",
+              "type": "string"
+            },
+            {
+              "id": "webhook_generate",
+              "name": "webhook_generate",
+              "value": "https://YOUR-N8N-URL/webhook/generate-emails",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "config",
+      "name": "⚠️ НАСТРОЙТЕ WEBHOOK URLs",
+      "type": "n8n-nodes-base.set",
+      "position": [460, 200],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "jsCode": "// Извлекаем поисковый запрос из сообщения\nconst text = $input.item.json.text || '';\n\n// Удаляем команду \"найти\" и берём остальное\nlet query = text\n  .replace(/найти|найди|поиск/gi, '')\n  .trim();\n\n// Если запрос пустой - используем дефолтный\nif (!query) {\n  query = 'компании недвижимость';\n}\n\nreturn {\n  json: {\n    query: query,\n    city: 'Благовещенск',\n    region: 'Амурская область'\n  }\n};"
+      },
+      "id": "prepare-search",
+      "name": "Подготовить поиск",
+      "type": "n8n-nodes-base.code",
+      "position": [900, 200],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚠️ НАСТРОЙТЕ WEBHOOK URLs').item.json.webhook_search }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "call-search",
+      "name": "→ Вызвать Поиск",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1120, 200],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "jsCode": "// Извлекаем URL из сообщения\nconst text = $input.item.json.text || '';\n\n// Ищем URL в тексте (с http:// или без)\nconst urlMatch = text.match(/(https?:\\/\\/[^\\s]+)|([a-zA-Z0-9-]+\\.[a-zA-Z]{2,}[^\\s]*)/);\nconst url = urlMatch ? urlMatch[0] : '';\n\nif (!url) {\n  return {\n    json: {\n      error: true,\n      message: 'URL не найден в сообщении'\n    }\n  };\n}\n\nreturn {\n  json: {\n    url: url,\n    company_name: ''\n  }\n};"
+      },
+      "id": "prepare-add",
+      "name": "Подготовить URL",
+      "type": "n8n-nodes-base.code",
+      "position": [900, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚠️ НАСТРОЙТЕ WEBHOOK URLs').item.json.webhook_add }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "call-add",
+      "name": "→ Вызвать Добавление",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1120, 300],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚠️ НАСТРОЙТЕ WEBHOOK URLs').item.json.webhook_scrape }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={}",
+        "options": {}
+      },
+      "id": "call-scrape",
+      "name": "→ Вызвать Сбор данных",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1120, 400],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚠️ НАСТРОЙТЕ WEBHOOK URLs').item.json.webhook_generate }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={}",
+        "options": {}
+      },
+      "id": "call-generate",
+      "name": "→ Вызвать Генерацию писем",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1120, 500],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "response_text",
+              "name": "response_text",
+              "value": "={{ $json.message || 'Готово!' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prepare-response",
+      "name": "Подготовить ответ",
+      "type": "n8n-nodes-base.set",
+      "position": [1340, 350],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $('Извлечь данные').item.json.chat_id }}",
+        "text": "={{ $json.response_text }}",
+        "additionalFields": {}
+      },
+      "id": "send-response",
+      "name": "Отправить ответ",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1560, 350],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chat_id }}",
+        "text": "Доступные команды:\n\n🔍 ПОИСК:\n\"найди строительные компании\"\n\"найти агентства недвижимости\"\n\n➕ ДОБАВИТЬ САЙТ:\n\"добавь сайт https://example.com\"\n\n📊 СОБРАТЬ ДАННЫЕ:\n\"собери данные с сайтов\"\n\n✉️ СОЗДАТЬ ПИСЬМА:\n\"создай коммерческие предложения\"",
+        "additionalFields": {}
+      },
+      "id": "send-help",
+      "name": "Показать справку",
+      "type": "n8n-nodes-base.telegram",
+      "position": [900, 600],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Извлечь данные",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Извлечь данные": {
+      "main": [
+        [
+          {
+            "node": "Определить команду",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "⚠️ НАСТРОЙТЕ WEBHOOK URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Определить команду": {
+      "main": [
+        [
+          {
+            "node": "Подготовить поиск",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Подготовить URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "→ Вызвать Сбор данных",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "→ Вызвать Генерацию писем",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Показать справку",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Подготовить поиск": {
+      "main": [
+        [
+          {
+            "node": "→ Вызвать Поиск",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "→ Вызвать Поиск": {
+      "main": [
+        [
+          {
+            "node": "Подготовить ответ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Подготовить URL": {
+      "main": [
+        [
+          {
+            "node": "→ Вызвать Добавление",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "→ Вызвать Добавление": {
+      "main": [
+        [
+          {
+            "node": "Подготовить ответ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "→ Вызвать Сбор данных": {
+      "main": [
+        [
+          {
+            "node": "Подготовить ответ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "→ Вызвать Генерацию писем": {
+      "main": [
+        [
+          {
+            "node": "Подготовить ответ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Подготовить ответ": {
+      "main": [
+        [
+          {
+            "node": "Отправить ответ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "telegram-bot-main"
+}

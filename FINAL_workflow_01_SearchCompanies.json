@@ -1,0 +1,202 @@
+{
+  "name": "01 - Поиск компаний (Google)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "search-companies",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [240, 300],
+      "webhookId": "search-companies-webhook",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "// Получаем данные из запроса\nconst query = $input.item.json.query || '';\nconst city = $input.item.json.city || 'Благовещенск';\nconst region = $input.item.json.region || 'Амурская область';\n\n// Формируем поисковый запрос для Google\nconst searchQuery = `${query} ${city} ${region} сайт контакты`;\n\nreturn {\n  json: {\n    query: searchQuery,\n    original_query: query,\n    city: city,\n    region: region\n  }\n};"
+      },
+      "id": "prepare-query",
+      "name": "Подготовить запрос",
+      "type": "n8n-nodes-base.code",
+      "position": [460, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://www.googleapis.com/customsearch/v1",
+        "authentication": "none",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "=YOUR_GOOGLE_API_KEY"
+            },
+            {
+              "name": "cx",
+              "value": "=YOUR_SEARCH_ENGINE_ID"
+            },
+            {
+              "name": "q",
+              "value": "={{ $json.query }}"
+            },
+            {
+              "name": "lr",
+              "value": "lang_ru"
+            },
+            {
+              "name": "gl",
+              "value": "ru"
+            },
+            {
+              "name": "num",
+              "value": "10"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "google-search",
+      "name": "Google Custom Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [680, 300],
+      "typeVersion": 4.2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Обработка результатов Google Custom Search\nconst response = $input.item.json;\nconst results = [];\n\n// Проверяем наличие результатов\nif (response.items && Array.isArray(response.items)) {\n  for (const item of response.items) {\n    const url = item.link;\n    const title = item.title || 'Unknown';\n    const snippet = item.snippet || '';\n    \n    if (!url) continue;\n    \n    // Фильтруем социальные сети и маркетплейсы\n    const excludeDomains = [\n      'vk.com', 'facebook.com', 'instagram.com', 'youtube.com',\n      'avito.ru', '2gis.ru', 'yandex.ru', 'google.com',\n      'wikipedia.org', 'zoon.ru', 'flamp.ru'\n    ];\n    \n    try {\n      const hostname = new URL(url).hostname.replace('www.', '');\n      if (excludeDomains.some(d => hostname.includes(d))) continue;\n      \n      results.push({\n        json: {\n          url: url,\n          company_name: title,\n          description: snippet,\n          source: 'google_search',\n          created_at: new Date().toISOString(),\n          status: 0\n        }\n      });\n    } catch (e) {\n      // Пропускаем невалидные URL\n    }\n  }\n}\n\nreturn results.length > 0 ? results : [{ json: { no_results: true } }];"
+      },
+      "id": "extract-sites",
+      "name": "Извлечь сайты",
+      "type": "n8n-nodes-base.code",
+      "position": [900, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "id": "has-url",
+              "leftValue": "={{ $json.url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-has-results",
+      "name": "Есть результаты?",
+      "type": "n8n-nodes-base.if",
+      "position": [1120, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "=YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "CompanySites"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "URL": "={{ $json.url }}",
+            "Company Name": "={{ $json.company_name }}",
+            "Status": "0",
+            "Created At": "={{ $json.created_at }}",
+            "Updated At": "={{ $json.created_at }}",
+            "Source": "google_search"
+          }
+        },
+        "options": {}
+      },
+      "id": "save-to-sheets",
+      "name": "Сохранить в Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [1340, 200],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Найдено ' + $('Извлечь сайты').all().length + ' компаний', count: $('Извлечь сайты').all().length } }}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Ответ - Успех",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1560, 200],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, message: 'Компании не найдены' } }}",
+        "options": {}
+      },
+      "id": "respond-no-results",
+      "name": "Ответ - Нет результатов",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1340, 400],
+      "typeVersion": 1.1
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Подготовить запрос", "type": "main", "index": 0}]]
+    },
+    "Подготовить запрос": {
+      "main": [[{"node": "Google Custom Search", "type": "main", "index": 0}]]
+    },
+    "Google Custom Search": {
+      "main": [[{"node": "Извлечь сайты", "type": "main", "index": 0}]]
+    },
+    "Извлечь сайты": {
+      "main": [[{"node": "Есть результаты?", "type": "main", "index": 0}]]
+    },
+    "Есть результаты?": {
+      "main": [
+        [{"node": "Сохранить в Google Sheets", "type": "main", "index": 0}],
+        [{"node": "Ответ - Нет результатов", "type": "main", "index": 0}]
+      ]
+    },
+    "Сохранить в Google Sheets": {
+      "main": [[{"node": "Ответ - Успех", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "workflow-01-search"
+}

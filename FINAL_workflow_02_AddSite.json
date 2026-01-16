@@ -1,0 +1,143 @@
+{
+  "name": "02 - Добавить сайт вручную",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "add-site",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [240, 300],
+      "webhookId": "add-site-webhook",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "// Получаем URL и название компании\nlet url = $input.item.json.url || '';\nconst companyName = $input.item.json.company_name || 'Неизвестная компания';\n\n// Добавляем https:// если отсутствует\nif (url && !url.match(/^https?:\\/\\//i)) {\n  url = 'https://' + url;\n}\n\n// Валидация URL\nif (!url) {\n  return {\n    json: {\n      error: true,\n      message: 'URL обязателен'\n    }\n  };\n}\n\ntry {\n  new URL(url); // Проверка валидности\n  return {\n    json: {\n      url: url,\n      company_name: companyName,\n      source: 'manual',\n      created_at: new Date().toISOString(),\n      status: 0\n    }\n  };\n} catch (e) {\n  return {\n    json: {\n      error: true,\n      message: 'Невалидный URL'\n    }\n  };\n}"
+      },
+      "id": "validate-url",
+      "name": "Валидация URL",
+      "type": "n8n-nodes-base.code",
+      "position": [460, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "id": "is-valid",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "notTrue"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-valid",
+      "name": "URL валиден?",
+      "type": "n8n-nodes-base.if",
+      "position": [680, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "=YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "CompanySites"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "URL": "={{ $json.url }}",
+            "Company Name": "={{ $json.company_name }}",
+            "Status": "0",
+            "Created At": "={{ $json.created_at }}",
+            "Updated At": "={{ $json.created_at }}",
+            "Source": "manual"
+          }
+        },
+        "options": {}
+      },
+      "id": "save-to-sheets",
+      "name": "Сохранить в Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [900, 200],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Сайт добавлен: ' + $('Валидация URL').item.json.url } }}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Ответ - Успех",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1120, 200],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, message: $json.message } }}",
+        "options": {}
+      },
+      "id": "respond-error",
+      "name": "Ответ - Ошибка",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [900, 400],
+      "typeVersion": 1.1
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Валидация URL", "type": "main", "index": 0}]]
+    },
+    "Валидация URL": {
+      "main": [[{"node": "URL валиден?", "type": "main", "index": 0}]]
+    },
+    "URL валиден?": {
+      "main": [
+        [{"node": "Сохранить в Google Sheets", "type": "main", "index": 0}],
+        [{"node": "Ответ - Ошибка", "type": "main", "index": 0}]
+      ]
+    },
+    "Сохранить в Google Sheets": {
+      "main": [[{"node": "Ответ - Успех", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "workflow-02-add-site"
+}

@@ -1,0 +1,295 @@
+{
+  "name": "03 - Сбор данных (Perplexity AI)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "scrape-data",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [240, 400],
+      "webhookId": "scrape-data-webhook",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "=YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "CompanySites"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status",
+              "lookupValue": "0"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-sites",
+      "name": "Получить сайты (статус=0)",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [460, 400],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "id": "has-sites",
+              "leftValue": "={{ $json.ID }}",
+              "rightValue": "",
+              "operator": {
+                "type": "any",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-has-sites",
+      "name": "Есть сайты?",
+      "type": "n8n-nodes-base.if",
+      "position": [680, 400],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ограничиваем до 5 сайтов за раз для безопасности\nconst items = $input.all().slice(0, 5);\nreturn items;"
+      },
+      "id": "limit-batch",
+      "name": "Макс 5 сайтов",
+      "type": "n8n-nodes-base.code",
+      "position": [900, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.URL }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "fetch-html",
+      "name": "Загрузить HTML",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1120, 300],
+      "typeVersion": 4.2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Очистка HTML от тегов и оставляем только текст\nconst html = typeof $input.item.json === 'string' ? $input.item.json : JSON.stringify($input.item.json);\nconst siteData = $('Получить сайты (статус=0)').item.json;\n\nlet cleanText = html\n  .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n  .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n  .replace(/<[^>]+>/g, ' ')\n  .replace(/&[a-z]+;/gi, ' ')\n  .replace(/\\s+/g, ' ')\n  .trim()\n  .substring(0, 10000); // Ограничиваем до 10000 символов\n\nreturn {\n  json: {\n    site_id: siteData.ID,\n    url: siteData.URL,\n    company_name: siteData['Company Name'],\n    html_text: cleanText\n  }\n};"
+      },
+      "id": "clean-html",
+      "name": "Очистить HTML",
+      "type": "n8n-nodes-base.code",
+      "position": [1340, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer YOUR_PERPLEXITY_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'llama-3.1-sonar-small-128k-online',\n  messages: [\n    {\n      role: 'system',\n      content: 'Извлеки контактные данные компании из текста сайта. Верни ТОЛЬКО JSON без дополнительного текста. Формат: {\"company_name\":\"название\",\"inn\":\"ИНН\",\"address\":\"адрес\",\"phone\":\"телефон\",\"email\":\"email\",\"description\":\"описание\"}. Если данных нет - пустая строка.'\n    },\n    {\n      role: 'user',\n      content: 'Текст сайта: ' + $json.html_text\n    }\n  ],\n  temperature: 0.2,\n  max_tokens: 800\n}) }}",
+        "options": {}
+      },
+      "id": "perplexity-ai",
+      "name": "Perplexity AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1560, 300],
+      "typeVersion": 4.2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Парсинг ответа от Perplexity AI\nconst response = $input.item.json;\nconst siteData = $('Очистить HTML').item.json;\n\nlet extractedData = {};\n\ntry {\n  let aiContent = response.choices?.[0]?.message?.content || '{}';\n  // Удаляем markdown блоки если есть\n  aiContent = aiContent.replace(/```json\\n?/g, '').replace(/```/g, '').trim();\n  extractedData = JSON.parse(aiContent);\n} catch (e) {\n  // Если не удалось распарсить - используем пустые значения\n  extractedData = {};\n}\n\nreturn {\n  json: {\n    site_id: siteData.site_id,\n    url: siteData.url,\n    company_name: extractedData.company_name || siteData.company_name || '',\n    inn: extractedData.inn || '',\n    address: extractedData.address || '',\n    phone: extractedData.phone || '',\n    email: extractedData.email || '',\n    description: extractedData.description || '',\n    scraped_at: new Date().toISOString()\n  }\n};"
+      },
+      "id": "parse-ai-response",
+      "name": "Парсинг ответа AI",
+      "type": "n8n-nodes-base.code",
+      "position": [1780, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "=YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "CompanyInformation"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Site ID": "={{ $json.site_id }}",
+            "Company Name": "={{ $json.company_name }}",
+            "INN": "={{ $json.inn }}",
+            "Address": "={{ $json.address }}",
+            "Phone": "={{ $json.phone }}",
+            "Email": "={{ $json.email }}",
+            "Description": "={{ $json.description }}",
+            "Scraped At": "={{ $json.scraped_at }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "save-company-info",
+      "name": "Сохранить данные компании",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [2000, 300],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "=YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "CompanySites"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "2",
+            "Updated At": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": ["ID"]
+        },
+        "options": {}
+      },
+      "id": "update-status",
+      "name": "Обновить статус → 2",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [2220, 300],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Обработано ' + $('Макс 5 сайтов').all().length + ' компаний', count: $('Макс 5 сайтов').all().length } }}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Ответ - Успех",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [2440, 300],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, message: 'Нет сайтов для обработки' } }}",
+        "options": {}
+      },
+      "id": "respond-no-sites",
+      "name": "Ответ - Нет сайтов",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [900, 500],
+      "typeVersion": 1.1
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Получить сайты (статус=0)", "type": "main", "index": 0}]]
+    },
+    "Получить сайты (статус=0)": {
+      "main": [[{"node": "Есть сайты?", "type": "main", "index": 0}]]
+    },
+    "Есть сайты?": {
+      "main": [
+        [{"node": "Макс 5 сайтов", "type": "main", "index": 0}],
+        [{"node": "Ответ - Нет сайтов", "type": "main", "index": 0}]
+      ]
+    },
+    "Макс 5 сайтов": {
+      "main": [[{"node": "Загрузить HTML", "type": "main", "index": 0}]]
+    },
+    "Загрузить HTML": {
+      "main": [[{"node": "Очистить HTML", "type": "main", "index": 0}]]
+    },
+    "Очистить HTML": {
+      "main": [[{"node": "Perplexity AI", "type": "main", "index": 0}]]
+    },
+    "Perplexity AI": {
+      "main": [[{"node": "Парсинг ответа AI", "type": "main", "index": 0}]]
+    },
+    "Парсинг ответа AI": {
+      "main": [[{"node": "Сохранить данные компании", "type": "main", "index": 0}]]
+    },
+    "Сохранить данные компании": {
+      "main": [[{"node": "Обновить статус → 2", "type": "main", "index": 0}]]
+    },
+    "Обновить статус → 2": {
+      "main": [[{"node": "Ответ - Успех", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "workflow-03-scrape"
+}
