@@ -1,0 +1,139 @@
+{
+  "name": "ChinaLeadBot - Telegram (Simplified)",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"]
+      },
+      "id": "telegram-trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "webhookId": "telegram-chinaleadbot",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = $input.first().json.message;\nconst userId = message.from.id;\nconst userName = message.from.first_name;\nconst text = message.text || '';\nconst chatId = message.chat.id;\n\nif (text.startsWith('/start')) {\n  return { json: { command: 'start', user_id: userId, user_name: userName, chat_id: chatId } };\n}\n\nif (text.startsWith('/help')) {\n  return { json: { command: 'help', user_id: userId, user_name: userName, chat_id: chatId } };\n}\n\nconst category = text.replace('/search', '').trim();\nreturn {\n  json: {\n    command: 'search',\n    user_id: userId,\n    user_name: userName,\n    chat_id: chatId,\n    category: category || 'wireless headphones',\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "parse-command",
+      "name": "Parse Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{ "value1": "={{ $json.command }}", "value2": "start" }]
+        }
+      },
+      "id": "if-start",
+      "name": "Is Start?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "🇨🇳 *Добро пожаловать в ChinaLeadBot!*\\n\\nЯ помогу найти китайских поставщиков.\\n\\n*Как использовать:*\\nПросто напишите категорию товара:\\nwireless headphones\\n\\n*Команды:*\\n/help - Помощь",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "send-welcome",
+      "name": "Send Welcome",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "credentials": { "telegramApi": { "id": "TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" } }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{ "value1": "={{ $json.command }}", "value2": "help" }]
+        }
+      },
+      "id": "if-help",
+      "name": "Is Help?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 500]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "*Помощь*\\n\\nНапишите категорию товара:\\n• wireless headphones\\n• LED lights\\n• backpack\\n\\n/start - Начать",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "send-help",
+      "name": "Send Help",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1120, 500],
+      "credentials": { "telegramApi": { "id": "TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" } }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "🔍 *Поиск запущен!*\\n\\nКатегория: {{ $json.category }}\\nАнализирую...\\n⏳ 10-30 секунд",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "send-processing",
+      "name": "Send Processing",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1120, 700],
+      "credentials": { "telegramApi": { "id": "TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const category = $json.category;\nconst suppliers = [\n  { company_name: 'Yiwu Wholesale Trading Co.', rating: 4.9, years_in_business: 15, moq: '200 pieces', price: 3.80, location: 'Zhejiang, China', verified: true, gold_supplier: true, contact_email: 'export@yiwu-wholesale.com', company_url: 'https://yiwu-wholesale.en.alibaba.com', response_rate: '98%', total_transactions: 12400, product_category: category },\n  { company_name: 'Shanghai Premium Exports Inc.', rating: 4.7, years_in_business: 10, moq: '300 pieces', price: 6.50, location: 'Shanghai, China', verified: true, gold_supplier: true, contact_email: 'export@sh-premium.com', company_url: 'https://sh-premium.en.alibaba.com', response_rate: '92%', total_transactions: 7600, product_category: category },\n  { company_name: 'Shenzhen Tech Electronics', rating: 4.8, years_in_business: 12, moq: '100 pieces', price: 5.50, location: 'Guangdong, China', verified: true, gold_supplier: true, contact_email: 'sales@shenzhen-tech.com', company_url: 'https://shenzhen-tech.en.alibaba.com', response_rate: '95%', total_transactions: 5800, product_category: category }\n];\n\nreturn suppliers.map(s => ({ json: { ...s, chat_id: $input.first().json.chat_id, user_id: $input.first().json.user_id } }));"
+      },
+      "id": "generate-suppliers",
+      "name": "Generate Suppliers",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 700]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst chatId = item.chat_id;\n\nconst message = `🏢 *${item.company_name}*\\n⭐️ ${item.rating}/5 | 📦 MOQ: ${item.moq}\\n💰 $${item.price} | 📍 ${item.location}\\n📧 ${item.contact_email}\\n🌐 ${item.company_url}`;\n\nreturn { json: { chat_id: chatId, message: message } };"
+      },
+      "id": "format-result",
+      "name": "Format Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 700]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "send-result",
+      "name": "Send Result",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1780, 700],
+      "credentials": { "telegramApi": { "id": "TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" } }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": { "main": [[{ "node": "Parse Command", "type": "main", "index": 0 }]] },
+    "Parse Command": { "main": [[{ "node": "Is Start?", "type": "main", "index": 0 }]] },
+    "Is Start?": { "main": [[{ "node": "Send Welcome", "type": "main", "index": 0 }], [{ "node": "Is Help?", "type": "main", "index": 0 }]] },
+    "Is Help?": { "main": [[{ "node": "Send Help", "type": "main", "index": 0 }], [{ "node": "Send Processing", "type": "main", "index": 0 }]] },
+    "Send Processing": { "main": [[{ "node": "Generate Suppliers", "type": "main", "index": 0 }]] },
+    "Generate Suppliers": { "main": [[{ "node": "Format Result", "type": "main", "index": 0 }]] },
+    "Format Result": { "main": [[{ "node": "Send Result", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}
