@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # Rental property parser
+  parser:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rental_parser
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - DB_PATH=/app/data/rental_parser.db
+      - LOG_FILE=/app/logs/parser.log
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./proxies.txt:/app/proxies.txt:ro
+    command: python main.py --max-pages 5 --proxy-file proxies.txt
+    restart: unless-stopped
+    networks:
+      - rental_network
+
+  # Telegram bot
+  telegram_bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rental_telegram_bot
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - DB_PATH=/app/data/rental_parser.db
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    command: python bot/telegram_bot.py
+    restart: unless-stopped
+    depends_on:
+      - parser
+    networks:
+      - rental_network
+
+  # Phone extractor (runs periodically)
+  phone_extractor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rental_phone_extractor
+    environment:
+      - DB_PATH=/app/data/rental_parser.db
+      - LOG_FILE=/app/logs/phone_extractor.log
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./proxies.txt:/app/proxies.txt:ro
+    command: >
+      sh -c "while true; do
+        python main.py --extract-phones --phone-limit 20 --proxy-file proxies.txt;
+        sleep 3600;
+      done"
+    restart: unless-stopped
+    depends_on:
+      - parser
+    networks:
+      - rental_network
+
+  # n8n workflow automation (optional)
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: rental_n8n
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=changeme
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./rental_parser_workflow.json:/workflows/rental_parser_workflow.json:ro
+    restart: unless-stopped
+    networks:
+      - rental_network
+
+networks:
+  rental_network:
+    driver: bridge
+
+volumes:
+  n8n_data:

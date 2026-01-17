@@ -1,0 +1,20 @@
+# Proxy list configuration
+# Format: protocol://username:password@host:port
+# One proxy per line
+
+# Example proxies (replace with your own)
+http://user:pass@proxy1.example.com:8080
+http://user:pass@proxy2.example.com:8080
+socks5://user:pass@proxy3.example.com:1080
+
+# You can also use proxies without authentication
+# http://proxy4.example.com:8080
+
+# Recommended proxy services for Russian websites:
+# - Proxy6.net
+# - Proxys.io
+# - Smartproxy
+# - Bright Data (formerly Luminati)
+
+# Leave this file empty to run without proxies
+# Note: Without proxies, you may get rate-limited or banned faster
