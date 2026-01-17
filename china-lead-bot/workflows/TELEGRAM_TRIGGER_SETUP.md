@@ -77,7 +77,32 @@ Access Token: 8385249886:AAE7zDQznQ3nKjmRGr9Ix7LsvJqqcp5tMLU
 
 ---
 
-### Шаг 5: АКТИВИРУЙТЕ Workflow
+### Шаг 5: Настройте Google Sheets (ОБЯЗАТЕЛЬНО!)
+
+1. Создайте таблицу на https://sheets.google.com
+2. Назовите лист: **"Leads"**
+3. В первую строку добавьте заголовки:
+   ```
+   Timestamp | Company | Rating | MOQ | Price | Location | Email | URL | AI_Score | Recommended | Summary | Pros | Risks | User_ID | Chat_ID
+   ```
+4. Скопируйте ID таблицы из URL:
+   ```
+   https://docs.google.com/spreadsheets/d/1a2b3c4d5e6f7g8h9i0j/edit
+                                          ^^^^^^^^^^^^^^^^^^^
+                                          Это ваш Sheet ID
+   ```
+
+5. В n8n кликните узел **"Save to Google Sheets"**
+6. **Credentials → Create New**
+7. Выберите **"Google Sheets OAuth2 API"**
+8. Нажмите **"Connect my account"** → войдите через Google
+9. **Document ID**: Вставьте скопированный ID таблицы
+10. **Sheet Name**: `Leads`
+11. **Save**
+
+---
+
+### Шаг 7: АКТИВИРУЙТЕ Workflow
 
 1. Вверху справа найдите переключатель **Inactive**
 2. **Кликните** чтобы активировать
@@ -168,6 +193,7 @@ backpack
 - Generate Suppliers Data (5 компаний)
 - OpenAI Analyze (для каждой)
 - Parse AI Response
+- **Save to Google Sheets** ← Сохраняет в таблицу!
 - Format Results
 - Send Results
 

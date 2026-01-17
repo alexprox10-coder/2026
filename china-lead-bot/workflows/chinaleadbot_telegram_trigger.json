@@ -168,7 +168,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Парсим AI ответ\nconst item = $input.first().json;\nlet aiData = {};\n\ntry {\n  let aiResponse = item.response || item.text || '{}';\n  if (typeof aiResponse === 'string') {\n    aiResponse = aiResponse.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n    aiData = JSON.parse(aiResponse);\n  } else {\n    aiData = aiResponse;\n  }\n} catch (error) {\n  aiData = {\n    reliability_score: 7,\n    recommended: true,\n    summary_ru: 'Надёжная компания',\n    pros: ['Проверенный поставщик'],\n    risks: ['Нет данных']\n  };\n}\n\nreturn {\n  json: {\n    chat_id: item.chat_id,\n    company_name: item.company_name,\n    rating: item.rating,\n    moq: item.moq,\n    price: item.price,\n    location: item.location,\n    email: item.contact_email,\n    url: item.company_url,\n    ai_score: aiData.reliability_score || 7,\n    recommended: aiData.recommended !== false,\n    summary: aiData.summary_ru || 'Нет данных',\n    pros: Array.isArray(aiData.pros) ? aiData.pros.join(', ') : 'Нет данных',\n    risks: Array.isArray(aiData.risks) ? aiData.risks.join(', ') : 'Нет данных'\n  }\n};"
+        "jsCode": "// Парсим AI ответ\nconst item = $input.first().json;\nlet aiData = {};\n\ntry {\n  let aiResponse = item.response || item.text || '{}';\n  if (typeof aiResponse === 'string') {\n    aiResponse = aiResponse.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n    aiData = JSON.parse(aiResponse);\n  } else {\n    aiData = aiResponse;\n  }\n} catch (error) {\n  aiData = {\n    reliability_score: 7,\n    recommended: true,\n    summary_ru: 'Надёжная компания',\n    pros: ['Проверенный поставщик'],\n    risks: ['Нет данных']\n  };\n}\n\nreturn {\n  json: {\n    timestamp: new Date().toISOString(),\n    chat_id: item.chat_id,\n    user_id: item.user_id,\n    company_name: item.company_name,\n    rating: item.rating,\n    moq: item.moq,\n    price: item.price,\n    location: item.location,\n    email: item.contact_email,\n    url: item.company_url,\n    ai_score: aiData.reliability_score || 7,\n    recommended: aiData.recommended !== false,\n    summary: aiData.summary_ru || 'Нет данных',\n    pros: Array.isArray(aiData.pros) ? aiData.pros.join(', ') : 'Нет данных',\n    risks: Array.isArray(aiData.risks) ? aiData.risks.join(', ') : 'Нет данных'\n  }\n};"
       },
       "id": "parse-ai",
       "name": "Parse AI Response",
@@ -178,13 +178,60 @@
     },
     {
       "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $now.toISO() }}",
+            "Company": "={{ $json.company_name }}",
+            "Rating": "={{ $json.rating }}",
+            "MOQ": "={{ $json.moq }}",
+            "Price": "={{ '$' + $json.price }}",
+            "Location": "={{ $json.location }}",
+            "Email": "={{ $json.email }}",
+            "URL": "={{ $json.url }}",
+            "AI_Score": "={{ $json.ai_score }}",
+            "Recommended": "={{ $json.recommended }}",
+            "Summary": "={{ $json.summary }}",
+            "Pros": "={{ $json.pros }}",
+            "Risks": "={{ $json.risks }}",
+            "User_ID": "={{ $json.user_id }}",
+            "Chat_ID": "={{ $json.chat_id }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "save-sheets",
+      "name": "Save to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1920, 700],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets Account"
+        }
+      }
+    },
+    {
+      "parameters": {
         "jsCode": "// Собираем результаты\nconst items = $input.all();\nconst chatId = items[0].json.chat_id;\n\n// Группируем по chat_id\nconst leads = items.map(item => item.json);\nleads.sort((a, b) => b.ai_score - a.ai_score);\n\n// Формируем сообщение\nlet message = `✅ **НАЙДЕНО ${leads.length} ПОСТАВЩИКОВ**\\n\\n📊 Отсортировано по надёжности\\n\\n`;\nmessage += `━━━━━━━━━━━━━━━━━━━━\\n\\n`;\n\nleads.forEach((lead, index) => {\n  const number = index + 1;\n  const emoji = lead.recommended ? '✅' : '⚠️';\n  \n  message += `🏢 **#${number}: ${lead.company_name}**\\n`;\n  message += `⭐️ Рейтинг: ${lead.rating}/5\\n`;\n  message += `📊 AI-оценка: ${lead.ai_score}/10\\n`;\n  message += `${emoji} ${lead.recommended ? 'Рекомендуется' : 'Требует проверки'}\\n\\n`;\n  message += `📍 ${lead.location}\\n`;\n  message += `📦 MOQ: ${lead.moq}\\n`;\n  message += `💰 Цена: $${lead.price}\\n\\n`;\n  message += `📧 ${lead.email}\\n`;\n  message += `🌐 ${lead.url}\\n\\n`;\n  message += `💬 **Резюме AI:**\\n${lead.summary}\\n\\n`;\n  message += `✅ **Плюсы:** ${lead.pros}\\n`;\n  message += `⚠️ **Риски:** ${lead.risks}\\n\\n`;\n  message += `━━━━━━━━━━━━━━━━━━━━\\n\\n`;\n});\n\nmessage += `🎯 Осталось поисков: 4\\n`;\nmessage += `💎 Хотите больше? /upgrade`;\n\nreturn {\n  json: {\n    chat_id: chatId,\n    message: message\n  }\n};"
       },
       "id": "format-results",
       "name": "Format Results",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2000, 700]
+      "position": [2140, 700]
     },
     {
       "parameters": {
@@ -198,7 +245,7 @@
       "name": "Send Results",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
-      "position": [2220, 700],
+      "position": [2360, 700],
       "credentials": {
         "telegramApi": {
           "id": "TELEGRAM_CREDENTIAL_ID",
@@ -301,6 +348,17 @@
       ]
     },
     "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Google Sheets": {
       "main": [
         [
           {
