@@ -1,0 +1,241 @@
+{
+  "name": "🏠 Rental Parser - Simple Version",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 4
+            }
+          ]
+        }
+      },
+      "id": "schedule_trigger",
+      "name": "Schedule Every 4h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "command": "cd /home/user/2026/rental_parser && python3 scripts/run_parser.py"
+      },
+      "id": "run_parser",
+      "name": "Run Parser",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "command": "cd /home/user/2026/rental_parser && python3 scripts/extract_phones.py"
+      },
+      "id": "extract_phones",
+      "name": "Extract Phones",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "command": "cd /home/user/2026/rental_parser && python3 scripts/get_unsent.py"
+      },
+      "id": "get_unsent",
+      "name": "Get Unsent Listings",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse JSON from stdout\nconst data = JSON.parse($input.first().json.stdout);\n\nif (!data || data.length === 0) {\n  return [];\n}\n\nreturn data.map(item => ({\n  json: item\n}));"
+      },
+      "id": "parse_json",
+      "name": "Parse JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format message for Telegram\nconst platform = $json.platform || 'unknown';\nconst platformEmoji = {\n  'cian': '🔵',\n  'yandex': '🔴',\n  'avito': '🟢'\n}[platform] || '⚪';\n\nconst platformName = {\n  'cian': 'Cian.ru',\n  'yandex': 'Yandex.Realty',\n  'avito': 'Avito.ru'\n}[platform] || platform;\n\nconst roomsText = $json.rooms === 0 ? 'Студия' : \n                  $json.rooms ? `${$json.rooms}-комн` : '';\n\nconst priceText = $json.price ? \n                  `${Math.round($json.price).toLocaleString('ru-RU')} ₽/мес` : \n                  'Цена не указана';\n\nlet message = `${platformEmoji} *Новое объявление - ${platformName}*\\n\\n`;\nmessage += `*${$json.title}*\\n\\n`;\nmessage += `💰 ${priceText}\\n`;\n\nif (roomsText) {\n  message += `🏠 ${roomsText}`;\n}\n\nif ($json.area) {\n  message += `${roomsText ? ', ' : '📐 '}${$json.area} м²`;\n}\n\nmessage += '\\n';\n\nif ($json.address) {\n  message += `📍 ${$json.address}\\n`;\n}\n\nif ($json.phone) {\n  message += `📞 \\`${$json.phone}\\`\\n`;\n} else {\n  message += `📞 Телефон не указан\\n`;\n}\n\nmessage += `\\n🔗 [Открыть объявление](${$json.url})\\n`;\nmessage += `\\n_Площадка: ${platformName}_`;\n\nreturn {\n  json: {\n    ...$json,\n    message: message,\n    platform_emoji: platformEmoji\n  }\n};"
+      },
+      "id": "format_message",
+      "name": "Format Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "telegramApi",
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send_telegram",
+      "name": "Send to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1560,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "sBegr8MZX7eZ7dIX",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 3,
+        "unit": "seconds"
+      },
+      "id": "wait",
+      "name": "Wait 3s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1780,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "command": "=cd /home/user/2026/rental_parser && python3 scripts/mark_sent.py {{ $json.id }}"
+      },
+      "id": "mark_sent",
+      "name": "Mark as Sent",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        2000,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Every 4h": {
+      "main": [
+        [
+          {
+            "node": "Run Parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Parser": {
+      "main": [
+        [
+          {
+            "node": "Extract Phones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Phones": {
+      "main": [
+        [
+          {
+            "node": "Get Unsent Listings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Unsent Listings": {
+      "main": [
+        [
+          {
+            "node": "Parse JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse JSON": {
+      "main": [
+        [
+          {
+            "node": "Format Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Message": {
+      "main": [
+        [
+          {
+            "node": "Send to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to Telegram": {
+      "main": [
+        [
+          {
+            "node": "Wait 3s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 3s": {
+      "main": [
+        [
+          {
+            "node": "Mark as Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-01-17T00:00:00.000Z",
+  "versionId": "1"
+}
