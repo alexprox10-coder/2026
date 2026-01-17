@@ -1,0 +1,281 @@
+{
+  "name": "ChinaLeadBot v2 - Lead Generation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chinaleadbot-search",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-1",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "webhookId": "chinaleadbot-search"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Извлекаем параметры поиска\nconst input = $input.first().json;\n\nconst userId = input.user_id || input.body?.user_id;\nconst category = input.category || input.body?.category;\nconst moq = input.moq || input.body?.moq || 'any';\nconst priceRange = input.price_range || input.body?.price_range || 'any';\n\nconsole.log('Received search request:', { userId, category, moq, priceRange });\n\nreturn {\n  json: {\n    user_id: userId,\n    category: category,\n    moq: moq,\n    price_range: priceRange,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "code-1",
+      "name": "Extract Parameters",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Генерируем тестовые данные китайских поставщиков\nconst category = $json.category;\nconst moq = $json.moq;\nconst priceRange = $json.price_range;\n\nconst suppliers = [\n  {\n    company_name: 'Shenzhen Tech Electronics Co., Ltd.',\n    rating: 4.8,\n    years_in_business: 12,\n    moq: '100 pieces',\n    price: 5.50,\n    location: 'Guangdong, China',\n    verified: true,\n    gold_supplier: true,\n    contact_email: 'sales@shenzhen-tech.com',\n    company_url: 'https://shenzhen-tech.en.alibaba.com',\n    trade_assurance: true,\n    response_rate: '95%',\n    total_transactions: 5800,\n    product_category: category\n  },\n  {\n    company_name: 'Guangzhou Quality Manufacturing Ltd.',\n    rating: 4.6,\n    years_in_business: 8,\n    moq: '500 pieces',\n    price: 4.20,\n    location: 'Guangdong, China',\n    verified: true,\n    gold_supplier: false,\n    contact_email: 'info@gz-quality.com',\n    company_url: 'https://gz-quality.en.alibaba.com',\n    trade_assurance: true,\n    response_rate: '88%',\n    total_transactions: 3200,\n    product_category: category\n  },\n  {\n    company_name: 'Yiwu Wholesale Trading Co.',\n    rating: 4.9,\n    years_in_business: 15,\n    moq: '200 pieces',\n    price: 3.80,\n    location: 'Zhejiang, China',\n    verified: true,\n    gold_supplier: true,\n    contact_email: 'export@yiwu-wholesale.com',\n    company_url: 'https://yiwu-wholesale.en.alibaba.com',\n    trade_assurance: true,\n    response_rate: '98%',\n    total_transactions: 12400,\n    product_category: category\n  },\n  {\n    company_name: 'Shanghai Premium Exports Inc.',\n    rating: 4.7,\n    years_in_business: 10,\n    moq: '300 pieces',\n    price: 6.50,\n    location: 'Shanghai, China',\n    verified: true,\n    gold_supplier: true,\n    contact_email: 'export@sh-premium.com',\n    company_url: 'https://sh-premium.en.alibaba.com',\n    trade_assurance: true,\n    response_rate: '92%',\n    total_transactions: 7600,\n    product_category: category\n  },\n  {\n    company_name: 'Ningbo Reliable Manufacturing',\n    rating: 4.4,\n    years_in_business: 7,\n    moq: '500 pieces',\n    price: 4.80,\n    location: 'Zhejiang, China',\n    verified: true,\n    gold_supplier: false,\n    contact_email: 'info@ningbo-reliable.com',\n    company_url: 'https://ningbo-reliable.en.alibaba.com',\n    trade_assurance: true,\n    response_rate: '85%',\n    total_transactions: 2100,\n    product_category: category\n  },\n  {\n    company_name: 'Beijing International Trade Corp',\n    rating: 4.8,\n    years_in_business: 18,\n    moq: '100 pieces',\n    price: 7.20,\n    location: 'Beijing, China',\n    verified: true,\n    gold_supplier: true,\n    contact_email: 'export@beijing-intl.com',\n    company_url: 'https://beijing-intl.en.alibaba.com',\n    trade_assurance: true,\n    response_rate: '96%',\n    total_transactions: 15200,\n    product_category: category\n  },\n  {\n    company_name: 'Hangzhou Quality First Ltd.',\n    rating: 4.6,\n    years_in_business: 9,\n    moq: '300 pieces',\n    price: 5.10,\n    location: 'Zhejiang, China',\n    verified: true,\n    gold_supplier: true,\n    contact_email: 'sales@hz-qualityfirst.com',\n    company_url: 'https://hz-qualityfirst.en.alibaba.com',\n    trade_assurance: true,\n    response_rate: '90%',\n    total_transactions: 4900,\n    product_category: category\n  },\n  {\n    company_name: 'Qingdao Export Solutions',\n    rating: 4.5,\n    years_in_business: 11,\n    moq: '500 pieces',\n    price: 4.40,\n    location: 'Shandong, China',\n    verified: true,\n    gold_supplier: false,\n    contact_email: 'info@qd-exportsolutions.com',\n    company_url: 'https://qd-exportsolutions.en.alibaba.com',\n    trade_assurance: true,\n    response_rate: '87%',\n    total_transactions: 3600,\n    product_category: category\n  },\n  {\n    company_name: 'Dongguan Factory Direct Supplies',\n    rating: 4.3,\n    years_in_business: 6,\n    moq: '1000 pieces',\n    price: 2.90,\n    location: 'Guangdong, China',\n    verified: false,\n    gold_supplier: false,\n    contact_email: 'sales@dg-factory.com',\n    company_url: 'https://dg-factory.en.alibaba.com',\n    trade_assurance: false,\n    response_rate: '75%',\n    total_transactions: 850,\n    product_category: category\n  },\n  {\n    company_name: 'Fujian Best Price Traders',\n    rating: 4.2,\n    years_in_business: 5,\n    moq: '2000 pieces',\n    price: 2.20,\n    location: 'Fujian, China',\n    verified: false,\n    gold_supplier: false,\n    contact_email: 'sales@fujian-bestprice.com',\n    company_url: 'https://fujian-bestprice.en.alibaba.com',\n    trade_assurance: false,\n    response_rate: '70%',\n    total_transactions: 450,\n    product_category: category\n  }\n];\n\n// Применяем фильтры\nlet filtered = suppliers;\n\n// Фильтр по MOQ\nif (moq && moq !== 'any') {\n  const moqValue = parseInt(moq);\n  filtered = filtered.filter(s => {\n    const supplierMoq = parseInt(s.moq);\n    return !isNaN(supplierMoq) && supplierMoq <= moqValue;\n  });\n}\n\n// Фильтр по цене\nif (priceRange && priceRange !== 'any') {\n  const [min, max] = priceRange.split('_').map(p => parseFloat(p) || 0);\n  filtered = filtered.filter(s => {\n    return s.price >= min && (max === 0 || s.price <= max);\n  });\n}\n\n// Сортировка по качеству\nfiltered.sort((a, b) => {\n  const scoreA = (a.rating * 0.4) + (a.total_transactions / 10000 * 0.3) + (a.verified ? 0.2 : 0) + (a.gold_supplier ? 0.1 : 0);\n  const scoreB = (b.rating * 0.4) + (b.total_transactions / 10000 * 0.3) + (b.verified ? 0.2 : 0) + (b.gold_supplier ? 0.1 : 0);\n  return scoreB - scoreA;\n});\n\n// Возвращаем топ-10\nconst topSuppliers = filtered.slice(0, 10);\n\nconsole.log(`Found ${topSuppliers.length} suppliers after filtering`);\n\nreturn topSuppliers.map(supplier => ({\n  json: supplier\n}));"
+      },
+      "id": "code-2",
+      "name": "Generate Suppliers Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4",
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 500
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Ты эксперт по оценке китайских компаний-поставщиков.\n\nПроанализируй эту компанию:\n\nНазвание: {{ $json.company_name }}\nРейтинг: {{ $json.rating }}/5\nОпыт работы: {{ $json.years_in_business }} лет\nMOQ: {{ $json.moq }}\nЦена: ${{ $json.price }}\nЛокация: {{ $json.location }}\nВерифицирована: {{ $json.verified ? 'Да' : 'Нет' }}\nGold Supplier: {{ $json.gold_supplier ? 'Да' : 'Нет' }}\nОтклик: {{ $json.response_rate }}\nСделок: {{ $json.total_transactions }}\nTrade Assurance: {{ $json.trade_assurance ? 'Да' : 'Нет' }}\n\nДай оценку компании в формате JSON (БЕЗ markdown блоков ```json, ТОЛЬКО чистый JSON):\n\n{\n  \"reliability_score\": <число от 1 до 10>,\n  \"recommended\": <true или false>,\n  \"summary_ru\": \"краткое резюме на русском (2-3 предложения)\",\n  \"pros\": [\"преимущество 1\", \"преимущество 2\"],\n  \"risks\": [\"риск 1\", \"риск 2\"]\n}\n\nВАЖНО: Верни ТОЛЬКО JSON, без каких-либо дополнительных текстов или markdown форматирования!"
+            }
+          ]
+        }
+      },
+      "id": "openai-1",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "ВАШЕ_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "timestamp",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "company_name",
+              "name": "company_name",
+              "value": "={{ $('Generate Suppliers Data').item.json.company_name }}",
+              "type": "string"
+            },
+            {
+              "id": "rating",
+              "name": "rating",
+              "value": "={{ $('Generate Suppliers Data').item.json.rating }}",
+              "type": "number"
+            },
+            {
+              "id": "moq",
+              "name": "moq",
+              "value": "={{ $('Generate Suppliers Data').item.json.moq }}",
+              "type": "string"
+            },
+            {
+              "id": "price",
+              "name": "price",
+              "value": "={{ '$' + $('Generate Suppliers Data').item.json.price }}",
+              "type": "string"
+            },
+            {
+              "id": "location",
+              "name": "location",
+              "value": "={{ $('Generate Suppliers Data').item.json.location }}",
+              "type": "string"
+            },
+            {
+              "id": "years",
+              "name": "years",
+              "value": "={{ $('Generate Suppliers Data').item.json.years_in_business }}",
+              "type": "number"
+            },
+            {
+              "id": "email",
+              "name": "email",
+              "value": "={{ $('Generate Suppliers Data').item.json.contact_email }}",
+              "type": "string"
+            },
+            {
+              "id": "url",
+              "name": "url",
+              "value": "={{ $('Generate Suppliers Data').item.json.company_url }}",
+              "type": "string"
+            },
+            {
+              "id": "verified",
+              "name": "verified",
+              "value": "={{ $('Generate Suppliers Data').item.json.verified }}",
+              "type": "boolean"
+            },
+            {
+              "id": "ai_analysis",
+              "name": "ai_analysis",
+              "value": "={{ $json.choices[0].message.content }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-1",
+      "name": "Combine Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Парсим AI ответ из JSON\nconst item = $input.first().json;\nlet aiData = {};\n\ntry {\n  // Извлекаем JSON из ответа AI\n  let aiResponse = item.ai_analysis || '{}';\n  \n  // Убираем markdown блоки если есть\n  aiResponse = aiResponse.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  \n  // Парсим JSON\n  aiData = JSON.parse(aiResponse);\n  \n  console.log('Parsed AI data:', aiData);\n} catch (error) {\n  console.error('Error parsing AI response:', error.message);\n  // Дефолтные значения если парсинг не удался\n  aiData = {\n    reliability_score: 5,\n    recommended: false,\n    summary_ru: 'Не удалось проанализировать компанию',\n    pros: ['Требуется дополнительный анализ'],\n    risks: ['Недостаточно данных']\n  };\n}\n\nreturn {\n  json: {\n    timestamp: item.timestamp,\n    company_name: item.company_name,\n    rating: item.rating,\n    moq: item.moq,\n    price: item.price,\n    location: item.location,\n    years: item.years,\n    email: item.email,\n    url: item.url,\n    verified: item.verified,\n    ai_score: aiData.reliability_score || 5,\n    recommended: aiData.recommended || false,\n    summary: aiData.summary_ru || 'Нет данных',\n    pros: Array.isArray(aiData.pros) ? aiData.pros.join(', ') : 'Нет данных',\n    risks: Array.isArray(aiData.risks) ? aiData.risks.join(', ') : 'Нет данных'\n  }\n};"
+      },
+      "id": "code-3",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Собираем все результаты\nconst items = $input.all();\n\nconst leads = items.map(item => item.json);\n\n// Сортируем по AI score\nleads.sort((a, b) => b.ai_score - a.ai_score);\n\nconsole.log(`Returning ${leads.length} analyzed leads`);\n\nreturn {\n  json: {\n    success: true,\n    total_leads: leads.length,\n    timestamp: new Date().toISOString(),\n    leads: leads\n  }\n};"
+      },
+      "id": "code-4",
+      "name": "Aggregate Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json, null, 2) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "webhook-response",
+      "name": "Send Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1780, 300]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Parameters": {
+      "main": [
+        [
+          {
+            "node": "Generate Suppliers Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Suppliers Data": {
+      "main": [
+        [
+          {
+            "node": "OpenAI Chat Model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "main": [
+        [
+          {
+            "node": "Combine Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Data": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Results": {
+      "main": [
+        [
+          {
+            "node": "Send Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  },
+  "versionId": "chinaleadbot-v2",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "your-instance-id"
+  },
+  "id": "chinaleadbot-v2",
+  "tags": []
+}
