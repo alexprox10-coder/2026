@@ -1,0 +1,2 @@
+Timestamp,Company,Rating,MOQ,Price,Location,Years,Email,URL,AI_Score,Recommended,Summary,Pros,Risks
+2026-01-17T10:00:00Z,Example Company Ltd.,4.8,100 pieces,$5.50,"Guangdong, China",12,sales@example.com,https://example.en.alibaba.com,9,TRUE,"Надежная компания с высоким рейтингом и большим опытом работы","высокий рейтинг, большой опыт, verified supplier","высокий MOQ может быть проблемой для малого бизнеса"
