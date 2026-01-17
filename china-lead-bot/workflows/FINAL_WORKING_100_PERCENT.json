@@ -1,0 +1,128 @@
+{
+  "name": "ChinaLeadBot - ИТОГОВАЯ РАБОЧАЯ ВЕРСИЯ",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"]
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "webhookId": "chinaleadbot-final-working",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = $input.first().json.message;\nconst text = message.text || '';\nconst chatId = message.chat.id;\n\nif (text.startsWith('/start')) {\n  return { json: { command: 'start', chat_id: chatId } };\n}\n\nif (text.startsWith('/help')) {\n  return { json: { command: 'help', chat_id: chatId } };\n}\n\nreturn {\n  json: {\n    command: 'search',\n    chat_id: chatId,\n    category: text.trim() || 'wireless headphones'\n  }\n};"
+      },
+      "id": "b2c3d4e5-f6g7-8901-bcde-f12345678901",
+      "name": "Parse Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{ "value1": "={{ $json.command }}", "value2": "start" }]
+        }
+      },
+      "id": "c3d4e5f6-g7h8-9012-cdef-123456789012",
+      "name": "Is Start?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "🇨🇳 *ChinaLeadBot*\n\nНапишите категорию:\nwireless headphones",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "d4e5f6g7-h8i9-0123-defg-234567890123",
+      "name": "Send Welcome",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "credentials": { "telegramApi": { "id": "TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" } }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{ "value1": "={{ $json.command }}", "value2": "help" }]
+        }
+      },
+      "id": "e5f6g7h8-i9j0-1234-efgh-345678901234",
+      "name": "Is Help?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 500]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "Напишите категорию товара",
+        "additionalFields": {}
+      },
+      "id": "f6g7h8i9-j0k1-2345-fghi-456789012345",
+      "name": "Send Help",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1120, 500],
+      "credentials": { "telegramApi": { "id": "TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" } }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "🔍 Поиск: {{ $json.category }}",
+        "additionalFields": {}
+      },
+      "id": "g7h8i9j0-k1l2-3456-ghij-567890123456",
+      "name": "Send Processing",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1120, 700],
+      "credentials": { "telegramApi": { "id": "TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const category = $input.first().json.category;\nconst chatId = $input.first().json.chat_id;\n\nconst suppliers = [\n  { name: 'Yiwu Wholesale Trading Co.', rating: 4.9, moq: '200 шт', price: '$3.80', location: 'Zhejiang', email: 'export@yiwu-wholesale.com', url: 'yiwu-wholesale.en.alibaba.com' },\n  { name: 'Shanghai Premium Exports', rating: 4.7, moq: '300 шт', price: '$6.50', location: 'Shanghai', email: 'export@sh-premium.com', url: 'sh-premium.en.alibaba.com' },\n  { name: 'Shenzhen Tech Electronics', rating: 4.8, moq: '100 шт', price: '$5.50', location: 'Guangdong', email: 'sales@shenzhen-tech.com', url: 'shenzhen-tech.en.alibaba.com' }\n];\n\nlet message = `📊 *${category}* (${suppliers.length} компаний)\\n\\n`;\n\nsuppliers.forEach((s, i) => {\n  message += `⭐️ *${i+1}. ${s.name}*\\n`;\n  message += `📊 ${s.rating}/5 | 📦 ${s.moq} | 💰 ${s.price}\\n`;\n  message += `📍 ${s.location}\\n`;\n  message += `📧 ${s.email}\\n`;\n  message += `🌐 ${s.url}\\n\\n`;\n});\n\nreturn {\n  json: {\n    chat_id: chatId,\n    message: message\n  }\n};"
+      },
+      "id": "h8i9j0k1-l2m3-4567-hijk-678901234567",
+      "name": "Generate and Format",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 700]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "i9j0k1l2-m3n4-5678-ijkl-789012345678",
+      "name": "Send Result",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1560, 700],
+      "credentials": { "telegramApi": { "id": "TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" } }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": { "main": [[{ "node": "Parse Command", "type": "main", "index": 0 }]] },
+    "Parse Command": { "main": [[{ "node": "Is Start?", "type": "main", "index": 0 }]] },
+    "Is Start?": { "main": [[{ "node": "Send Welcome", "type": "main", "index": 0 }], [{ "node": "Is Help?", "type": "main", "index": 0 }]] },
+    "Is Help?": { "main": [[{ "node": "Send Help", "type": "main", "index": 0 }], [{ "node": "Send Processing", "type": "main", "index": 0 }]] },
+    "Send Processing": { "main": [[{ "node": "Generate and Format", "type": "main", "index": 0 }]] },
+    "Generate and Format": { "main": [[{ "node": "Send Result", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

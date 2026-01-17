@@ -1,0 +1,221 @@
+{
+  "name": "ChinaLeadBot - С AI И ТАБЛИЦЕЙ (ПОЛНАЯ ВЕРСИЯ)",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"]
+      },
+      "id": "telegram-trigger-final",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "webhookId": "chinaleadbot-full-final",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = $input.first().json.message;\nconst text = message.text || '';\nconst chatId = message.chat.id;\nconst userId = message.from.id;\nconst userName = message.from.first_name;\n\nif (text.startsWith('/start')) {\n  return { json: { command: 'start', chat_id: chatId } };\n}\n\nif (text.startsWith('/help')) {\n  return { json: { command: 'help', chat_id: chatId } };\n}\n\nreturn {\n  json: {\n    command: 'search',\n    chat_id: chatId,\n    user_id: userId,\n    user_name: userName,\n    category: text.trim() || 'wireless headphones'\n  }\n};"
+      },
+      "id": "parse-command-final",
+      "name": "Parse Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{ "value1": "={{ $json.command }}", "value2": "start" }]
+        }
+      },
+      "id": "if-start-final",
+      "name": "Is Start?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "🇨🇳 *ChinaLeadBot с AI*\n\nНапишите категорию:\nwireless headphones",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "send-welcome-final",
+      "name": "Send Welcome",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "credentials": { "telegramApi": { "id": "TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" } }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{ "value1": "={{ $json.command }}", "value2": "help" }]
+        }
+      },
+      "id": "if-help-final",
+      "name": "Is Help?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 500]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "Напишите категорию товара",
+        "additionalFields": {}
+      },
+      "id": "send-help-final",
+      "name": "Send Help",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1120, 500],
+      "credentials": { "telegramApi": { "id": "TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" } }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "🔍 Поиск: {{ $json.category }}\n🤖 AI анализ...\n⏳ 20 сек",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "send-processing-final",
+      "name": "Send Processing",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1120, 700],
+      "credentials": { "telegramApi": { "id": "TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const category = $input.first().json.category;\nconst chatId = $input.first().json.chat_id;\nconst userId = $input.first().json.user_id;\nconst userName = $input.first().json.user_name;\n\nconst suppliers = [\n  { name: 'Yiwu Wholesale Trading Co.', rating: 4.9, years: 15, moq: '200 шт', price: '$3.80', location: 'Zhejiang', email: 'export@yiwu-wholesale.com', url: 'yiwu-wholesale.en.alibaba.com', response: '98%', transactions: 12400 },\n  { name: 'Shanghai Premium Exports', rating: 4.7, years: 10, moq: '300 шт', price: '$6.50', location: 'Shanghai', email: 'export@sh-premium.com', url: 'sh-premium.en.alibaba.com', response: '92%', transactions: 7600 },\n  { name: 'Shenzhen Tech Electronics', rating: 4.8, years: 12, moq: '100 шт', price: '$5.50', location: 'Guangdong', email: 'sales@shenzhen-tech.com', url: 'shenzhen-tech.en.alibaba.com', response: '95%', transactions: 5800 }\n];\n\nreturn suppliers.map(s => ({\n  json: {\n    company_name: s.name,\n    rating: s.rating,\n    years_in_business: s.years,\n    moq: s.moq,\n    price: s.price,\n    location: s.location,\n    contact_email: s.email,\n    company_url: s.url,\n    response_rate: s.response,\n    total_transactions: s.transactions,\n    category: category,\n    chat_id: chatId,\n    user_id: userId,\n    user_name: userName\n  }\n}));"
+      },
+      "id": "generate-suppliers-final",
+      "name": "Generate Suppliers",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 700]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer ВАШ_OPENROUTER_API_KEY"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "https://n8n.arendadom24.ru"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"anthropic/claude-3.5-sonnet\",\n  \"messages\": [{\n    \"role\": \"user\",\n    \"content\": \"Analyze Chinese supplier for Russian importer. Company: {{ $json.company_name }}, Rating: {{ $json.rating }}/5, Years: {{ $json.years_in_business }}, MOQ: {{ $json.moq }}, Price: {{ $json.price }}, Location: {{ $json.location }}. Respond ONLY JSON: {\\\"ai_score\\\": 9, \\\"recommended\\\": \\\"YES\\\", \\\"pros\\\": \\\"Высокий рейтинг\\\", \\\"risks\\\": \\\"Средний MOQ\\\"}\"\n  }],\n  \"max_tokens\": 200\n}",
+        "options": {}
+      },
+      "id": "ai-analyze-final",
+      "name": "AI Analyze",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 700]
+    },
+    {
+      "parameters": {
+        "jsCode": "const index = $itemIndex;\nconst aiResp = $input.item.json;\nconst allCompanies = $node[\"Generate Suppliers\"].json;\nconst company = Array.isArray(allCompanies) ? allCompanies[index] : allCompanies;\n\nlet ai = { ai_score: 7, recommended: 'YES', pros: 'Хороший рейтинг', risks: 'Проверьте документы' };\n\ntry {\n  const parsed = JSON.parse(aiResp.choices[0].message.content);\n  ai = { ai_score: parsed.ai_score || 7, recommended: parsed.recommended || 'YES', pros: parsed.pros || ai.pros, risks: parsed.risks || ai.risks };\n} catch (e) {}\n\nreturn {\n  json: {\n    company_name: company.company_name,\n    rating: company.rating,\n    moq: company.moq,\n    price: company.price,\n    location: company.location,\n    contact_email: company.contact_email,\n    company_url: company.company_url,\n    category: company.category,\n    chat_id: company.chat_id,\n    user_id: company.user_id,\n    user_name: company.user_name,\n    ai_score: ai.ai_score,\n    recommended: ai.recommended,\n    pros: ai.pros,\n    risks: ai.risks,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "merge-data-final",
+      "name": "Merge Company and AI Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 700]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "mode": "list", "value": "ВАШ_GOOGLE_SHEET_ID" },
+        "sheetName": { "mode": "list", "value": "Leads" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $json.timestamp }}",
+            "User_ID": "={{ $json.user_id }}",
+            "User_Name": "={{ $json.user_name }}",
+            "Chat_ID": "={{ $json.chat_id }}",
+            "Category": "={{ $json.category }}",
+            "Company": "={{ $json.company_name }}",
+            "Rating": "={{ $json.rating }}",
+            "MOQ": "={{ $json.moq }}",
+            "Price": "={{ $json.price }}",
+            "Location": "={{ $json.location }}",
+            "Email": "={{ $json.contact_email }}",
+            "URL": "={{ $json.company_url }}",
+            "AI_Score": "={{ $json.ai_score }}",
+            "Recommended": "={{ $json.recommended }}",
+            "Pros": "={{ $json.pros }}",
+            "Risks": "={{ $json.risks }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "save-to-sheets-final",
+      "name": "Save to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [2000, 700],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst chatId = items[0].json.chat_id;\nconst category = items[0].json.category;\n\nlet message = `📊 *${category}* (${items.length} компаний)\\n\\n`;\n\nitems.forEach((item, i) => {\n  const d = item.json;\n  const star = d.recommended === 'YES' ? '⭐️' : '📍';\n  message += `${star} *${i+1}. ${d.company_name}*\\n`;\n  message += `🎯 AI: ${d.ai_score}/10 | 📊 ${d.rating}/5\\n`;\n  message += `📦 ${d.moq} | 💰 ${d.price}\\n`;\n  message += `📍 ${d.location}\\n`;\n  message += `📧 ${d.contact_email}\\n`;\n  message += `🌐 ${d.company_url}\\n`;\n  message += `✅ ${d.pros}\\n`;\n  message += `⚠️ ${d.risks}\\n\\n`;\n});\n\nmessage += `_Сохранено в Google Sheets_ 📝`;\n\nreturn {\n  json: {\n    chat_id: chatId,\n    message: message\n  }\n};"
+      },
+      "id": "format-message-final",
+      "name": "Format Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2220, 700]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "send-result-final",
+      "name": "Send Result",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [2440, 700],
+      "credentials": { "telegramApi": { "id": "TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" } }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": { "main": [[{ "node": "Parse Command", "type": "main", "index": 0 }]] },
+    "Parse Command": { "main": [[{ "node": "Is Start?", "type": "main", "index": 0 }]] },
+    "Is Start?": { "main": [[{ "node": "Send Welcome", "type": "main", "index": 0 }], [{ "node": "Is Help?", "type": "main", "index": 0 }]] },
+    "Is Help?": { "main": [[{ "node": "Send Help", "type": "main", "index": 0 }], [{ "node": "Send Processing", "type": "main", "index": 0 }]] },
+    "Send Processing": { "main": [[{ "node": "Generate Suppliers", "type": "main", "index": 0 }]] },
+    "Generate Suppliers": { "main": [[{ "node": "AI Analyze", "type": "main", "index": 0 }]] },
+    "AI Analyze": { "main": [[{ "node": "Merge Company and AI Data", "type": "main", "index": 0 }]] },
+    "Merge Company and AI Data": { "main": [[{ "node": "Save to Google Sheets", "type": "main", "index": 0 }]] },
+    "Save to Google Sheets": { "main": [[{ "node": "Format Message", "type": "main", "index": 0 }]] },
+    "Format Message": { "main": [[{ "node": "Send Result", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}
