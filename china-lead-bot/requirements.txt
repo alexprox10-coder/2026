@@ -1,0 +1,29 @@
+# Core dependencies
+python-telegram-bot==20.7
+python-dotenv==1.0.0
+
+# AI & NLP
+anthropic==0.18.1
+
+# Web scraping
+beautifulsoup4==4.12.3
+requests==2.31.0
+lxml==5.1.0
+
+# Data processing
+pandas==2.2.0
+
+# Google Sheets integration
+gspread==5.12.4
+google-auth==2.27.0
+google-auth-oauthlib==1.2.0
+
+# Database
+sqlalchemy==2.0.25
+
+# Payments
+yookassa==3.0.0
+
+# Utils
+aiohttp==3.9.1
+asyncio==3.4.3

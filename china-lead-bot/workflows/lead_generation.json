@@ -1,0 +1,338 @@
+{
+  "name": "ChinaLeadBot - Lead Generation & Qualification",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-search",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "🎯 Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "position": [240, 300],
+      "typeVersion": 1.1,
+      "webhookId": "china-lead-search"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract search parameters from webhook\nconst params = $input.first().json;\n\nconst userId = params.user_id;\nconst category = params.category;\nconst moq = params.moq || 'any';\nconst priceRange = params.price_range || 'any';\n\n// Build Alibaba search URL\nconst searchQuery = encodeURIComponent(category);\nconst alibaba_url = `https://www.alibaba.com/trade/search?SearchText=${searchQuery}`;\n\n// Alternative sources\nconst sources = [\n  {\n    name: 'alibaba',\n    url: alibaba_url,\n    selector: '.organic-list-offer'\n  },\n  {\n    name: '1688',\n    url: `https://s.1688.com/selloffer/offer_search.htm?keywords=${searchQuery}`,\n    selector: '.sm-offer-item'\n  }\n];\n\n// Return search configuration\nreturn {\n  json: {\n    user_id: userId,\n    category: category,\n    moq: moq,\n    price_range: priceRange,\n    search_sources: sources,\n    timestamp: new Date().toISOString(),\n    status: 'initialized'\n  }\n};"
+      },
+      "id": "init-search",
+      "name": "📋 Initialize Search",
+      "type": "n8n-nodes-base.code",
+      "position": [460, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.search_sources[0].url }}",
+        "method": "GET",
+        "options": {
+          "timeout": 30000,
+          "headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+          }
+        }
+      },
+      "id": "scrape-alibaba",
+      "name": "🌐 Scrape Alibaba",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [680, 300],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Alibaba search results\nconst html = $input.first().json.body;\n\n// Mock data for demonstration (in production use real HTML parsing)\nconst mockSuppliers = [\n  {\n    company_name: 'Shenzhen Tech Electronics Co., Ltd.',\n    product_name: $('category').value,\n    rating: 4.8,\n    years_in_business: 12,\n    moq: '100 pieces',\n    price: '$5.50',\n    location: 'Guangdong, China',\n    verified: true,\n    gold_supplier: true,\n    contact_email: 'sales@shenzhen-tech.com',\n    company_url: 'https://shenzhen-tech.en.alibaba.com',\n    trade_assurance: true,\n    response_rate: '95%',\n    total_transactions: 5800\n  },\n  {\n    company_name: 'Guangzhou Quality Manufacturing Ltd.',\n    product_name: $('category').value,\n    rating: 4.6,\n    years_in_business: 8,\n    moq: '500 pieces',\n    price: '$4.20',\n    location: 'Guangdong, China',\n    verified: true,\n    gold_supplier: false,\n    contact_email: 'info@gz-quality.com',\n    company_url: 'https://gz-quality.en.alibaba.com',\n    trade_assurance: true,\n    response_rate: '88%',\n    total_transactions: 3200\n  },\n  {\n    company_name: 'Yiwu Wholesale Trading Co.',\n    product_name: $('category').value,\n    rating: 4.9,\n    years_in_business: 15,\n    moq: '200 pieces',\n    price: '$3.80',\n    location: 'Zhejiang, China',\n    verified: true,\n    gold_supplier: true,\n    contact_email: 'export@yiwu-wholesale.com',\n    company_url: 'https://yiwu-wholesale.en.alibaba.com',\n    trade_assurance: true,\n    response_rate: '98%',\n    total_transactions: 12400\n  },\n  {\n    company_name: 'Dongguan Factory Direct Supplies',\n    product_name: $('category').value,\n    rating: 4.5,\n    years_in_business: 6,\n    moq: '1000 pieces',\n    price: '$2.90',\n    location: 'Guangdong, China',\n    verified: false,\n    gold_supplier: false,\n    contact_email: 'sales@dg-factory.com',\n    company_url: 'https://dg-factory.en.alibaba.com',\n    trade_assurance: false,\n    response_rate: '75%',\n    total_transactions: 850\n  },\n  {\n    company_name: 'Shanghai Premium Exports Inc.',\n    product_name: $('category').value,\n    rating: 4.7,\n    years_in_business: 10,\n    moq: '300 pieces',\n    price: '$6.50',\n    location: 'Shanghai, China',\n    verified: true,\n    gold_supplier: true,\n    contact_email: 'export@sh-premium.com',\n    company_url: 'https://sh-premium.en.alibaba.com',\n    trade_assurance: true,\n    response_rate: '92%',\n    total_transactions: 7600\n  },\n  {\n    company_name: 'Ningbo Reliable Manufacturing',\n    product_name: $('category').value,\n    rating: 4.4,\n    years_in_business: 7,\n    moq: '500 pieces',\n    price: '$4.80',\n    location: 'Zhejiang, China',\n    verified: true,\n    gold_supplier: false,\n    contact_email: 'info@ningbo-reliable.com',\n    company_url: 'https://ningbo-reliable.en.alibaba.com',\n    trade_assurance: true,\n    response_rate: '85%',\n    total_transactions: 2100\n  },\n  {\n    company_name: 'Fujian Best Price Traders',\n    product_name: $('category').value,\n    rating: 4.3,\n    years_in_business: 5,\n    moq: '2000 pieces',\n    price: '$2.20',\n    location: 'Fujian, China',\n    verified: false,\n    gold_supplier: false,\n    contact_email: 'sales@fujian-bestprice.com',\n    company_url: 'https://fujian-bestprice.en.alibaba.com',\n    trade_assurance: false,\n    response_rate: '70%',\n    total_transactions: 450\n  },\n  {\n    company_name: 'Beijing International Trade Corp',\n    product_name: $('category').value,\n    rating: 4.8,\n    years_in_business: 18,\n    moq: '100 pieces',\n    price: '$7.20',\n    location: 'Beijing, China',\n    verified: true,\n    gold_supplier: true,\n    contact_email: 'export@beijing-intl.com',\n    company_url: 'https://beijing-intl.en.alibaba.com',\n    trade_assurance: true,\n    response_rate: '96%',\n    total_transactions: 15200\n  },\n  {\n    company_name: 'Hangzhou Quality First Ltd.',\n    product_name: $('category').value,\n    rating: 4.6,\n    years_in_business: 9,\n    moq: '300 pieces',\n    price: '$5.10',\n    location: 'Zhejiang, China',\n    verified: true,\n    gold_supplier: true,\n    contact_email: 'sales@hz-qualityfirst.com',\n    company_url: 'https://hz-qualityfirst.en.alibaba.com',\n    trade_assurance: true,\n    response_rate: '90%',\n    total_transactions: 4900\n  },\n  {\n    company_name: 'Qingdao Export Solutions',\n    product_name: $('category').value,\n    rating: 4.5,\n    years_in_business: 11,\n    moq: '500 pieces',\n    price: '$4.40',\n    location: 'Shandong, China',\n    verified: true,\n    gold_supplier: false,\n    contact_email: 'info@qd-exportsolutions.com',\n    company_url: 'https://qd-exportsolutions.en.alibaba.com',\n    trade_assurance: true,\n    response_rate: '87%',\n    total_transactions: 3600\n  }\n];\n\n// Apply filters based on MOQ and price\nconst moqFilter = $('moq').value;\nconst priceFilter = $('price_range').value;\n\nlet filteredSuppliers = mockSuppliers;\n\n// Filter by MOQ\nif (moqFilter && moqFilter !== 'any') {\n  const moqValue = parseInt(moqFilter);\n  filteredSuppliers = filteredSuppliers.filter(s => {\n    const supplierMoq = parseInt(s.moq);\n    return supplierMoq <= moqValue || isNaN(supplierMoq);\n  });\n}\n\n// Filter by price\nif (priceFilter && priceFilter !== 'any') {\n  const [min, max] = priceFilter.split('_').map(p => parseFloat(p) || 0);\n  filteredSuppliers = filteredSuppliers.filter(s => {\n    const price = parseFloat(s.price.replace('$', ''));\n    return price >= min && (max === 0 || price <= max);\n  });\n}\n\n// Sort by rating and transactions\nfilteredSuppliers.sort((a, b) => {\n  const scoreA = (a.rating * 0.5) + (a.total_transactions / 10000 * 0.3) + (a.verified ? 0.2 : 0);\n  const scoreB = (b.rating * 0.5) + (b.total_transactions / 10000 * 0.3) + (b.verified ? 0.2 : 0);\n  return scoreB - scoreA;\n});\n\n// Return top 10\nreturn filteredSuppliers.slice(0, 10).map(supplier => ({\n  json: supplier\n}));"
+      },
+      "id": "parse-results",
+      "name": "🔍 Parse & Filter Results",
+      "type": "n8n-nodes-base.code",
+      "position": [900, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Проанализируй китайскую компанию-поставщика и дай экспертную оценку:\\n\\nНазвание: ' + $json.company_name + '\\nРейтинг: ' + $json.rating + '/5\\nОпыт: ' + $json.years_in_business + ' лет\\nMOQ: ' + $json.moq + '\\nЦена: ' + $json.price + '\\nЛокация: ' + $json.location + '\\nВерифицирована: ' + ($json.verified ? 'Да' : 'Нет') + '\\nGold Supplier: ' + ($json.gold_supplier ? 'Да' : 'Нет') + '\\nОтклик: ' + $json.response_rate + '\\nСделок: ' + $json.total_transactions + '\\n\\nДай краткую оценку (2-3 предложения):\\n1. Надежность компании (1-10)\\n2. Рекомендуется ли для сотрудничества?\\n3. Ключевые преимущества/риски\\n\\nФормат ответа - только JSON:\\n{\\n  \"reliability_score\": <число 1-10>,\\n  \"recommended\": <true/false>,\\n  \"summary_ru\": \"краткое резюме на русском\",\\n  \"pros\": [\"плюс 1\", \"плюс 2\"],\\n  \"risks\": [\"риск 1\", \"риск 2\"]\\n}' }}",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "id": "ai-analysis",
+      "name": "🤖 AI Quality Analysis",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [1120, 300],
+      "typeVersion": 3.1
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-5-20250929",
+          "cachedResultName": "Claude Sonnet 4.5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [1120, 500],
+      "id": "claude-model",
+      "name": "✨ Claude AI",
+      "credentials": {
+        "anthropicApi": {
+          "id": "YOUR_ANTHROPIC_CREDENTIAL_ID",
+          "name": "Anthropic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\"type\":\"object\",\"properties\":{\"reliability_score\":{\"type\":\"number\"},\"recommended\":{\"type\":\"boolean\"},\"summary_ru\":{\"type\":\"string\"},\"pros\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"risks\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}},\"required\":[\"reliability_score\",\"recommended\",\"summary_ru\"]}",
+        "autoFix": true
+      },
+      "id": "json-parser",
+      "name": "🔧 JSON Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [1120, 680],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "company_name",
+              "name": "company_name",
+              "value": "={{ $('Parse & Filter Results').item.json.company_name }}",
+              "type": "string"
+            },
+            {
+              "id": "rating",
+              "name": "rating",
+              "value": "={{ $('Parse & Filter Results').item.json.rating }}",
+              "type": "number"
+            },
+            {
+              "id": "moq",
+              "name": "moq",
+              "value": "={{ $('Parse & Filter Results').item.json.moq }}",
+              "type": "string"
+            },
+            {
+              "id": "price",
+              "name": "price",
+              "value": "={{ $('Parse & Filter Results').item.json.price }}",
+              "type": "string"
+            },
+            {
+              "id": "location",
+              "name": "location",
+              "value": "={{ $('Parse & Filter Results').item.json.location }}",
+              "type": "string"
+            },
+            {
+              "id": "years",
+              "name": "years",
+              "value": "={{ $('Parse & Filter Results').item.json.years_in_business }}",
+              "type": "number"
+            },
+            {
+              "id": "contact_email",
+              "name": "contact_email",
+              "value": "={{ $('Parse & Filter Results').item.json.contact_email }}",
+              "type": "string"
+            },
+            {
+              "id": "company_url",
+              "name": "company_url",
+              "value": "={{ $('Parse & Filter Results').item.json.company_url }}",
+              "type": "string"
+            },
+            {
+              "id": "ai_score",
+              "name": "ai_score",
+              "value": "={{ $json.reliability_score }}",
+              "type": "number"
+            },
+            {
+              "id": "recommended",
+              "name": "recommended",
+              "value": "={{ $json.recommended }}",
+              "type": "boolean"
+            },
+            {
+              "id": "ai_summary",
+              "name": "ai_summary",
+              "value": "={{ $json.summary_ru }}",
+              "type": "string"
+            },
+            {
+              "id": "pros",
+              "name": "pros",
+              "value": "={{ $json.pros.join(', ') }}",
+              "type": "string"
+            },
+            {
+              "id": "risks",
+              "name": "risks",
+              "value": "={{ $json.risks.join(', ') }}",
+              "type": "string"
+            },
+            {
+              "id": "timestamp",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prepare-output",
+      "name": "📊 Prepare Output",
+      "type": "n8n-nodes-base.set",
+      "position": [1340, 300],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $json.timestamp }}",
+            "Company": "={{ $json.company_name }}",
+            "Rating": "={{ $json.rating }}",
+            "MOQ": "={{ $json.moq }}",
+            "Price": "={{ $json.price }}",
+            "Location": "={{ $json.location }}",
+            "Years": "={{ $json.years }}",
+            "Email": "={{ $json.contact_email }}",
+            "URL": "={{ $json.company_url }}",
+            "AI_Score": "={{ $json.ai_score }}",
+            "Recommended": "={{ $json.recommended }}",
+            "Summary": "={{ $json.ai_summary }}",
+            "Pros": "={{ $json.pros }}",
+            "Risks": "={{ $json.risks }}"
+          },
+          "matchingColumns": ["Company"],
+          "schema": [
+            {"id": "Timestamp", "displayName": "Timestamp", "required": false},
+            {"id": "Company", "displayName": "Company", "required": true, "canBeUsedToMatch": true},
+            {"id": "Rating", "displayName": "Rating", "required": false},
+            {"id": "MOQ", "displayName": "MOQ", "required": false},
+            {"id": "Price", "displayName": "Price", "required": false},
+            {"id": "Location", "displayName": "Location", "required": false},
+            {"id": "Years", "displayName": "Years", "required": false},
+            {"id": "Email", "displayName": "Email", "required": false},
+            {"id": "URL", "displayName": "URL", "required": false},
+            {"id": "AI_Score", "displayName": "AI_Score", "required": false},
+            {"id": "Recommended", "displayName": "Recommended", "required": false},
+            {"id": "Summary", "displayName": "Summary", "required": false},
+            {"id": "Pros", "displayName": "Pros", "required": false},
+            {"id": "Risks", "displayName": "Risks", "required": false}
+          ]
+        },
+        "options": {}
+      },
+      "id": "save-to-sheets",
+      "name": "💾 Save to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [1560, 300],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate all leads and prepare response\nconst allLeads = $input.all();\n\nconst leadsData = allLeads.map(item => ({\n  company_name: item.json.company_name,\n  rating: item.json.rating,\n  moq: item.json.moq,\n  price: item.json.price,\n  location: item.json.location,\n  years: item.json.years,\n  contact_email: item.json.contact_email,\n  company_url: item.json.company_url,\n  ai_score: item.json.ai_score,\n  recommended: item.json.recommended,\n  ai_summary: item.json.ai_summary,\n  pros: item.json.pros,\n  risks: item.json.risks\n}));\n\nreturn {\n  json: {\n    success: true,\n    total_leads: leadsData.length,\n    leads: leadsData,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "aggregate-results",
+      "name": "📦 Aggregate Results",
+      "type": "n8n-nodes-base.code",
+      "position": [1780, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "webhook-response",
+      "name": "✅ Send Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [2000, 300],
+      "typeVersion": 1.1
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "🎯 Webhook Trigger": {
+      "main": [[{"node": "📋 Initialize Search", "type": "main", "index": 0}]]
+    },
+    "📋 Initialize Search": {
+      "main": [[{"node": "🌐 Scrape Alibaba", "type": "main", "index": 0}]]
+    },
+    "🌐 Scrape Alibaba": {
+      "main": [[{"node": "🔍 Parse & Filter Results", "type": "main", "index": 0}]]
+    },
+    "🔍 Parse & Filter Results": {
+      "main": [[{"node": "🤖 AI Quality Analysis", "type": "main", "index": 0}]]
+    },
+    "🤖 AI Quality Analysis": {
+      "main": [[{"node": "📊 Prepare Output", "type": "main", "index": 0}]]
+    },
+    "✨ Claude AI": {
+      "ai_languageModel": [[{"node": "🤖 AI Quality Analysis", "type": "ai_languageModel", "index": 0}]]
+    },
+    "🔧 JSON Parser": {
+      "ai_outputParser": [[{"node": "🤖 AI Quality Analysis", "type": "ai_outputParser", "index": 0}]]
+    },
+    "📊 Prepare Output": {
+      "main": [[{"node": "💾 Save to Google Sheets", "type": "main", "index": 0}]]
+    },
+    "💾 Save to Google Sheets": {
+      "main": [[{"node": "📦 Aggregate Results", "type": "main", "index": 0}]]
+    },
+    "📦 Aggregate Results": {
+      "main": [[{"node": "✅ Send Response", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "lead-gen-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "china-lead-bot-workflow",
+  "tags": [
+    {
+      "name": "Lead Generation",
+      "id": "lead-gen-tag"
+    },
+    {
+      "name": "AI Automation",
+      "id": "ai-automation-tag"
+    }
+  ]
+}
