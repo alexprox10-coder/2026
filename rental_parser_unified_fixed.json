@@ -1,0 +1,552 @@
+{
+  "name": "🏠 Rental Parser - All Platforms (Fixed)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 4
+            }
+          ]
+        }
+      },
+      "id": "1",
+      "name": "⏰ Schedule Every 4h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "command": "cd /home/user/2026/rental_parser && python3 main.py --max-pages 5 --platforms cian yandex avito"
+      },
+      "id": "2",
+      "name": "🏠 Run Parser (All Platforms)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "command": "cd /home/user/2026/rental_parser && python3 main.py --extract-phones --phone-limit 10"
+      },
+      "id": "3",
+      "name": "📞 Extract Phones",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "command": "cd /home/user/2026/rental_parser && python3 -c \"from database.models import init_db, get_unsent_listings; import json; db = init_db(); listings = get_unsent_listings(db, limit=20); print(json.dumps([{'id': l.id, 'platform': l.platform, 'url': l.url, 'title': l.title, 'price': l.price, 'phone': l.phone, 'address': l.address, 'rooms': l.rooms, 'area': l.area, 'listing_id': l.listing_id} for l in listings], ensure_ascii=False))\""
+      },
+      "id": "4",
+      "name": "📋 Get Unsent Listings",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = JSON.parse($input.first().json.stdout);\nreturn output.map(item => ({ json: item }));"
+      },
+      "id": "5",
+      "name": "Parse JSON Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.title }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6",
+      "name": "✅ Has Listings?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const platform = $json.platform || 'unknown';\nconst platformEmoji = platform === 'cian' ? '🔵' : (platform === 'yandex' ? '🔴' : '🟢');\nconst platformName = platform === 'cian' ? 'Cian.ru' : (platform === 'yandex' ? 'Yandex.Realty' : 'Avito.ru');\n\nconst roomsText = $json.rooms === 0 ? 'Студия' : ($json.rooms ? `${$json.rooms}-комн` : '');\nconst priceText = $json.price ? `${Math.round($json.price).toLocaleString('ru-RU')} ₽/мес` : 'Цена не указана';\n\nconst message = `${platformEmoji} *Новое объявление - ${platformName}*\\n\\n*${$json.title}*\\n\\n💰 ${priceText}\\n${roomsText ? '🏠 ' + roomsText : ''}${$json.area ? (roomsText ? ', ' : '📐 ') + $json.area + ' м²' : ''}\\n${$json.address ? '📍 ' + $json.address : ''}\\n${$json.phone ? '📞 \\`' + $json.phone + '\\`' : '📞 Телефон не указан'}\\n\\n🔗 [Открыть объявление](${$json.url})\\n\\n_Площадка: ${platformName}_`;\n\nreturn {\n  json: {\n    ...($json),\n    message: message,\n    platform_emoji: platformEmoji,\n    platform_name: platformName\n  }\n};"
+      },
+      "id": "7",
+      "name": "✍️ Format Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "disable_web_page_preview": false
+        }
+      },
+      "id": "8",
+      "name": "📱 Send to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        1780,
+        200
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "sBegr8MZX7eZ7dIX",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 3,
+        "unit": "seconds"
+      },
+      "id": "9",
+      "name": "⏳ Wait 3s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        2000,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.phone }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "10",
+      "name": "📞 Has Phone?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2220,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.AUTO_DIAL_WEBHOOK_URL || 'http://localhost:3000/autodial' }}",
+        "authentication": "none",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"phone\": \"{{ $json.phone }}\",\n  \"listing_id\": \"{{ $json.listing_id }}\",\n  \"platform\": \"{{ $json.platform }}\",\n  \"url\": \"{{ $json.url }}\"\n}",
+        "options": {}
+      },
+      "id": "11",
+      "name": "📞 Auto-Dial Webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2440,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "command": "=cd /home/user/2026/rental_parser && python3 -c \"from database.models import init_db, mark_as_sent; db = init_db(); mark_as_sent(db, {{ $json.id }}, 'n8n_workflow'); print('Marked as sent')\""
+      },
+      "id": "12",
+      "name": "✔️ Mark as Sent",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        2660,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "RentalListings",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $now.toISO() }}",
+            "Platform": "={{ $json.platform }}",
+            "URL": "={{ $json.url }}",
+            "Title": "={{ $json.title }}",
+            "Price": "={{ $json.price }}",
+            "Rooms": "={{ $json.rooms }}",
+            "Area": "={{ $json.area }}",
+            "Address": "={{ $json.address }}",
+            "Phone": "={{ $json.phone }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "13",
+      "name": "💾 Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2880,
+        200
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "0h17UZ4QJ4bHSSHp",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "😔 *Новых объявлений не найдено*\\n\\nВсе объявления уже были отправлены ранее.\\n\\n⏰ {{ $now.toLocaleString('ru-RU') }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "14",
+      "name": "📭 No Listings",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        1560,
+        400
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "sBegr8MZX7eZ7dIX",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "rental-manual",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "15",
+      "name": "🔧 Manual Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        500
+      ],
+      "webhookId": "rental-manual-trigger"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"Parser started\", \"time\": $now.toISO() } }}"
+      },
+      "id": "16",
+      "name": "📤 Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        460,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "command": "cd /home/user/2026/rental_parser && python3 main.py --stats"
+      },
+      "id": "17",
+      "name": "📊 Get Stats",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        680,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=✅ *Парсинг завершен!*\\n\\n{{ $node[\"Get Stats\"].json.stdout }}\\n\\n⏰ {{ $now.toLocaleString('ru-RU') }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "18",
+      "name": "✅ Completion Notice",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        900,
+        500
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "sBegr8MZX7eZ7dIX",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "⏰ Schedule Every 4h": {
+      "main": [
+        [
+          {
+            "node": "🏠 Run Parser (All Platforms)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏠 Run Parser (All Platforms)": {
+      "main": [
+        [
+          {
+            "node": "📞 Extract Phones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📞 Extract Phones": {
+      "main": [
+        [
+          {
+            "node": "📋 Get Unsent Listings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Get Unsent Listings": {
+      "main": [
+        [
+          {
+            "node": "Parse JSON Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse JSON Output": {
+      "main": [
+        [
+          {
+            "node": "✅ Has Listings?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Has Listings?": {
+      "main": [
+        [
+          {
+            "node": "✍️ Format Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📭 No Listings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✍️ Format Message": {
+      "main": [
+        [
+          {
+            "node": "📱 Send to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📱 Send to Telegram": {
+      "main": [
+        [
+          {
+            "node": "⏳ Wait 3s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏳ Wait 3s": {
+      "main": [
+        [
+          {
+            "node": "📞 Has Phone?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📞 Has Phone?": {
+      "main": [
+        [
+          {
+            "node": "📞 Auto-Dial Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "✔️ Mark as Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📞 Auto-Dial Webhook": {
+      "main": [
+        [
+          {
+            "node": "✔️ Mark as Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✔️ Mark as Sent": {
+      "main": [
+        [
+          {
+            "node": "💾 Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔧 Manual Webhook": {
+      "main": [
+        [
+          {
+            "node": "📤 Webhook Response",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🏠 Run Parser (All Platforms)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 Webhook Response": {
+      "main": [
+        [
+          {
+            "node": "📊 Get Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Get Stats": {
+      "main": [
+        [
+          {
+            "node": "✅ Completion Notice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-01-17T00:00:00.000Z",
+  "versionId": "1"
+}
