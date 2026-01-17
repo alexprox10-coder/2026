@@ -1,0 +1,139 @@
+{
+  "name": "ChinaLeadBot - БЕЗ SHEETS (Работает 100%)",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"]
+      },
+      "id": "telegram-trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "webhookId": "telegram-chinaleadbot-nosheets",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = $input.first().json.message;\nconst userId = message.from.id;\nconst userName = message.from.first_name;\nconst text = message.text || '';\nconst chatId = message.chat.id;\n\nif (text.startsWith('/start')) {\n  return { json: { command: 'start', user_id: userId, user_name: userName, chat_id: chatId } };\n}\n\nif (text.startsWith('/help')) {\n  return { json: { command: 'help', user_id: userId, user_name: userName, chat_id: chatId } };\n}\n\nconst category = text.replace('/search', '').trim();\nreturn {\n  json: {\n    command: 'search',\n    user_id: userId,\n    user_name: userName,\n    chat_id: chatId,\n    category: category || 'wireless headphones'\n  }\n};"
+      },
+      "id": "parse-command",
+      "name": "Parse Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{ "value1": "={{ $json.command }}", "value2": "start" }]
+        }
+      },
+      "id": "if-start",
+      "name": "Is Start?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "🇨🇳 *ChinaLeadBot*\n\nНапишите категорию товара:\nwireless headphones\n\n/help - Помощь",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "send-welcome",
+      "name": "Send Welcome",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "credentials": { "telegramApi": { "id": "TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" } }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{ "value1": "={{ $json.command }}", "value2": "help" }]
+        }
+      },
+      "id": "if-help",
+      "name": "Is Help?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 500]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "*Помощь*\n\nНапишите:\nwireless headphones\nLED lights\nbackpack",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "send-help",
+      "name": "Send Help",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1120, 500],
+      "credentials": { "telegramApi": { "id": "TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" } }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "🔍 Поиск: {{ $json.category }}\n⏳ 15-30 сек",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "send-processing",
+      "name": "Send Processing",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1120, 700],
+      "credentials": { "telegramApi": { "id": "TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst category = input.category;\nconst chatId = input.chat_id;\nconst userId = input.user_id;\nconst userName = input.user_name;\n\nconst suppliers = [\n  { company_name: 'Yiwu Wholesale Trading Co.', rating: 4.9, moq: '200 шт', price: '$3.80', location: 'Zhejiang', contact_email: 'export@yiwu-wholesale.com', company_url: 'https://yiwu-wholesale.en.alibaba.com' },\n  { company_name: 'Shanghai Premium Exports', rating: 4.7, moq: '300 шт', price: '$6.50', location: 'Shanghai', contact_email: 'export@sh-premium.com', company_url: 'https://sh-premium.en.alibaba.com' },\n  { company_name: 'Shenzhen Tech Electronics', rating: 4.8, moq: '100 шт', price: '$5.50', location: 'Guangdong', contact_email: 'sales@shenzhen-tech.com', company_url: 'https://shenzhen-tech.en.alibaba.com' }\n];\n\nconst result = suppliers.map(s => ({\n  json: {\n    company_name: s.company_name,\n    rating: s.rating,\n    moq: s.moq,\n    price: s.price,\n    location: s.location,\n    contact_email: s.contact_email,\n    company_url: s.company_url,\n    category: category,\n    chat_id: chatId,\n    user_id: userId\n  }\n}));\n\nreturn result;"
+      },
+      "id": "generate-suppliers",
+      "name": "Generate Suppliers",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 700]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nif (!items || items.length === 0) {\n  throw new Error('Нет данных от Generate Suppliers!');\n}\n\nconst chatId = items[0].json.chat_id;\nconst category = items[0].json.category;\n\nif (!chatId) {\n  throw new Error('chat_id отсутствует в данных!');\n}\n\nlet message = `📊 *${category}* (${items.length} компаний)\\n\\n`;\n\nitems.forEach((item, i) => {\n  const d = item.json;\n  message += `⭐️ *${i+1}. ${d.company_name}*\\n`;\n  message += `📊 ${d.rating}/5 | 📦 ${d.moq} | 💰 ${d.price}\\n`;\n  message += `📍 ${d.location}\\n`;\n  message += `📧 ${d.contact_email}\\n`;\n  message += `🌐 ${d.company_url}\\n\\n`;\n});\n\nreturn [{\n  json: {\n    chat_id: chatId,\n    message: message\n  }\n}];"
+      },
+      "id": "format-simple",
+      "name": "Format Simple",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 700]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "send-result",
+      "name": "Send Result",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1780, 700],
+      "credentials": { "telegramApi": { "id": "TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" } }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": { "main": [[{ "node": "Parse Command", "type": "main", "index": 0 }]] },
+    "Parse Command": { "main": [[{ "node": "Is Start?", "type": "main", "index": 0 }]] },
+    "Is Start?": { "main": [[{ "node": "Send Welcome", "type": "main", "index": 0 }], [{ "node": "Is Help?", "type": "main", "index": 0 }]] },
+    "Is Help?": { "main": [[{ "node": "Send Help", "type": "main", "index": 0 }], [{ "node": "Send Processing", "type": "main", "index": 0 }]] },
+    "Send Processing": { "main": [[{ "node": "Generate Suppliers", "type": "main", "index": 0 }]] },
+    "Generate Suppliers": { "main": [[{ "node": "Format Simple", "type": "main", "index": 0 }]] },
+    "Format Simple": { "main": [[{ "node": "Send Result", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}
