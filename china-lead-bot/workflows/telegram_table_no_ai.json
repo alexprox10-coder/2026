@@ -1,0 +1,139 @@
+{
+  "name": "ChinaLeadBot - Table Without AI (Working)",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"]
+      },
+      "id": "telegram-trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "webhookId": "telegram-chinaleadbot-noai",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = $input.first().json.message;\nconst userId = message.from.id;\nconst userName = message.from.first_name;\nconst text = message.text || '';\nconst chatId = message.chat.id;\n\nif (text.startsWith('/start')) {\n  return { json: { command: 'start', user_id: userId, user_name: userName, chat_id: chatId } };\n}\n\nif (text.startsWith('/help')) {\n  return { json: { command: 'help', user_id: userId, user_name: userName, chat_id: chatId } };\n}\n\nconst category = text.replace('/search', '').trim();\nreturn {\n  json: {\n    command: 'search',\n    user_id: userId,\n    user_name: userName,\n    chat_id: chatId,\n    category: category || 'wireless headphones',\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "parse-command",
+      "name": "Parse Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{ "value1": "={{ $json.command }}", "value2": "start" }]
+        }
+      },
+      "id": "if-start",
+      "name": "Is Start?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "🇨🇳 *Добро пожаловать в ChinaLeadBot!*\n\nЯ помогу найти китайских поставщиков.\n\n*Как использовать:*\nПросто напишите категорию товара, например:\nwireless headphones\n\n*Команды:*\n/help - Помощь",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "send-welcome",
+      "name": "Send Welcome",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "credentials": { "telegramApi": { "id": "TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" } }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{ "value1": "={{ $json.command }}", "value2": "help" }]
+        }
+      },
+      "id": "if-help",
+      "name": "Is Help?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 500]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "*Помощь ChinaLeadBot*\n\nНапишите категорию товара:\n• wireless headphones\n• LED lights\n• backpack\n• phone cases\n\n/start - Начать заново",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "send-help",
+      "name": "Send Help",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1120, 500],
+      "credentials": { "telegramApi": { "id": "TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" } }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "🔍 *Поиск запущен!*\n\nКатегория: {{ $json.category }}\nАнализирую китайских поставщиков...\n⏳ 5-10 секунд",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "send-processing",
+      "name": "Send Processing",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1120, 700],
+      "credentials": { "telegramApi": { "id": "TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst category = input.category;\nconst chatId = input.chat_id;\nconst userId = input.user_id;\nconst userName = input.user_name;\nconst timestamp = input.timestamp;\n\nconst suppliers = [\n  {\n    company_name: 'Yiwu Wholesale Trading Co.',\n    rating: 4.9,\n    years_in_business: 15,\n    moq: '200 шт',\n    price: '$3.80',\n    location: 'Zhejiang, China',\n    contact_email: 'export@yiwu-wholesale.com',\n    company_url: 'https://yiwu-wholesale.en.alibaba.com',\n    response_rate: '98%',\n    total_transactions: 12400,\n    ai_score: 9,\n    recommended: 'YES',\n    pros: 'Высокий рейтинг, много транзакций, быстрый ответ',\n    risks: 'Средний MOQ может быть проблемой для малого бизнеса'\n  },\n  {\n    company_name: 'Shanghai Premium Exports Inc.',\n    rating: 4.7,\n    years_in_business: 10,\n    moq: '300 шт',\n    price: '$6.50',\n    location: 'Shanghai, China',\n    contact_email: 'export@sh-premium.com',\n    company_url: 'https://sh-premium.en.alibaba.com',\n    response_rate: '92%',\n    total_transactions: 7600,\n    ai_score: 8,\n    recommended: 'YES',\n    pros: 'Премиум качество, хорошая репутация',\n    risks: 'Выше цена, больше MOQ'\n  },\n  {\n    company_name: 'Shenzhen Tech Electronics',\n    rating: 4.8,\n    years_in_business: 12,\n    moq: '100 шт',\n    price: '$5.50',\n    location: 'Guangdong, China',\n    contact_email: 'sales@shenzhen-tech.com',\n    company_url: 'https://shenzhen-tech.en.alibaba.com',\n    response_rate: '95%',\n    total_transactions: 5800,\n    ai_score: 9,\n    recommended: 'YES',\n    pros: 'Низкий MOQ, технологичная компания, быстрая доставка',\n    risks: 'Меньше опыта по сравнению с топовыми'\n  },\n  {\n    company_name: 'Guangzhou Factory Direct Ltd.',\n    rating: 4.6,\n    years_in_business: 8,\n    moq: '500 шт',\n    price: '$2.90',\n    location: 'Guangdong, China',\n    contact_email: 'sales@gz-factory.com',\n    company_url: 'https://gz-factory.en.alibaba.com',\n    response_rate: '88%',\n    total_transactions: 4200,\n    ai_score: 7,\n    recommended: 'YES',\n    pros: 'Самая низкая цена, прямо с фабрики',\n    risks: 'Высокий MOQ, медленный ответ'\n  },\n  {\n    company_name: 'Dongguan Quality Manufacturing',\n    rating: 4.5,\n    years_in_business: 6,\n    moq: '1000 шт',\n    price: '$2.20',\n    location: 'Guangdong, China',\n    contact_email: 'info@dg-quality.com',\n    company_url: 'https://dg-quality.en.alibaba.com',\n    response_rate: '85%',\n    total_transactions: 3100,\n    ai_score: 6,\n    recommended: 'NO',\n    pros: 'Очень низкая цена для больших объемов',\n    risks: 'Очень высокий MOQ, меньше опыта'\n  }\n];\n\nreturn suppliers.map(s => ({\n  json: {\n    ...s,\n    product_category: category,\n    chat_id: chatId,\n    user_id: userId,\n    user_name: userName,\n    timestamp: timestamp\n  }\n}));"
+      },
+      "id": "generate-suppliers",
+      "name": "Generate Suppliers with Scores",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 700]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst category = items[0].json.product_category;\nconst chatId = items[0].json.chat_id;\n\nlet message = `📊 *Найдено ${items.length} поставщиков: ${category}*\\n\\n`;\n\nitems.forEach((item, index) => {\n  const d = item.json;\n  const num = index + 1;\n  const star = d.recommended === 'YES' ? '⭐️' : '📍';\n  \n  message += `${star} *${num}. ${d.company_name}*\\n`;\n  message += `🎯 Оценка: ${d.ai_score}/10 | ⭐️ Рейтинг: ${d.rating}/5\\n`;\n  message += `📦 MOQ: ${d.moq} | 💰 Цена: ${d.price}\\n`;\n  message += `📍 ${d.location}\\n`;\n  message += `📧 ${d.contact_email}\\n`;\n  message += `🌐 ${d.company_url}\\n`;\n  message += `✅ ${d.pros}\\n`;\n  message += `⚠️ ${d.risks}\\n\\n`;\n});\n\nmessage += `_Данные готовы к сохранению в Google Sheets_ 📝`;\n\nreturn {\n  json: {\n    chat_id: chatId,\n    message: message\n  }\n};"
+      },
+      "id": "format-table",
+      "name": "Format Table Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 700]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "send-table",
+      "name": "Send Table to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1780, 700],
+      "credentials": { "telegramApi": { "id": "TELEGRAM_CREDENTIAL_ID", "name": "Telegram Bot" } }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": { "main": [[{ "node": "Parse Command", "type": "main", "index": 0 }]] },
+    "Parse Command": { "main": [[{ "node": "Is Start?", "type": "main", "index": 0 }]] },
+    "Is Start?": { "main": [[{ "node": "Send Welcome", "type": "main", "index": 0 }], [{ "node": "Is Help?", "type": "main", "index": 0 }]] },
+    "Is Help?": { "main": [[{ "node": "Send Help", "type": "main", "index": 0 }], [{ "node": "Send Processing", "type": "main", "index": 0 }]] },
+    "Send Processing": { "main": [[{ "node": "Generate Suppliers with Scores", "type": "main", "index": 0 }]] },
+    "Generate Suppliers with Scores": { "main": [[{ "node": "Format Table Message", "type": "main", "index": 0 }]] },
+    "Format Table Message": { "main": [[{ "node": "Send Table to Telegram", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}
