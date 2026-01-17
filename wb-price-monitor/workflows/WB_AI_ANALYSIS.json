@@ -1,0 +1,117 @@
+{
+  "name": "WB Price Monitor - AI Analysis",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Входные данные: товар с изменившейся ценой\nconst product = $input.first().json;\n\nconst prompt = `Ты аналитик ценообразования для продавцов на Wildberries.\n\nТовар: ${product.product_name}\nБренд: ${product.brand}\nБыло: ${product.previous_price} ₽\nСтало: ${product.price} ₽\nИзменение: ${product.price_change_percent}%\nРейтинг: ${product.rating}\nОтзывов: ${product.feedbacks}\n\nПроанализируй это изменение цены и дай краткие рекомендации продавцу (2-3 предложения):\n- Почему конкурент мог изменить цену?\n- Что делать продавцу?\n- Стоит ли менять свою цену?\n\nФормат ответа JSON:\n{\n  \"analysis\": \"Краткий анализ (2-3 предложения)\",\n  \"recommendation\": \"Рекомендация (1-2 предложения)\",\n  \"action\": \"СНИЗИТЬ\" | \"ОСТАВИТЬ\" | \"ПОВЫСИТЬ\",\n  \"suggested_price\": 2499\n}`;\n\nreturn {\n  json: {\n    ...product,\n    ai_prompt: prompt\n  }\n};"
+      },
+      "id": "prepare-ai-prompt",
+      "name": "Prepare AI Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_OPENROUTER_API_KEY"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "https://n8n.arendadom24.ru"
+            },
+            {
+              "name": "X-Title",
+              "value": "WB Price Monitor"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"anthropic/claude-3.5-sonnet\",\n  \"messages\": [{\n    \"role\": \"user\",\n    \"content\": {{ JSON.stringify($json.ai_prompt) }}\n  }],\n  \"max_tokens\": 500\n}",
+        "options": {}
+      },
+      "id": "call-ai-api",
+      "name": "Call AI API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiResponse = $input.first().json;\nconst product = $node['Prepare AI Prompt'].json;\n\nlet analysis = {\n  analysis: 'Конкурент снизил цену, возможно из-за распродажи.',\n  recommendation: 'Следите за динамикой. Если спрос упал - снижайте.',\n  action: 'ОСТАВИТЬ',\n  suggested_price: product.price\n};\n\ntry {\n  const content = aiResponse.choices[0].message.content;\n  const parsed = JSON.parse(content);\n  analysis = {\n    analysis: parsed.analysis || analysis.analysis,\n    recommendation: parsed.recommendation || analysis.recommendation,\n    action: parsed.action || analysis.action,\n    suggested_price: parsed.suggested_price || product.price\n  };\n} catch (e) {\n  // Используем fallback\n}\n\nconst actionEmoji = {\n  'СНИЗИТЬ': '📉',\n  'ОСТАВИТЬ': '➡️',\n  'ПОВЫСИТЬ': '📈'\n};\n\nconst message = `🤖 *AI Анализ изменения цены*\\n\\n` +\n  `📦 ${product.product_name}\\n` +\n  `💰 Было: ${product.previous_price} ₽ → Стало: ${product.price} ₽\\n` +\n  `${product.price_change_percent > 0 ? '📈' : '📉'} ${Math.abs(product.price_change_percent)}%\\n\\n` +\n  `💡 *Анализ:*\\n${analysis.analysis}\\n\\n` +\n  `🎯 *Рекомендация:*\\n${analysis.recommendation}\\n\\n` +\n  `${actionEmoji[analysis.action]} *Действие:* ${analysis.action}\\n` +\n  `💵 *Предлагаемая цена:* ${analysis.suggested_price} ₽`;\n\nreturn {\n  json: {\n    chat_id: product.chat_id,\n    message: message,\n    ai_analysis: analysis.analysis,\n    ai_recommendation: analysis.recommendation,\n    ai_action: analysis.action,\n    ai_suggested_price: analysis.suggested_price\n  }\n};"
+      },
+      "id": "parse-ai-response",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-ai-notification",
+      "name": "Send AI Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [900, 400],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Prepare AI Prompt": {
+      "main": [
+        [
+          {
+            "node": "Call AI API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call AI API": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Send AI Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

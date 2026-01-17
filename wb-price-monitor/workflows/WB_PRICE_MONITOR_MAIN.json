@@ -1,0 +1,337 @@
+{
+  "name": "WB Price Monitor - MAIN",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"]
+      },
+      "id": "telegram-trigger-wb",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "webhookId": "wb-price-monitor-main",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = $input.first().json.message;\nconst text = message.text || '';\nconst chatId = message.chat.id;\nconst userId = message.from.id;\nconst userName = message.from.first_name;\n\n// /start\nif (text.startsWith('/start')) {\n  return {\n    json: {\n      command: 'start',\n      chat_id: chatId,\n      user_id: userId,\n      user_name: userName\n    }\n  };\n}\n\n// /help\nif (text.startsWith('/help')) {\n  return {\n    json: {\n      command: 'help',\n      chat_id: chatId\n    }\n  };\n}\n\n// /add 123456789\nif (text.startsWith('/add')) {\n  const parts = text.split(' ');\n  const articleId = parts[1] || '';\n  return {\n    json: {\n      command: 'add',\n      chat_id: chatId,\n      user_id: userId,\n      user_name: userName,\n      article_id: articleId\n    }\n  };\n}\n\n// /list\nif (text.startsWith('/list')) {\n  return {\n    json: {\n      command: 'list',\n      chat_id: chatId,\n      user_id: userId\n    }\n  };\n}\n\n// /remove 123456789\nif (text.startsWith('/remove')) {\n  const parts = text.split(' ');\n  const articleId = parts[1] || '';\n  return {\n    json: {\n      command: 'remove',\n      chat_id: chatId,\n      user_id: userId,\n      article_id: articleId\n    }\n  };\n}\n\n// /price 123456789\nif (text.startsWith('/price')) {\n  const parts = text.split(' ');\n  const articleId = parts[1] || '';\n  return {\n    json: {\n      command: 'price',\n      chat_id: chatId,\n      article_id: articleId\n    }\n  };\n}\n\n// /stats\nif (text.startsWith('/stats')) {\n  return {\n    json: {\n      command: 'stats',\n      chat_id: chatId,\n      user_id: userId\n    }\n  };\n}\n\n// Unknown command\nreturn {\n  json: {\n    command: 'unknown',\n    chat_id: chatId,\n    text: text\n  }\n};"
+      },
+      "id": "parse-command-wb",
+      "name": "Parse Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.command }}",
+              "value2": "start"
+            }
+          ]
+        }
+      },
+      "id": "if-start-wb",
+      "name": "Is Start?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 200]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "🛍️ *WB Price Monitor Bot*\n\nМониторинг цен конкурентов на Wildberries\n\n📋 *Команды:*\n/add 123456789 - Добавить артикул\n/list - Мои товары\n/price 123456789 - Текущая цена\n/remove 123456789 - Удалить\n/stats - Статистика\n/help - Помощь\n\n💎 *FREE план:* 3 товара\n🚀 *PRO:* /upgrade",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-start-wb",
+      "name": "Send Start",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [900, 100],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.command }}",
+              "value2": "add"
+            }
+          ]
+        }
+      },
+      "id": "if-add-wb",
+      "name": "Is Add?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://card.wb.ru/cards/detail?nm={{ $json.article_id }}",
+        "options": {}
+      },
+      "id": "fetch-wb-product",
+      "name": "Fetch WB Product",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst articleId = $node['Parse Command'].json.article_id;\nconst chatId = $node['Parse Command'].json.chat_id;\nconst userId = $node['Parse Command'].json.user_id;\nconst userName = $node['Parse Command'].json.user_name;\n\nif (!response || !response.data || !response.data.products || response.data.products.length === 0) {\n  return {\n    json: {\n      error: true,\n      chat_id: chatId,\n      message: '❌ Артикул не найден!\\n\\nПроверьте правильность артикула.'\n    }\n  };\n}\n\nconst product = response.data.products[0];\n\n// Извлекаем цену\nlet price = 0;\nif (product.salePriceU) {\n  price = product.salePriceU / 100; // Цена в копейках, делим на 100\n} else if (product.priceU) {\n  price = product.priceU / 100;\n}\n\nconst oldPrice = product.extended?.basicPriceU ? product.extended.basicPriceU / 100 : price;\nconst discount = oldPrice > price ? Math.round(((oldPrice - price) / oldPrice) * 100) : 0;\n\nreturn {\n  json: {\n    article_id: articleId,\n    chat_id: chatId,\n    user_id: userId,\n    user_name: userName,\n    product_name: product.name || 'Без названия',\n    brand: product.brand || 'Неизвестно',\n    price: price,\n    old_price: oldPrice,\n    discount: discount,\n    rating: product.rating || 0,\n    feedbacks: product.feedbacks || 0,\n    seller: product.supplier || 'Неизвестно',\n    url: `https://www.wildberries.ru/catalog/${articleId}/detail.aspx`,\n    timestamp: new Date().toISOString(),\n    error: false\n  }\n};"
+      },
+      "id": "parse-wb-response",
+      "name": "Parse WB Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "mode": "list",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "mode": "list",
+          "value": "Products"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $json.timestamp }}",
+            "User_ID": "={{ $json.user_id }}",
+            "User_Name": "={{ $json.user_name }}",
+            "Article_ID": "={{ $json.article_id }}",
+            "Product_Name": "={{ $json.product_name }}",
+            "Brand": "={{ $json.brand }}",
+            "Price": "={{ $json.price }}",
+            "Old_Price": "={{ $json.old_price }}",
+            "Discount": "={{ $json.discount }}",
+            "Rating": "={{ $json.rating }}",
+            "Feedbacks": "={{ $json.feedbacks }}",
+            "Seller": "={{ $json.seller }}",
+            "URL": "={{ $json.url }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "save-to-sheets-wb",
+      "name": "Save to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1560, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst chatId = data.chat_id;\n\nif (data.error) {\n  return {\n    json: {\n      chat_id: chatId,\n      message: data.message\n    }\n  };\n}\n\nconst message = `✅ *Добавлен на мониторинг!*\\n\\n📦 *${data.product_name}*\\n🏷️ Бренд: ${data.brand}\\n💰 Цена: ${data.price.toLocaleString('ru-RU')} ₽${data.discount > 0 ? ` (-${data.discount}%)` : ''}\\n⭐ Рейтинг: ${data.rating}\\n💬 Отзывов: ${data.feedbacks}\\n🏪 Продавец: ${data.seller}\\n🔗 [Открыть на WB](${data.url})\\n\\n🔔 Вы получите уведомление при изменении цены!`;\n\nreturn {\n  json: {\n    chat_id: chatId,\n    message: message\n  }\n};"
+      },
+      "id": "format-add-response",
+      "name": "Format Add Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-response-wb",
+      "name": "Send Response",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [2000, 400],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.command }}",
+              "value2": "help"
+            }
+          ]
+        }
+      },
+      "id": "if-help-wb",
+      "name": "Is Help?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 500]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "📖 *Помощь WB Price Monitor*\\n\\n*Основные команды:*\\n/add 123456789 - Добавить товар\\n/list - Список товаров\\n/price 123456789 - Проверить цену\\n/remove 123456789 - Удалить товар\\n/stats - Статистика изменений\\n\\n*Как работает:*\\n1. Добавьте артикул через /add\\n2. Бот проверяет цену каждый час\\n3. При изменении получаете уведомление\\n\\n*Тарифы:*\\n💎 FREE: 3 товара, проверка 1 раз/день\\n🚀 PRO: 100 товаров, каждый час, AI анализ\\n\\n/upgrade - Перейти на PRO",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-help-wb",
+      "name": "Send Help",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1120, 500],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Command": {
+      "main": [
+        [
+          {
+            "node": "Is Start?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Start?": {
+      "main": [
+        [
+          {
+            "node": "Send Start",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Add?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Add?": {
+      "main": [
+        [
+          {
+            "node": "Fetch WB Product",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Help?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch WB Product": {
+      "main": [
+        [
+          {
+            "node": "Parse WB Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse WB Response": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Format Add Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Add Response": {
+      "main": [
+        [
+          {
+            "node": "Send Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Help?": {
+      "main": [
+        [
+          {
+            "node": "Send Help",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
