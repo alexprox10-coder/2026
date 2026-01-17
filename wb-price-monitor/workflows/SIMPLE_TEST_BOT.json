@@ -1,0 +1,178 @@
+{
+  "name": "WB Price Monitor - ПРОСТОЙ (для теста)",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"]
+      },
+      "id": "telegram-trigger-simple",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "wb-simple-test",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = $input.first().json.message;\nconst text = message.text || '';\nconst chatId = message.chat.id;\n\nif (text.startsWith('/start')) {\n  return { json: { command: 'start', chat_id: chatId } };\n}\n\nif (!text || !/^\\d+$/.test(text.trim())) {\n  return { json: { command: 'help', chat_id: chatId } };\n}\n\nreturn { json: { command: 'check', chat_id: chatId, article_id: text.trim() } };"
+      },
+      "id": "parse-input",
+      "name": "Parse Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{ "value1": "={{ $json.command }}", "value2": "start" }]
+        }
+      },
+      "id": "is-start",
+      "name": "Is Start?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "🛍️ *WB Price Monitor - Тестовая версия*\\n\\nОтправьте артикул товара с WB (просто число)\\n\\nПример: `123456789`\\n\\nБот покажет цену и информацию о товаре.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-start",
+      "name": "Send Start",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [900, 200],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{ "value1": "={{ $json.command }}", "value2": "help" }]
+        }
+      },
+      "id": "is-help",
+      "name": "Is Help?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "ℹ️ Отправьте артикул товара WB\\n\\nПример: `123456789`",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-help",
+      "name": "Send Help",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1120, 400],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://card.wb.ru/cards/detail?nm={{ $json.article_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fetch-wb",
+      "name": "Fetch WB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst articleId = $node['Parse Input'].json.article_id;\nconst chatId = $node['Parse Input'].json.chat_id;\n\nif (!response || !response.data || !response.data.products || response.data.products.length === 0) {\n  return {\n    json: {\n      chat_id: chatId,\n      message: '❌ Товар не найден!\\n\\nПроверьте артикул.'\n    }\n  };\n}\n\nconst product = response.data.products[0];\n\nlet price = 0;\nif (product.salePriceU) {\n  price = product.salePriceU / 100;\n} else if (product.priceU) {\n  price = product.priceU / 100;\n}\n\nconst oldPrice = product.extended && product.extended.basicPriceU ? product.extended.basicPriceU / 100 : price;\nconst discount = oldPrice > price ? Math.round(((oldPrice - price) / oldPrice) * 100) : 0;\n\nconst priceText = price.toLocaleString('ru-RU');\nconst discountText = discount > 0 ? ` (-${discount}%)` : '';\n\nconst message = `✅ *Информация о товаре*\\n\\n📦 ${product.name || 'Без названия'}\\n🏷️ ${product.brand || 'Неизвестно'}\\n💰 Цена: ${priceText} ₽${discountText}\\n⭐ Рейтинг: ${product.rating || 0}/5\\n💬 Отзывов: ${product.feedbacks || 0}\\n🏪 ${product.supplier || 'Неизвестно'}\\n\\n🔗 [Открыть на WB](https://www.wildberries.ru/catalog/${articleId}/detail.aspx)`;\n\nreturn {\n  json: {\n    chat_id: chatId,\n    message: message\n  }\n};"
+      },
+      "id": "format-result",
+      "name": "Format Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 600]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "send-result",
+      "name": "Send Result",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1560, 600],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [[{ "node": "Parse Input", "type": "main", "index": 0 }]]
+    },
+    "Parse Input": {
+      "main": [[{ "node": "Is Start?", "type": "main", "index": 0 }]]
+    },
+    "Is Start?": {
+      "main": [
+        [{ "node": "Send Start", "type": "main", "index": 0 }],
+        [{ "node": "Is Help?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Is Help?": {
+      "main": [
+        [{ "node": "Send Help", "type": "main", "index": 0 }],
+        [{ "node": "Fetch WB", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch WB": {
+      "main": [[{ "node": "Format Result", "type": "main", "index": 0 }]]
+    },
+    "Format Result": {
+      "main": [[{ "node": "Send Result", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
