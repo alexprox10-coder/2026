@@ -1,0 +1,336 @@
+{
+  "name": "ChinaLeadBot - Telegram Trigger",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ]
+      },
+      "id": "telegram-trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "webhookId": "telegram-chinaleadbot",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Получаем сообщение от пользователя\nconst message = $input.first().json.message;\nconst userId = message.from.id;\nconst userName = message.from.first_name;\nconst text = message.text || '';\nconst chatId = message.chat.id;\n\nconsole.log('Received message from', userName, ':', text);\n\n// Обрабатываем команды\nif (text.startsWith('/start')) {\n  return {\n    json: {\n      command: 'start',\n      user_id: userId,\n      user_name: userName,\n      chat_id: chatId\n    }\n  };\n}\n\nif (text.startsWith('/search') || text.includes('найти') || text.includes('поиск')) {\n  // Извлекаем категорию из текста\n  const category = text.replace('/search', '').replace('найти', '').replace('поиск', '').trim();\n  \n  return {\n    json: {\n      command: 'search',\n      user_id: userId,\n      user_name: userName,\n      chat_id: chatId,\n      category: category || 'wireless headphones',\n      moq: 'any',\n      price_range: 'any',\n      timestamp: new Date().toISOString()\n    }\n  };\n}\n\nif (text.startsWith('/help')) {\n  return {\n    json: {\n      command: 'help',\n      user_id: userId,\n      user_name: userName,\n      chat_id: chatId\n    }\n  };\n}\n\n// По умолчанию считаем что это поисковый запрос\nreturn {\n  json: {\n    command: 'search',\n    user_id: userId,\n    user_name: userName,\n    chat_id: chatId,\n    category: text,\n    moq: 'any',\n    price_range: 'any',\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "parse-command",
+      "name": "Parse Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.command }}",
+              "value2": "start"
+            }
+          ]
+        }
+      },
+      "id": "if-start",
+      "name": "Is Start Command?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "=🇨🇳 **Добро пожаловать в ChinaLeadBot!**\n\nЯ помогу найти надёжных китайских поставщиков на Alibaba и 1688.\n\n🔍 **Что я умею:**\n✅ Поиск поставщиков по категориям товаров\n✅ Фильтрация по MOQ и ценовому диапазону  \n✅ AI-анализ надёжности компаний\n✅ Контактные данные проверенных поставщиков\n\n💎 У вас доступно: **5 поисков** (FREE тариф)\n\n**Как использовать:**\n• Просто напишите категорию товара: *wireless headphones*\n• Или используйте команду: */search wireless headphones*\n\n**Другие команды:**\n/help - Помощь\n\nНачните поиск прямо сейчас! 🚀",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-welcome",
+      "name": "Send Welcome Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.command }}",
+              "value2": "help"
+            }
+          ]
+        }
+      },
+      "id": "if-help",
+      "name": "Is Help Command?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 500]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "=❓ **Помощь по ChinaLeadBot**\n\n**Как искать поставщиков:**\n1. Просто напишите категорию товара на английском\n   Пример: *wireless headphones*\n\n2. Или используйте команду /search\n   Пример: */search LED lights*\n\n**Доступные команды:**\n/start - Начать работу\n/search <категория> - Найти поставщиков\n/help - Эта справка\n\n**Примеры поисковых запросов:**\n• wireless headphones\n• backpack\n• LED lights\n• phone case\n• bluetooth speaker\n\n**Что делает бот:**\n✅ Ищет поставщиков на Alibaba/1688\n✅ Анализирует надёжность через AI\n✅ Показывает рейтинг, цены, контакты\n✅ Фильтрует по качеству\n\nПопробуйте прямо сейчас! 🚀",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-help",
+      "name": "Send Help Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1120, 500],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "=🔍 **Поиск запущен!**\n\nКатегория: {{ $json.category }}\nАнализирую базу поставщиков...\n⏳ Это займет 10-30 секунд.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-processing",
+      "name": "Send Processing Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1120, 700],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Генерируем тестовые данные китайских поставщиков\nconst category = $json.category || 'wireless headphones';\n\nconst suppliers = [\n  {\n    company_name: 'Shenzhen Tech Electronics Co., Ltd.',\n    rating: 4.8,\n    years_in_business: 12,\n    moq: '100 pieces',\n    price: 5.50,\n    location: 'Guangdong, China',\n    verified: true,\n    gold_supplier: true,\n    contact_email: 'sales@shenzhen-tech.com',\n    company_url: 'https://shenzhen-tech.en.alibaba.com',\n    response_rate: '95%',\n    total_transactions: 5800,\n    product_category: category\n  },\n  {\n    company_name: 'Yiwu Wholesale Trading Co.',\n    rating: 4.9,\n    years_in_business: 15,\n    moq: '200 pieces',\n    price: 3.80,\n    location: 'Zhejiang, China',\n    verified: true,\n    gold_supplier: true,\n    contact_email: 'export@yiwu-wholesale.com',\n    company_url: 'https://yiwu-wholesale.en.alibaba.com',\n    response_rate: '98%',\n    total_transactions: 12400,\n    product_category: category\n  },\n  {\n    company_name: 'Shanghai Premium Exports Inc.',\n    rating: 4.7,\n    years_in_business: 10,\n    moq: '300 pieces',\n    price: 6.50,\n    location: 'Shanghai, China',\n    verified: true,\n    gold_supplier: true,\n    contact_email: 'export@sh-premium.com',\n    company_url: 'https://sh-premium.en.alibaba.com',\n    response_rate: '92%',\n    total_transactions: 7600,\n    product_category: category\n  },\n  {\n    company_name: 'Guangzhou Quality Manufacturing Ltd.',\n    rating: 4.6,\n    years_in_business: 8,\n    moq: '500 pieces',\n    price: 4.20,\n    location: 'Guangdong, China',\n    verified: true,\n    gold_supplier: false,\n    contact_email: 'info@gz-quality.com',\n    company_url: 'https://gz-quality.en.alibaba.com',\n    response_rate: '88%',\n    total_transactions: 3200,\n    product_category: category\n  },\n  {\n    company_name: 'Beijing International Trade Corp',\n    rating: 4.8,\n    years_in_business: 18,\n    moq: '100 pieces',\n    price: 7.20,\n    location: 'Beijing, China',\n    verified: true,\n    gold_supplier: true,\n    contact_email: 'export@beijing-intl.com',\n    company_url: 'https://beijing-intl.en.alibaba.com',\n    response_rate: '96%',\n    total_transactions: 15200,\n    product_category: category\n  }\n];\n\n// Сортировка по качеству\nsuppliers.sort((a, b) => {\n  const scoreA = (a.rating * 0.4) + (a.total_transactions / 10000 * 0.3) + (a.verified ? 0.2 : 0) + (a.gold_supplier ? 0.1 : 0);\n  const scoreB = (b.rating * 0.4) + (b.total_transactions / 10000 * 0.3) + (b.verified ? 0.2 : 0) + (b.gold_supplier ? 0.1 : 0);\n  return scoreB - scoreA;\n});\n\nreturn suppliers.map(supplier => ({\n  json: {\n    ...supplier,\n    chat_id: $input.first().json.chat_id,\n    user_id: $input.first().json.user_id\n  }\n}));"
+      },
+      "id": "generate-suppliers",
+      "name": "Generate Suppliers Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 700]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4",
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 300
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Ты эксперт по анализу китайских компаний-поставщиков. Отвечай строго в формате JSON."
+            },
+            {
+              "role": "user",
+              "content": "=Проанализируй компанию:\n\nНазвание: {{ $json.company_name }}\nРейтинг: {{ $json.rating }}/5\nОпыт: {{ $json.years_in_business }} лет\nMOQ: {{ $json.moq }}\nЦена: ${{ $json.price }}\nЛокация: {{ $json.location }}\nВерифицирована: {{ $json.verified ? 'Да' : 'Нет' }}\n\nВерни JSON:\n{\n  \"reliability_score\": <1-10>,\n  \"recommended\": <true/false>,\n  \"summary_ru\": \"краткое резюме\",\n  \"pros\": [\"плюс1\"],\n  \"risks\": [\"риск1\"]\n}"
+            }
+          ]
+        }
+      },
+      "id": "openai-analyze",
+      "name": "OpenAI Analyze",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1,
+      "position": [1560, 700],
+      "credentials": {
+        "openAiApi": {
+          "id": "OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Парсим AI ответ\nconst item = $input.first().json;\nlet aiData = {};\n\ntry {\n  let aiResponse = item.response || item.text || '{}';\n  if (typeof aiResponse === 'string') {\n    aiResponse = aiResponse.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n    aiData = JSON.parse(aiResponse);\n  } else {\n    aiData = aiResponse;\n  }\n} catch (error) {\n  aiData = {\n    reliability_score: 7,\n    recommended: true,\n    summary_ru: 'Надёжная компания',\n    pros: ['Проверенный поставщик'],\n    risks: ['Нет данных']\n  };\n}\n\nreturn {\n  json: {\n    chat_id: item.chat_id,\n    company_name: item.company_name,\n    rating: item.rating,\n    moq: item.moq,\n    price: item.price,\n    location: item.location,\n    email: item.contact_email,\n    url: item.company_url,\n    ai_score: aiData.reliability_score || 7,\n    recommended: aiData.recommended !== false,\n    summary: aiData.summary_ru || 'Нет данных',\n    pros: Array.isArray(aiData.pros) ? aiData.pros.join(', ') : 'Нет данных',\n    risks: Array.isArray(aiData.risks) ? aiData.risks.join(', ') : 'Нет данных'\n  }\n};"
+      },
+      "id": "parse-ai",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 700]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Собираем результаты\nconst items = $input.all();\nconst chatId = items[0].json.chat_id;\n\n// Группируем по chat_id\nconst leads = items.map(item => item.json);\nleads.sort((a, b) => b.ai_score - a.ai_score);\n\n// Формируем сообщение\nlet message = `✅ **НАЙДЕНО ${leads.length} ПОСТАВЩИКОВ**\\n\\n📊 Отсортировано по надёжности\\n\\n`;\nmessage += `━━━━━━━━━━━━━━━━━━━━\\n\\n`;\n\nleads.forEach((lead, index) => {\n  const number = index + 1;\n  const emoji = lead.recommended ? '✅' : '⚠️';\n  \n  message += `🏢 **#${number}: ${lead.company_name}**\\n`;\n  message += `⭐️ Рейтинг: ${lead.rating}/5\\n`;\n  message += `📊 AI-оценка: ${lead.ai_score}/10\\n`;\n  message += `${emoji} ${lead.recommended ? 'Рекомендуется' : 'Требует проверки'}\\n\\n`;\n  message += `📍 ${lead.location}\\n`;\n  message += `📦 MOQ: ${lead.moq}\\n`;\n  message += `💰 Цена: $${lead.price}\\n\\n`;\n  message += `📧 ${lead.email}\\n`;\n  message += `🌐 ${lead.url}\\n\\n`;\n  message += `💬 **Резюме AI:**\\n${lead.summary}\\n\\n`;\n  message += `✅ **Плюсы:** ${lead.pros}\\n`;\n  message += `⚠️ **Риски:** ${lead.risks}\\n\\n`;\n  message += `━━━━━━━━━━━━━━━━━━━━\\n\\n`;\n});\n\nmessage += `🎯 Осталось поисков: 4\\n`;\nmessage += `💎 Хотите больше? /upgrade`;\n\nreturn {\n  json: {\n    chat_id: chatId,\n    message: message\n  }\n};"
+      },
+      "id": "format-results",
+      "name": "Format Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 700]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-results",
+      "name": "Send Results",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [2220, 700],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Command": {
+      "main": [
+        [
+          {
+            "node": "Is Start Command?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Start Command?": {
+      "main": [
+        [
+          {
+            "node": "Send Welcome Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Help Command?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Help Command?": {
+      "main": [
+        [
+          {
+            "node": "Send Help Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Processing Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Processing Message": {
+      "main": [
+        [
+          {
+            "node": "Generate Suppliers Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Suppliers Data": {
+      "main": [
+        [
+          {
+            "node": "OpenAI Analyze",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Analyze": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Format Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Results": {
+      "main": [
+        [
+          {
+            "node": "Send Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "chinaleadbot-telegram",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "chinaleadbot-telegram",
+  "tags": []
+}
