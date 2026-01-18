@@ -1,0 +1,28 @@
+[Unit]
+Description=Rental Parser Agent - Automatic apartment parser
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/user/2026/rental_parser
+EnvironmentFile=/home/user/2026/rental_parser/.env
+
+# Запуск агента
+ExecStart=/usr/bin/python3 /home/user/2026/rental_parser/agent.py
+
+# Автоматический перезапуск при падении
+Restart=always
+RestartSec=10
+
+# Логирование
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rental-agent
+
+# Ограничения ресурсов (опционально)
+# MemoryLimit=512M
+# CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target

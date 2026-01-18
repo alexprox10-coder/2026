@@ -11,3 +11,8 @@ python-telegram-bot==20.7
 
 # Utilities
 python-dotenv==1.0.0
+schedule==1.2.0
+
+# Auto-dial support (optional)
+# twilio==8.10.0  # Uncomment if using Twilio
+# asterisk.ami==0.1.5  # Uncomment if using Asterisk
