@@ -1,0 +1,109 @@
+{
+  "name": "Rental Parser - Minimal",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "hours", "hoursInterval": 4}]
+        }
+      },
+      "id": "1",
+      "name": "Schedule Every 4h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "command": "cd /home/user/2026/rental_parser && python3 main.py --max-pages 5"
+      },
+      "id": "2",
+      "name": "Run Parser",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "command": "cd /home/user/2026/rental_parser && python3 scripts/n8n_get_unsent.py"
+      },
+      "id": "3",
+      "name": "Get Unsent",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = JSON.parse($input.first().json.stdout);\nreturn data.map(item => ({ json: item }));"
+      },
+      "id": "4",
+      "name": "Parse",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const p = $json.platform;\nconst e = {cian:'🔵',yandex:'🔴',avito:'🟢'}[p]||'⚪';\nconst n = {cian:'Cian',yandex:'Yandex',avito:'Avito'}[p]||p;\nconst r = $json.rooms===0?'Студия':($json.rooms?$json.rooms+'-комн':'');\nconst pr = $json.price?Math.round($json.price).toLocaleString('ru-RU')+' ₽':'Не указана';\nlet m = e+' *'+n+'*\\n\\n*'+$json.title+'*\\n\\n💰 '+pr+'\\n';\nif(r)m+='🏠 '+r;\nif($json.area)m+=(r?', ':'')+$json.area+' м²';\nm+='\\n';\nif($json.address)m+='📍 '+$json.address+'\\n';\nif($json.phone)m+='📞 `'+$json.phone+'`\\n';\nm+='\\n🔗 [Открыть]('+$json.url+')';\nreturn{json:{...$json,message:m}};"
+      },
+      "id": "5",
+      "name": "Format",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "telegramApi",
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {"parse_mode": "Markdown"}
+      },
+      "id": "6",
+      "name": "Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1340, 300],
+      "credentials": {"telegramApi": {"id": "sBegr8MZX7eZ7dIX"}}
+    },
+    {
+      "parameters": {
+        "amount": 3,
+        "unit": "seconds"
+      },
+      "id": "7",
+      "name": "Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "command": "=cd /home/user/2026/rental_parser && python3 scripts/n8n_mark_sent.py {{ $json.id }}"
+      },
+      "id": "8",
+      "name": "Mark Sent",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1780, 300]
+    }
+  ],
+  "connections": {
+    "Schedule Every 4h": {"main": [[{"node": "Run Parser", "type": "main", "index": 0}]]},
+    "Run Parser": {"main": [[{"node": "Get Unsent", "type": "main", "index": 0}]]},
+    "Get Unsent": {"main": [[{"node": "Parse", "type": "main", "index": 0}]]},
+    "Parse": {"main": [[{"node": "Format", "type": "main", "index": 0}]]},
+    "Format": {"main": [[{"node": "Telegram", "type": "main", "index": 0}]]},
+    "Telegram": {"main": [[{"node": "Wait", "type": "main", "index": 0}]]},
+    "Wait": {"main": [[{"node": "Mark Sent", "type": "main", "index": 0}]]}
+  },
+  "settings": {"executionOrder": "v1"},
+  "pinData": {},
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-01-17T00:00:00.000Z",
+  "versionId": "1"
+}
