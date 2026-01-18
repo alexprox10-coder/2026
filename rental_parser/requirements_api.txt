@@ -1,0 +1,2 @@
+# API server dependencies (add to existing requirements.txt)
+Flask==3.0.0
