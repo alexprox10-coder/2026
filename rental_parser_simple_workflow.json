@@ -24,7 +24,7 @@
     {
       "parameters": {
         "language": "python",
-        "pythonCode": "import subprocess\nimport json\nimport os\n\n# Путь к скрипту\nscript_path = '/home/user/2026/rental_parser/run_once.py'\n\n# Запуск скрипта\nresult = subprocess.run(\n    ['python3', script_path],\n    capture_output=True,\n    text=True,\n    cwd='/home/user/2026/rental_parser'\n)\n\n# Парсим вывод\nif result.returncode == 0:\n    # Ищем JSON в выводе\n    output_lines = result.stdout.strip().split('\\n')\n    json_started = False\n    json_lines = []\n    \n    for line in output_lines:\n        if line.strip() == '{':\n            json_started = True\n        if json_started:\n            json_lines.append(line)\n        if line.strip() == '}':\n            break\n    \n    if json_lines:\n        result_data = json.loads('\\n'.join(json_lines))\n    else:\n        result_data = {'success': True, 'output': result.stdout}\nelse:\n    result_data = {\n        'success': False,\n        'error': result.stderr,\n        'stdout': result.stdout\n    }\n\nreturn result_data"
+        "pythonCode": "import subprocess\nimport os\n\n# Путь к скрипту\nscript_path = '/home/user/2026/rental_parser/run_once.py'\nlog_path = '/home/user/2026/rental_parser/n8n_run.log'\n\n# Запуск в фоне (не ждем завершения!)\nprocess = subprocess.Popen(\n    ['python3', script_path],\n    stdout=open(log_path, 'w'),\n    stderr=subprocess.STDOUT,\n    cwd='/home/user/2026/rental_parser'\n)\n\n# Сразу возвращаем результат\nresult_data = {\n    'success': True,\n    'message': 'Parser started in background',\n    'pid': process.pid,\n    'log_file': log_path,\n    'note': 'Check log file for results'\n}\n\nreturn result_data"
       },
       "id": "code-node",
       "name": "Run Parser Script",
@@ -40,27 +40,21 @@
         "assignments": {
           "assignments": [
             {
-              "id": "summary-total-new",
-              "name": "total_new",
-              "value": "={{ $json.summary.total_new }}",
-              "type": "number"
-            },
-            {
-              "id": "summary-total-sent",
-              "name": "total_sent",
-              "value": "={{ $json.summary.total_sent }}",
-              "type": "number"
-            },
-            {
-              "id": "summary-timestamp",
-              "name": "timestamp",
-              "value": "={{ $json.timestamp }}",
+              "id": "summary-message",
+              "name": "message",
+              "value": "={{ $json.message }}",
               "type": "string"
             },
             {
-              "id": "summary-message",
-              "name": "message",
-              "value": "Парсинг завершен! Найдено новых: {{ $json.summary.total_new }}, отправлено: {{ $json.summary.total_sent }}",
+              "id": "summary-pid",
+              "name": "process_id",
+              "value": "={{ $json.pid }}",
+              "type": "number"
+            },
+            {
+              "id": "summary-log",
+              "name": "log_file",
+              "value": "={{ $json.log_file }}",
               "type": "string"
             }
           ]
@@ -108,6 +102,6 @@
   "staticData": null,
   "tags": [],
   "triggerCount": 0,
-  "updatedAt": "2026-01-18T10:00:00.000Z",
-  "versionId": "1"
+  "updatedAt": "2026-01-18T12:00:00.000Z",
+  "versionId": "2"
 }
