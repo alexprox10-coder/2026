@@ -7,6 +7,7 @@ import os
 import sys
 import json
 import logging
+import time
 from datetime import datetime
 from typing import Dict, List
 
@@ -25,6 +26,7 @@ from parsers.cian_parser import CianParser
 from parsers.yandex_parser import YandexParser
 from parsers.avito_parser import AvitoParser
 from telegram_sender import TelegramSender
+from auto_dial import AutoDialer
 
 
 def parse_all_platforms(city: str = 'москва', max_pages: int = 5) -> Dict:
@@ -129,6 +131,16 @@ def send_to_telegram(limit: int = 20) -> Dict:
     db = init_db('rental_parser.db')
     sender = TelegramSender(bot_token, chat_ids)
 
+    # Инициализация автонабора
+    auto_dial_enabled = os.getenv('AUTO_DIAL_ENABLED', 'true').lower() == 'true'
+    dialer = None
+    if auto_dial_enabled:
+        try:
+            dialer = AutoDialer()
+            logger.info(f"Auto-dial enabled: {dialer.backend.value}")
+        except Exception as e:
+            logger.warning(f"Auto-dial initialization failed: {e}")
+
     # Получить неотправленные
     listings = get_unsent_listings(db, limit=limit)
 
@@ -153,6 +165,17 @@ def send_to_telegram(limit: int = 20) -> Dict:
                 mark_as_sent(db, listing.id, 'run_once')
                 sent_count += 1
                 logger.info(f"Sent listing {listing.id} ({listing.platform})")
+
+                # Автонабор если включен и есть телефон
+                if dialer and listing.phone:
+                    try:
+                        dialer.dial(listing.phone, listing.url, listing.id)
+                        logger.info(f"Auto-dialed: {listing.phone}")
+                    except Exception as e:
+                        logger.error(f"Auto-dial failed for {listing.phone}: {e}")
+
+                # Задержка между отправками
+                time.sleep(2)
             else:
                 failed_count += 1
                 logger.error(f"Failed to send listing {listing.id}")

@@ -9,6 +9,7 @@
 - ✅ Работает через Code node в n8n (не нужны Execute Command ноды)
 - ✅ Простой workflow - всего 3 ноды
 - ✅ Автоматический запуск каждые 4 часа
+- ✅ Автонабор телефонов встроен (webhook/Asterisk/Twilio)
 - ✅ Можно запускать вручную для тестирования
 
 ---
@@ -45,6 +46,10 @@ TELEGRAM_CHAT_IDS=123456789,987654321
 CITY=москва
 MAX_PAGES=5
 SEND_LIMIT=20
+
+# Автонабор (опционально)
+AUTO_DIAL_ENABLED=true  # true/false
+DIALER_BACKEND=mock  # mock/webhook/asterisk/twilio
 ```
 
 ### Шаг 3: Протестируйте скрипт
@@ -85,9 +90,12 @@ PARSING COMPLETED: 25 new listings
 ============================================================
 SENDING TO TELEGRAM
 ============================================================
+Auto-dial enabled: mock
 Found 25 unsent listings
 Sent listing 1 (cian)
+Auto-dialed: +79991234567
 Sent listing 2 (yandex)
+Auto-dialed: +79997654321
 ...
 ============================================================
 SENDING COMPLETED: 20 sent, 0 failed
@@ -215,6 +223,81 @@ crontab -e
 
 ```bash
 curl -X POST https://your-n8n.com/webhook/rental-parser
+```
+
+---
+
+## 📞 Настройка автонабора
+
+Скрипт **автоматически набирает номер телефона** сразу после отправки объявления менеджеру в Telegram.
+
+### По умолчанию (Mock режим)
+
+```bash
+# В .env
+AUTO_DIAL_ENABLED=true
+DIALER_BACKEND=mock
+```
+
+Логи покажут: `Auto-dialed: +79991234567` но реальных звонков не будет (для тестирования).
+
+### Webhook интеграция
+
+Если у вас есть система телефонии с HTTP API:
+
+```bash
+# В .env
+AUTO_DIAL_ENABLED=true
+DIALER_BACKEND=webhook
+DIALER_WEBHOOK_URL=https://your-telephony.com/api/dial
+```
+
+При каждом объявлении будет POST запрос:
+
+```json
+{
+  "phone": "+79991234567",
+  "listing_url": "https://cian.ru/rent/123456",
+  "listing_id": 42
+}
+```
+
+### Asterisk AMI
+
+Для интеграции с Asterisk PBX:
+
+```bash
+# В .env
+AUTO_DIAL_ENABLED=true
+DIALER_BACKEND=asterisk
+ASTERISK_HOST=192.168.1.100
+ASTERISK_PORT=5038
+ASTERISK_USER=admin
+ASTERISK_PASSWORD=secret123
+```
+
+Установите библиотеку: `pip install asterisk.ami`
+
+### Twilio
+
+Для облачной телефонии:
+
+```bash
+# В .env
+AUTO_DIAL_ENABLED=true
+DIALER_BACKEND=twilio
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=your_auth_token
+TWILIO_FROM_NUMBER=+15551234567
+```
+
+Установите библиотеку: `pip install twilio`
+
+### Выключить автонабор
+
+```bash
+# В .env
+AUTO_DIAL_ENABLED=false
 ```
 
 ---
