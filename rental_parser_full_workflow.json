@@ -143,7 +143,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://host.docker.internal:5555/parse-async",
+        "url": "http://localhost:5555/parse-async",
         "options": {
           "timeout": 10000
         }
@@ -168,7 +168,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "http://host.docker.internal:5555/get-unsent?limit=50",
+        "url": "http://localhost:5555/get-unsent?limit=50",
         "options": {}
       },
       "id": "get-unsent",
