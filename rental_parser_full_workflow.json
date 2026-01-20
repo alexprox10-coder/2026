@@ -1,0 +1,294 @@
+{
+  "name": "Rental Parser PRO - Full",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message", "callback_query"]
+      },
+      "id": "telegram-trigger",
+      "name": "Telegram Bot",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "webhookId": "rental-bot-webhook",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Rental Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const update = $input.item.json;\nconst message = update.message || update.callback_query?.message;\nconst callback = update.callback_query?.data;\nconst text = update.message?.text || '';\nconst chatId = message.chat.id;\n\nlet response = { chatId, route: 'menu' };\n\nif (text === '/start' || text === '/menu' || callback === 'menu') {\n  response.text = '🏠 *Парсер аренды недвижимости*\\n\\n✨ Автоматический поиск квартир\\n🔍 Мониторинг каждые 3 минуты\\n📸 Фото + цена + адрес + телефон\\n🤖 AI консультант по аренде\\n\\n*Платформы:*\\n🔵 Cian.ru\\n🔴 Yandex.Realty\\n🟢 Avito.ru';\n  response.keyboard = {\n    inline_keyboard: [\n      [{text: '🏙️ Выбрать город', callback_data: 'select_city'}],\n      [{text: '🔍 Выбрать платформы', callback_data: 'select_platforms'}],\n      [{text: '⚙️ Настройки', callback_data: 'settings'}],\n      [{text: '🤖 AI Консультант', callback_data: 'ai_help'}],\n      [{text: '❓ FAQ', callback_data: 'faq'}, {text: '✍️ Отзыв', callback_data: 'review'}]\n    ]\n  };\n}\nelse if (callback === 'select_city') {\n  response.text = '🏙️ *Выбор города*\\n\\nВыберите город для парсинга:';\n  response.keyboard = {\n    inline_keyboard: [\n      [{text: 'Москва', callback_data: 'city_москва'}],\n      [{text: 'Санкт-Петербург', callback_data: 'city_санкт-петербург'}],\n      [{text: 'Благовещенск', callback_data: 'city_благовещенск'}],\n      [{text: 'Екатеринбург', callback_data: 'city_екатеринбург'}],\n      [{text: 'Новосибирск', callback_data: 'city_новосибирск'}],\n      [{text: 'Казань', callback_data: 'city_казань'}],\n      [{text: '🔙 Назад', callback_data: 'menu'}]\n    ]\n  };\n}\nelse if (callback && callback.startsWith('city_')) {\n  const city = callback.replace('city_', '');\n  $getWorkflowStaticData('node').selectedCity = city;\n  response.text = `✅ Город изменен на: *${city}*\\n\\nТеперь парсер будет искать квартиры в этом городе.`;\n  response.keyboard = {\n    inline_keyboard: [[{text: '🏠 Главное меню', callback_data: 'menu'}]]\n  };\n}\nelse if (callback === 'select_platforms') {\n  const platforms = $getWorkflowStaticData('node').selectedPlatforms || ['cian', 'yandex', 'avito'];\n  const checks = {\n    cian: platforms.includes('cian') ? '✅' : '☐',\n    yandex: platforms.includes('yandex') ? '✅' : '☐',\n    avito: platforms.includes('avito') ? '✅' : '☐'\n  };\n  response.text = `🔍 *Выбор платформ*\\n\\n${checks.cian} Cian.ru\\n${checks.yandex} Yandex.Realty\\n${checks.avito} Avito.ru\\n\\nВыберите платформы для парсинга:`;\n  response.keyboard = {\n    inline_keyboard: [\n      [{text: `${checks.cian} Cian`, callback_data: 'toggle_cian'}],\n      [{text: `${checks.yandex} Yandex`, callback_data: 'toggle_yandex'}],\n      [{text: `${checks.avito} Avito`, callback_data: 'toggle_avito'}],\n      [{text: '✅ Все', callback_data: 'platforms_all'}, {text: '❌ Сбросить', callback_data: 'platforms_none'}],\n      [{text: '🔙 Назад', callback_data: 'menu'}]\n    ]\n  };\n}\nelse if (callback && callback.startsWith('toggle_')) {\n  const platform = callback.replace('toggle_', '');\n  let platforms = $getWorkflowStaticData('node').selectedPlatforms || ['cian', 'yandex', 'avito'];\n  if (platforms.includes(platform)) {\n    platforms = platforms.filter(p => p !== platform);\n  } else {\n    platforms.push(platform);\n  }\n  $getWorkflowStaticData('node').selectedPlatforms = platforms;\n  response.text = '✅ Настройки сохранены!';\n  response.keyboard = {\n    inline_keyboard: [[{text: '🔍 Выбрать платформы', callback_data: 'select_platforms'}], [{text: '🏠 Главное меню', callback_data: 'menu'}]]\n  };\n}\nelse if (callback === 'platforms_all') {\n  $getWorkflowStaticData('node').selectedPlatforms = ['cian', 'yandex', 'avito'];\n  response.text = '✅ Выбраны все платформы!';\n  response.keyboard = {\n    inline_keyboard: [[{text: '🏠 Главное меню', callback_data: 'menu'}]]\n  };\n}\nelse if (callback === 'platforms_none') {\n  $getWorkflowStaticData('node').selectedPlatforms = [];\n  response.text = '❌ Все платформы отключены!';\n  response.keyboard = {\n    inline_keyboard: [[{text: '🔍 Выбрать платформы', callback_data: 'select_platforms'}]]\n  };\n}\nelse if (callback === 'settings') {\n  const city = $getWorkflowStaticData('node').selectedCity || 'москва';\n  const platforms = $getWorkflowStaticData('node').selectedPlatforms || ['cian', 'yandex', 'avito'];\n  response.text = `⚙️ *Текущие настройки*\\n\\n🏙️ Город: ${city}\\n🔍 Платформы: ${platforms.join(', ')}\\n⏰ Интервал: каждые 3 минуты\\n📊 Макс. страниц: 5\\n\\n*Статус парсера:* Активен ✅`;\n  response.keyboard = {\n    inline_keyboard: [\n      [{text: '🏙️ Сменить город', callback_data: 'select_city'}],\n      [{text: '🔍 Сменить платформы', callback_data: 'select_platforms'}],\n      [{text: '🔙 Назад', callback_data: 'menu'}]\n    ]\n  };\n}\nelse if (callback === 'ai_help') {\n  response.text = '🤖 *AI Консультант*\\n\\nЗадайте любой вопрос об аренде квартир!\\n\\nПримеры:\\n• Как проверить квартиру перед арендой?\\n• На что обратить внимание при осмотре?\\n• Какие документы нужны?\\n• Как торговаться с арендодателем?';\n  response.keyboard = {\n    inline_keyboard: [[{text: '🔙 Назад', callback_data: 'menu'}]]\n  };\n  response.route = 'menu';\n}\nelse if (callback === 'faq') {\n  response.text = '❓ *Частые вопросы*\\n\\n*Как работает бот?*\\nАвтоматический парсинг Cian, Yandex, Avito каждые 3 минуты.\\n\\n*Что включено?*\\nФото, цена, адрес, телефон, автонабор.\\n\\n*Дублируются объявления?*\\nНет! Встроенная дедупликация.\\n\\n*Какие города?*\\nЛюбые города России.\\n\\n*Сколько платформ?*\\n3 платформы одновременно!';\n  response.keyboard = {\n    inline_keyboard: [[{text: '📞 Поддержка', callback_data: 'support'}], [{text: '🔙 Назад', callback_data: 'menu'}]]\n  };\n}\nelse if (callback === 'review') {\n  response.text = '✍️ *Оставить отзыв*\\n\\nОцените работу бота:';\n  response.keyboard = {\n    inline_keyboard: [\n      [{text: '⭐⭐⭐⭐⭐ Отлично', callback_data: 'rate_5'}],\n      [{text: '⭐⭐⭐⭐ Хорошо', callback_data: 'rate_4'}],\n      [{text: '⭐⭐⭐ Нормально', callback_data: 'rate_3'}],\n      [{text: '🔙 Назад', callback_data: 'menu'}]\n    ]\n  };\n}\nelse if (callback && callback.startsWith('rate_')) {\n  response.text = '💖 Спасибо за отзыв! Мы ценим ваше мнение.';\n  response.keyboard = {\n    inline_keyboard: [[{text: '🏠 Главное меню', callback_data: 'menu'}]]\n  };\n}\nelse if (callback === 'support') {\n  response.text = '📞 *Поддержка*\\n\\nПо всем вопросам: @your_support\\nEmail: support@rental.ru';\n  response.keyboard = {\n    inline_keyboard: [[{text: '🔙 Назад', callback_data: 'menu'}]]\n  };\n}\nelse if (!text.startsWith('/') && text.length > 5) {\n  response.text = text;\n  response.route = 'ai';\n}\nelse {\n  response.text = 'Используйте /menu для навигации';\n  response.keyboard = {\n    inline_keyboard: [[{text: '🏠 Меню', callback_data: 'menu'}]]\n  };\n}\n\nreturn { json: response };"
+      },
+      "id": "router",
+      "name": "Router",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.route }}",
+              "value2": "ai"
+            }
+          ]
+        }
+      },
+      "id": "if-ai",
+      "name": "Is AI Question?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-3.5-turbo\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Ты эксперт по аренде недвижимости в России. Помогаешь риелторам и арендаторам. Отвечай кратко, по делу, на русском языке.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.text }}\"\n    }\n  ],\n  \"max_tokens\": 500,\n  \"temperature\": 0.7\n}",
+        "options": {}
+      },
+      "id": "ai-request",
+      "name": "AI Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ai-text",
+              "name": "text",
+              "value": "={{ $json.choices[0].message.content }}",
+              "type": "string"
+            },
+            {
+              "id": "ai-chatid",
+              "name": "chatId",
+              "value": "={{ $('Router').item.json.chatId }}",
+              "type": "string"
+            },
+            {
+              "id": "ai-keyboard",
+              "name": "keyboard",
+              "value": "={{ {inline_keyboard: [[{text: '🏠 Меню', callback_data: 'menu'}]]} }}",
+              "type": "object"
+            }
+          ]
+        }
+      },
+      "id": "format-ai",
+      "name": "Format AI Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "reply_markup": "={{ JSON.stringify($json.keyboard) }}"
+        }
+      },
+      "id": "send-message",
+      "name": "Send Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1340, 300],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Rental Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 3
+            }
+          ]
+        }
+      },
+      "id": "schedule",
+      "name": "Schedule 3min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5555/parse-async",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "run-parser",
+      "name": "Run Parser API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 600]
+    },
+    {
+      "parameters": {
+        "amount": 10,
+        "unit": "seconds"
+      },
+      "id": "wait-parse",
+      "name": "Wait for Parse",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [680, 600]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://localhost:5555/get-unsent?limit=50",
+        "options": {}
+      },
+      "id": "get-unsent",
+      "name": "Get Unsent Listings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst listings = Array.isArray(response) ? response : (response.listings || []);\n\nif (!listings || listings.length === 0) {\n  console.log('No unsent listings');\n  return [];\n}\n\nconsole.log(`Found ${listings.length} unsent listings`);\n\nreturn listings.map(listing => ({ json: listing }));"
+      },
+      "id": "split-listings",
+      "name": "Split Listings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "const listing = $input.item.json;\n\nconst platformEmoji = {\n  cian: '🔵',\n  yandex: '🔴',\n  avito: '🟢'\n};\n\nconst platformName = {\n  cian: 'Cian',\n  yandex: 'Yandex',\n  avito: 'Avito'\n};\n\nconst emoji = platformEmoji[listing.platform] || '⚪';\nconst name = platformName[listing.platform] || listing.platform;\n\nconst rooms = listing.rooms === 0 ? 'Студия' : (listing.rooms ? `${listing.rooms}-комн` : '');\nconst price = listing.price ? `${Math.round(listing.price).toLocaleString('ru-RU')} ₽/мес` : 'Уточняйте';\n\nlet caption = `${emoji} *${name}*\\n\\n`;\ncaption += `*${listing.title || 'Квартира'}*\\n\\n`;\ncaption += `💰 ${price}\\n`;\n\nif (rooms || listing.area) {\n  let parts = [];\n  if (rooms) parts.push(`🏠 ${rooms}`);\n  if (listing.area) parts.push(`${listing.area} м²`);\n  caption += parts.join(', ') + '\\n';\n}\n\nif (listing.address) {\n  caption += `📍 ${listing.address}\\n`;\n}\n\nif (listing.phone) {\n  caption += `📞 \\`${listing.phone}\\`\\n`;\n}\n\ncaption += `\\n🔗 [Открыть объявление](${listing.url})`;\n\n// Получаем chat_ids из Static Data или env\nconst chatIds = $getWorkflowStaticData('global').subscribedUsers || ['7984101063'];\n\nreturn {\n  json: {\n    ...listing,\n    caption: caption,\n    chatIds: chatIds,\n    photo: listing.image || 'https://via.placeholder.com/600x400/4A90E2/ffffff?text=Квартира'\n  }\n};"
+      },
+      "id": "format-listing",
+      "name": "Format Listing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 600]
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $json.chatIds[0] }}",
+        "binaryData": false,
+        "photoUrl": "={{ $json.photo }}",
+        "additionalFields": {
+          "caption": "={{ $json.caption }}",
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-photo",
+      "name": "Send Photo",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1560, 600],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Rental Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 2,
+        "unit": "seconds"
+      },
+      "id": "wait-between",
+      "name": "Wait Between",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1780, 600]
+    }
+  ],
+  "connections": {
+    "Telegram Bot": {
+      "main": [[{"node": "Router", "type": "main", "index": 0}]]
+    },
+    "Router": {
+      "main": [[{"node": "Is AI Question?", "type": "main", "index": 0}]]
+    },
+    "Is AI Question?": {
+      "main": [
+        [{"node": "AI Request", "type": "main", "index": 0}],
+        [{"node": "Send Message", "type": "main", "index": 0}]
+      ]
+    },
+    "AI Request": {
+      "main": [[{"node": "Format AI Response", "type": "main", "index": 0}]]
+    },
+    "Format AI Response": {
+      "main": [[{"node": "Send Message", "type": "main", "index": 0}]]
+    },
+    "Schedule 3min": {
+      "main": [[{"node": "Run Parser API", "type": "main", "index": 0}]]
+    },
+    "Run Parser API": {
+      "main": [[{"node": "Wait for Parse", "type": "main", "index": 0}]]
+    },
+    "Wait for Parse": {
+      "main": [[{"node": "Get Unsent Listings", "type": "main", "index": 0}]]
+    },
+    "Get Unsent Listings": {
+      "main": [[{"node": "Split Listings", "type": "main", "index": 0}]]
+    },
+    "Split Listings": {
+      "main": [[{"node": "Format Listing", "type": "main", "index": 0}]]
+    },
+    "Format Listing": {
+      "main": [[{"node": "Send Photo", "type": "main", "index": 0}]]
+    },
+    "Send Photo": {
+      "main": [[{"node": "Wait Between", "type": "main", "index": 0}]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {
+    "node": {
+      "selectedCity": "москва",
+      "selectedPlatforms": ["cian", "yandex", "avito"]
+    },
+    "global": {
+      "subscribedUsers": ["7984101063"]
+    }
+  },
+  "active": false,
+  "tags": [],
+  "meta": {
+    "instanceId": "rental-parser-pro"
+  }
+}

@@ -95,6 +95,44 @@ def run_parser_async():
         }), 500
 
 
+@app.route('/get-unsent', methods=['GET'])
+def get_unsent():
+    """Get unsent listings from database"""
+    try:
+        sys.path.insert(0, os.path.dirname(SCRIPT_PATH))
+        from database.models import init_db, get_unsent_listings
+
+        limit = int(request.args.get('limit', 20))
+        db = init_db('rental_parser.db')
+        listings = get_unsent_listings(db, limit=limit)
+
+        result = []
+        for listing in listings:
+            result.append({
+                'id': listing.id,
+                'platform': listing.platform,
+                'listing_id': listing.listing_id,
+                'url': listing.url,
+                'title': listing.title,
+                'price': listing.price,
+                'address': listing.address,
+                'rooms': listing.rooms,
+                'area': listing.area,
+                'phone': listing.phone,
+                'image': f'https://via.placeholder.com/600x400/4A90E2/ffffff?text={listing.platform}+{listing.listing_id}',
+                'created_at': listing.created_at.isoformat() if listing.created_at else None
+            })
+
+        db.close()
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 @app.route('/status', methods=['GET'])
 def status():
     """Get API status and configuration"""
@@ -131,10 +169,11 @@ if __name__ == '__main__':
     print(f"Script exists: {os.path.exists(SCRIPT_PATH)}")
     print("")
     print("Endpoints:")
-    print("  GET  /health      - Health check")
-    print("  GET  /status      - API status and configuration")
-    print("  POST /parse       - Run parser (wait for completion)")
-    print("  POST /parse-async - Run parser (background)")
+    print("  GET  /health        - Health check")
+    print("  GET  /status        - API status and configuration")
+    print("  GET  /get-unsent    - Get unsent listings from DB")
+    print("  POST /parse         - Run parser (wait for completion)")
+    print("  POST /parse-async   - Run parser (background)")
     print("=" * 60)
     print("")
 
