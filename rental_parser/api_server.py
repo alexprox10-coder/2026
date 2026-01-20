@@ -9,7 +9,23 @@ import sys
 import os
 import json
 
+
+class HostRewriteMiddleware:
+    """Middleware to rewrite Host header for Docker access"""
+    def __init__(self, app):
+        self.app = app
+
+    def __call__(self, environ, start_response):
+        # Always set Host to localhost to bypass Werkzeug's validation
+        environ['HTTP_HOST'] = 'localhost:5555'
+        environ['SERVER_NAME'] = 'localhost'
+        environ['SERVER_PORT'] = '5555'
+        return self.app(environ, start_response)
+
+
 app = Flask(__name__)
+# Allow access from any host (for n8n in Docker)
+app.wsgi_app = HostRewriteMiddleware(app.wsgi_app)
 
 # Path to run_once.py script
 SCRIPT_PATH = os.path.join(os.path.dirname(__file__), 'run_once.py')
@@ -165,6 +181,7 @@ if __name__ == '__main__':
     print("Starting Rental Parser API...")
     print("=" * 60)
     print(f"API will be available at: http://localhost:5555")
+    print(f"API also accessible at: http://21.0.0.150:5555")
     print(f"Script path: {SCRIPT_PATH}")
     print(f"Script exists: {os.path.exists(SCRIPT_PATH)}")
     print("")

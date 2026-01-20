@@ -21,7 +21,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:5555/parse-async",
+        "url": "http://host.docker.internal:5555/parse-async",
         "options": {
           "timeout": 10000
         }

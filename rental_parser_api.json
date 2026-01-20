@@ -15,7 +15,7 @@
     },
     {
       "parameters": {
-        "url": "http://localhost:5555/parse",
+        "url": "http://host.docker.internal:5555/parse",
         "method": "POST",
         "sendBody": true,
         "specifyBody": "json",
@@ -30,7 +30,7 @@
     },
     {
       "parameters": {
-        "url": "http://localhost:5555/unsent?limit=20",
+        "url": "http://host.docker.internal:5555/unsent?limit=20",
         "method": "GET",
         "options": {}
       },
@@ -88,7 +88,7 @@
     },
     {
       "parameters": {
-        "url": "=http://localhost:5555/mark-sent/{{ $json.id }}",
+        "url": "=http://host.docker.internal:5555/mark-sent/{{ $json.id }}",
         "method": "POST",
         "options": {}
       },
