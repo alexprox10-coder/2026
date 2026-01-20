@@ -1,0 +1,424 @@
+{
+  "name": "Циан PRO: Firecrawl + Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 3
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 3 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "city",
+              "name": "city",
+              "value": "moskva",
+              "type": "string"
+            },
+            {
+              "id": "platforms",
+              "name": "platforms",
+              "value": "={{ ['cian', 'yandex', 'avito'] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-config",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cian-url",
+              "name": "cianUrl",
+              "value": "=https://www.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=flat&room1=1&room2=1&room3=1&type=4",
+              "type": "string"
+            },
+            {
+              "id": "yandex-url",
+              "name": "yandexUrl",
+              "value": "=https://realty.yandex.ru/moskva/snyat/kvartira/?rentTime=large",
+              "type": "string"
+            },
+            {
+              "id": "avito-url",
+              "name": "avitoUrl",
+              "value": "=https://www.avito.ru/moskva/kvartiry/sdam/na_dlitelnyy_srok-ASgBAgICAkSSA8YQ?cd=1",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "build-urls",
+      "name": "Build URLs",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.firecrawl.dev/v0/scrape",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer fc-df32f6aa72994d6839e7a87df954d885f"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"url\": \"{{ $json.cianUrl }}\",\n  \"formats\": [\"markdown\", \"html\"],\n  \"onlyMainContent\": true,\n  \"waitFor\": 3000\n}",
+        "options": {}
+      },
+      "id": "scrape-cian",
+      "name": "Scrape Cian",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.firecrawl.dev/v0/scrape",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer fc-df32f6aa72994d6839e7a87df954d885f"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"url\": \"{{ $json.yandexUrl }}\",\n  \"formats\": [\"markdown\", \"html\"],\n  \"onlyMainContent\": true,\n  \"waitFor\": 3000\n}",
+        "options": {}
+      },
+      "id": "scrape-yandex",
+      "name": "Scrape Yandex",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.firecrawl.dev/v0/scrape",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer fc-df32f6aa72994d6839e7a87df954d885f"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"url\": \"{{ $json.avitoUrl }}\",\n  \"formats\": [\"markdown\", \"html\"],\n  \"onlyMainContent\": true,\n  \"waitFor\": 3000\n}",
+        "options": {}
+      },
+      "id": "scrape-avito",
+      "name": "Scrape Avito",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract listings from Firecrawl response\nconst items = [];\n\nfor (const item of $input.all()) {\n  const html = item.json.data?.html || '';\n  const markdown = item.json.data?.markdown || '';\n  const url = item.json.data?.url || '';\n  \n  let platform = 'unknown';\n  if (url.includes('cian.ru')) platform = 'cian';\n  else if (url.includes('yandex.ru')) platform = 'yandex';\n  else if (url.includes('avito.ru')) platform = 'avito';\n  \n  // Parse Cian listings\n  if (platform === 'cian') {\n    const regex = /https:\\/\\/www\\.cian\\.ru\\/rent\\/flat\\/\\d+/g;\n    const urls = [...new Set((html.match(regex) || []))];\n    \n    for (const listingUrl of urls.slice(0, 10)) {\n      const id = listingUrl.match(/\\d+$/)?.[0];\n      items.push({\n        json: {\n          platform: 'Cian',\n          url: listingUrl,\n          id: `cian_${id}`,\n          found_at: new Date().toISOString()\n        }\n      });\n    }\n  }\n  \n  // Parse Yandex listings\n  if (platform === 'yandex') {\n    const regex = /https:\\/\\/realty\\.yandex\\.ru\\/offer\\/\\w+/g;\n    const urls = [...new Set((html.match(regex) || []))];\n    \n    for (const listingUrl of urls.slice(0, 10)) {\n      const id = listingUrl.match(/\\/offer\\/(\\w+)/)?.[1];\n      items.push({\n        json: {\n          platform: 'Yandex',\n          url: listingUrl,\n          id: `yandex_${id}`,\n          found_at: new Date().toISOString()\n        }\n      });\n    }\n  }\n  \n  // Parse Avito listings\n  if (platform === 'avito') {\n    const regex = /https:\\/\\/www\\.avito\\.ru\\/[\\w-]+\\/kvartiry\\/[\\w-]+_\\d+/g;\n    const urls = [...new Set((html.match(regex) || []))];\n    \n    for (const listingUrl of urls.slice(0, 10)) {\n      const id = listingUrl.match(/_(\\d+)$/)?.[1];\n      items.push({\n        json: {\n          platform: 'Avito',\n          url: listingUrl,\n          id: `avito_${id}`,\n          found_at: new Date().toISOString()\n        }\n      });\n    }\n  }\n}\n\nreturn items;"
+      },
+      "id": "extract-listings",
+      "name": "Extract Listings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.firecrawl.dev/v0/scrape",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer fc-df32f6aa72994d6839e7a87df954d885f"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"url\": \"{{ $json.url }}\",\n  \"formats\": [\"markdown\"],\n  \"onlyMainContent\": true,\n  \"waitFor\": 2000\n}",
+        "options": {}
+      },
+      "id": "get-details",
+      "name": "Get Details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract details from listing page\nconst items = [];\n\nfor (const item of $input.all()) {\n  const markdown = item.json.data?.markdown || '';\n  const previousData = item.json;\n  \n  // Extract price\n  let price = '';\n  const priceMatch = markdown.match(/([\\d\\s]+)\\s*(?:₽|\\/мес|руб)/i);\n  if (priceMatch) {\n    price = priceMatch[1].replace(/\\s/g, '') + ' ₽/мес';\n  }\n  \n  // Extract phone (Russian format)\n  let phone = '';\n  const phoneMatch = markdown.match(/\\+?[78]?[\\s-]?\\(?\\d{3}\\)?[\\s-]?\\d{3}[\\s-]?\\d{2}[\\s-]?\\d{2}/);\n  if (phoneMatch) {\n    phone = phoneMatch[0].replace(/[^\\d+]/g, '');\n  }\n  \n  // Extract address\n  let address = '';\n  const addressMatch = markdown.match(/(?:адрес|Address|Адрес)[:：]?\\s*([^\\n]{10,100})/i);\n  if (addressMatch) {\n    address = addressMatch[1].trim();\n  }\n  \n  // Extract rooms\n  let rooms = '';\n  const roomsMatch = markdown.match(/(\\d)-комн|студия/i);\n  if (roomsMatch) {\n    rooms = roomsMatch[0];\n  }\n  \n  // Extract area\n  let area = '';\n  const areaMatch = markdown.match(/(\\d+)\\s*м²/);\n  if (areaMatch) {\n    area = areaMatch[0];\n  }\n  \n  // Extract image\n  const html = item.json.data?.html || '';\n  let image = '';\n  const imgMatch = html.match(/<img[^>]+src=\"([^\"]+)\"/);\n  if (imgMatch) {\n    image = imgMatch[1];\n  }\n  \n  items.push({\n    json: {\n      ...previousData,\n      price: price || 'Не указана',\n      phone: phone || 'Не указан',\n      address: address || 'Не указан',\n      rooms: rooms || '—',\n      area: area || '—',\n      image: image || '',\n      title: `${rooms || 'Квартира'} ${area || ''}`.trim()\n    }\n  });\n}\n\nreturn items;"
+      },
+      "id": "parse-details",
+      "name": "Parse Details",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 400]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "table": "sent_listings",
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "get-sent",
+      "name": "Get Sent IDs",
+      "type": "n8n-nodes-base.sqlite",
+      "typeVersion": 1,
+      "position": [1340, 600],
+      "credentials": {
+        "sqliteApi": {
+          "id": "sqlite-db",
+          "name": "Rental Parser DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Remove duplicates based on already sent IDs\nconst sentIds = new Set();\n\n// Get all sent IDs from database\nconst sentItems = $('Get Sent IDs').all();\nfor (const item of sentItems) {\n  if (item.json.listing_id) {\n    sentIds.add(item.json.listing_id);\n  }\n}\n\n// Filter out already sent listings\nconst newListings = [];\nfor (const item of $input.all()) {\n  if (!sentIds.has(item.json.id)) {\n    newListings.push(item);\n  }\n}\n\nreturn newListings;"
+      },
+      "id": "filter-duplicates",
+      "name": "Filter Duplicates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "=🏠 *{{ $json.title }}*\\n\\n💰 Цена: *{{ $json.price }}*\\n📍 Адрес: {{ $json.address }}\\n📞 Телефон: `{{ $json.phone }}`\\n🔗 Платформа: {{ $json.platform }}\\n\\n[Открыть объявление]({{ $json.url }})",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "disable_web_page_preview": false
+        }
+      },
+      "id": "send-telegram",
+      "name": "Send to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2000, 400],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Rental Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "sent_listings",
+        "columns": "listing_id, platform, url, sent_at",
+        "values": "={{ $json.id }},={{ $json.platform }},={{ $json.url }},={{ new Date().toISOString() }}"
+      },
+      "id": "mark-sent",
+      "name": "Mark as Sent",
+      "type": "n8n-nodes-base.sqlite",
+      "typeVersion": 1,
+      "position": [2220, 400],
+      "credentials": {
+        "sqliteApi": {
+          "id": "sqlite-db",
+          "name": "Rental Parser DB"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 3 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Build URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build URLs": {
+      "main": [
+        [
+          {
+            "node": "Scrape Cian",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Scrape Yandex",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Scrape Avito",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape Cian": {
+      "main": [
+        [
+          {
+            "node": "Extract Listings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape Yandex": {
+      "main": [
+        [
+          {
+            "node": "Extract Listings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape Avito": {
+      "main": [
+        [
+          {
+            "node": "Extract Listings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Listings": {
+      "main": [
+        [
+          {
+            "node": "Get Details",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Sent IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Details": {
+      "main": [
+        [
+          {
+            "node": "Parse Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Details": {
+      "main": [
+        [
+          {
+            "node": "Filter Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Duplicates": {
+      "main": [
+        [
+          {
+            "node": "Send to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to Telegram": {
+      "main": [
+        [
+          {
+            "node": "Mark as Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
