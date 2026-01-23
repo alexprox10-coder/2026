@@ -1,0 +1,498 @@
+{
+  "name": "Telegram Bot - Realtor Parser FINAL",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message", "callback_query"]
+      },
+      "id": "1",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 400],
+      "webhookId": "realtor-parser-final",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ String($json.message?.from?.id || $json.callback_query?.from?.id) }}",
+              "operation": "equals",
+              "value2": "7984101063"
+            }
+          ]
+        }
+      },
+      "id": "2",
+      "name": "Check User ID",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message?.chat?.id || $json.callback_query?.message?.chat?.id }}",
+        "text": "❌ У вас нет доступа к этому боту."
+      },
+      "id": "3",
+      "name": "Unauthorized",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [680, 600],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": ""
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.callback_query }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "4",
+      "name": "Is Callback",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 280]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message?.text }}",
+              "operation": "equals",
+              "value2": "/start"
+            }
+          ]
+        }
+      },
+      "id": "5",
+      "name": "Is Start",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "Привет! 👋\n\n*Бот управления парсером недвижимости* (Авито + ЦИАН)\n\nВыберите действие:",
+        "additionalFields": {
+          "parseMode": "Markdown",
+          "replyMarkup": "inlineKeyboard",
+          "inlineKeyboard": "={{ \n{\n  \"inline_keyboard\": [\n    [\n      {\"text\": \"🟢 Парсить Avito\", \"callback_data\": \"parse_avito\"}\n    ],\n    [\n      {\"text\": \"🔵 Парсить ЦИАН\", \"callback_data\": \"parse_cian\"}\n    ],\n    [\n      {\"text\": \"🟣 Парсить оба\", \"callback_data\": \"parse_both\"}\n    ],\n    [\n      {\"text\": \"⏰ Настройки\", \"callback_data\": \"settings\"}\n    ],\n    [\n      {\"text\": \"▶️ Включить\", \"callback_data\": \"enable\"},\n      {\"text\": \"⏸️ Выключить\", \"callback_data\": \"disable\"}\n    ],\n    [\n      {\"text\": \"❓ Помощь\", \"callback_data\": \"help\"}\n    ]\n  ]\n}\n}}"
+        }
+      },
+      "id": "6",
+      "name": "Send Welcome",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1120, 300],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "parse_avito",
+                    "operator": {"type": "string", "operation": "equals"}
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "avito"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "parse_cian",
+                    "operator": {"type": "string", "operation": "equals"}
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "cian"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "parse_both",
+                    "operator": {"type": "string", "operation": "equals"}
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "both"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "enable",
+                    "operator": {"type": "string", "operation": "equals"}
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "enable"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "disable",
+                    "operator": {"type": "string", "operation": "equals"}
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "disable"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "help",
+                    "operator": {"type": "string", "operation": "equals"}
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "help"
+            }
+          ]
+        }
+      },
+      "id": "7",
+      "name": "Callback Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [900, 160]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://alex024.app.n8n.cloud/api/v1/workflows/iXAfySHKjPj3DPcm/execute",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"source\": \"avito\"}",
+        "options": {}
+      },
+      "id": "8",
+      "name": "Run Avito",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 0],
+      "credentials": {
+        "n8nApi": {
+          "id": "N8N_API_CREDENTIALS_ID",
+          "name": "n8n API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://alex024.app.n8n.cloud/api/v1/workflows/iXAfySHKjPj3DPcm/execute",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"source\": \"cian\"}",
+        "options": {}
+      },
+      "id": "9",
+      "name": "Run CIAN",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 100],
+      "credentials": {
+        "n8nApi": {
+          "id": "N8N_API_CREDENTIALS_ID",
+          "name": "n8n API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://alex024.app.n8n.cloud/api/v1/workflows/iXAfySHKjPj3DPcm/execute",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"source\": \"both\"}",
+        "options": {}
+      },
+      "id": "10",
+      "name": "Run Both",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 200],
+      "credentials": {
+        "n8nApi": {
+          "id": "N8N_API_CREDENTIALS_ID",
+          "name": "n8n API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "https://alex024.app.n8n.cloud/api/v1/workflows/iXAfySHKjPj3DPcm",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"active\": true}",
+        "options": {}
+      },
+      "id": "11",
+      "name": "Enable Workflow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 400],
+      "credentials": {
+        "n8nApi": {
+          "id": "N8N_API_CREDENTIALS_ID",
+          "name": "n8n API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "https://alex024.app.n8n.cloud/api/v1/workflows/iXAfySHKjPj3DPcm",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"active\": false}",
+        "options": {}
+      },
+      "id": "12",
+      "name": "Disable Workflow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 500],
+      "credentials": {
+        "n8nApi": {
+          "id": "N8N_API_CREDENTIALS_ID",
+          "name": "n8n API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "✅ *Запущен парсинг Avito!*\n\nСбор объявлений начат. Результаты придут через несколько минут.",
+        "additionalFields": {
+          "parseMode": "Markdown"
+        }
+      },
+      "id": "13",
+      "name": "Avito OK",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1340, 0],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "✅ *Запущен парсинг ЦИАН!*\n\nСбор объявлений начат. Результаты придут через несколько минут.",
+        "additionalFields": {
+          "parseMode": "Markdown"
+        }
+      },
+      "id": "14",
+      "name": "CIAN OK",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1340, 100],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "✅ *Запущен парсинг обоих источников!*\n\nСбор объявлений с Avito и ЦИАН начат. Результаты придут через несколько минут.",
+        "additionalFields": {
+          "parseMode": "Markdown"
+        }
+      },
+      "id": "15",
+      "name": "Both OK",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1340, 200],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "▶️ *Авто-парсинг включён!*\n\nБот будет автоматически парсить объявления.",
+        "additionalFields": {
+          "parseMode": "Markdown"
+        }
+      },
+      "id": "16",
+      "name": "Enabled OK",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1340, 400],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "⏸️ *Авто-парсинг выключен!*\n\nАвтоматический сбор остановлен.",
+        "additionalFields": {
+          "parseMode": "Markdown"
+        }
+      },
+      "id": "17",
+      "name": "Disabled OK",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1340, 500],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "❓ *Справка*\n\n*Функции:*\n🟢 Парсить Avito\n🔵 Парсить ЦИАН\n🟣 Парсить оба\n▶️ Включить авто-парсинг\n⏸️ Выключить авто-парсинг\n\n_Используйте /start для возврата в меню_",
+        "additionalFields": {
+          "parseMode": "Markdown"
+        }
+      },
+      "id": "18",
+      "name": "Help",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1120, 600],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [[{"node": "Check User ID", "type": "main", "index": 0}]]
+    },
+    "Check User ID": {
+      "main": [
+        [{"node": "Is Callback", "type": "main", "index": 0}],
+        [{"node": "Unauthorized", "type": "main", "index": 0}]
+      ]
+    },
+    "Is Callback": {
+      "main": [
+        [{"node": "Callback Router", "type": "main", "index": 0}],
+        [{"node": "Is Start", "type": "main", "index": 0}]
+      ]
+    },
+    "Is Start": {
+      "main": [
+        [{"node": "Send Welcome", "type": "main", "index": 0}]
+      ]
+    },
+    "Callback Router": {
+      "main": [
+        [{"node": "Run Avito", "type": "main", "index": 0}],
+        [{"node": "Run CIAN", "type": "main", "index": 0}],
+        [{"node": "Run Both", "type": "main", "index": 0}],
+        [{"node": "Enable Workflow", "type": "main", "index": 0}],
+        [{"node": "Disable Workflow", "type": "main", "index": 0}],
+        [{"node": "Help", "type": "main", "index": 0}]
+      ]
+    },
+    "Run Avito": {
+      "main": [[{"node": "Avito OK", "type": "main", "index": 0}]]
+    },
+    "Run CIAN": {
+      "main": [[{"node": "CIAN OK", "type": "main", "index": 0}]]
+    },
+    "Run Both": {
+      "main": [[{"node": "Both OK", "type": "main", "index": 0}]]
+    },
+    "Enable Workflow": {
+      "main": [[{"node": "Enabled OK", "type": "main", "index": 0}]]
+    },
+    "Disable Workflow": {
+      "main": [[{"node": "Disabled OK", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {"executionOrder": "v1"}
+}
