@@ -1,0 +1,147 @@
+{
+  "name": "🤖 Telegram Bot - Realtor Parser (v2)",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message", "callback_query"]
+      },
+      "id": "tg-trigger-01",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 400],
+      "webhookId": "realtor-bot-v2",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CRED_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{
+            "value1": "={{ $json.message?.from?.id || $json.callback_query?.from?.id }}",
+            "operation": "equals",
+            "value2": "7984101063"
+          }]
+        }
+      },
+      "id": "check-user-02",
+      "name": "Check User",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message?.chat?.id || $json.callback_query?.message?.chat?.id }}",
+        "text": "❌ Доступ запрещён"
+      },
+      "id": "unauthorized-03",
+      "name": "Unauthorized",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [680, 580],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CRED_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{
+            "value1": "={{ $json.callback_query }}",
+            "operation": "isNotEmpty"
+          }]
+        }
+      },
+      "id": "is-callback-04",
+      "name": "Is Callback?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 280]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{
+            "value1": "={{ $json.message?.text }}",
+            "operation": "equals",
+            "value2": "/start"
+          }]
+        }
+      },
+      "id": "is-start-05",
+      "name": "Is Start Command?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "Привет! 👋\n\n*Бот управления парсером недвижимости* (Авито + ЦИАН)\n\nВыберите действие:",
+        "additionalFields": {
+          "parseMode": "Markdown",
+          "replyMarkup": "inlineKeyboard",
+          "inlineKeyboard": {
+            "rows": [
+              {"buttons": [{"text": "🟢 Avito", "additionalFields": {"callbackData": "parse_avito"}}]},
+              {"buttons": [{"text": "🔵 ЦИАН", "additionalFields": {"callbackData": "parse_cian"}}]},
+              {"buttons": [{"text": "🟣 Оба", "additionalFields": {"callbackData": "parse_both"}}]},
+              {"buttons": [{"text": "⏰ Настройки", "additionalFields": {"callbackData": "schedule_settings"}}]},
+              {"buttons": [
+                {"text": "▶️ Вкл", "additionalFields": {"callbackData": "enable_schedule"}},
+                {"text": "⏸️ Выкл", "additionalFields": {"callbackData": "disable_schedule"}}
+              ]},
+              {"buttons": [
+                {"text": "❓ Помощь", "additionalFields": {"callbackData": "help"}},
+                {"text": "💬 Отзыв", "additionalFields": {"callbackData": "feedback"}}
+              ]}
+            ]
+          }
+        }
+      },
+      "id": "send-welcome-06",
+      "name": "Send Welcome",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1120, 300],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CRED_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [[{"node": "Check User", "type": "main", "index": 0}]]
+    },
+    "Check User": {
+      "main": [
+        [{"node": "Is Callback?", "type": "main", "index": 0}],
+        [{"node": "Unauthorized", "type": "main", "index": 0}]
+      ]
+    },
+    "Is Callback?": {
+      "main": [
+        [],
+        [{"node": "Is Start Command?", "type": "main", "index": 0}]
+      ]
+    },
+    "Is Start Command?": {
+      "main": [
+        [{"node": "Send Welcome", "type": "main", "index": 0}],
+        []
+      ]
+    }
+  },
+  "settings": {"executionOrder": "v1"}
+}
