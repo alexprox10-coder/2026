@@ -1,0 +1,1288 @@
+{
+  "name": "🤖 Telegram Bot - Realtor Parser Control",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ]
+      },
+      "id": "01c8f9e0-8a8e-4c5a-9f3d-1a2b3c4d5e6f",
+      "name": "📱 Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "telegram-bot-realtor",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message?.from?.id || $json.callback_query?.from?.id }}",
+              "value2": "7984101063"
+            }
+          ]
+        }
+      },
+      "id": "02d9f0e1-9b9f-5d6b-0e4e-2b3c4d5e6f7g",
+      "name": "🔒 Check User ID",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message?.chat?.id || $json.callback_query?.message?.chat?.id }}",
+        "text": "❌ У вас нет доступа к этому боту.",
+        "additionalFields": {}
+      },
+      "id": "03e0f1e2-0c0g-6e7c-1f5f-3c4d5e6f7g8h",
+      "name": "⛔ Unauthorized",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        680,
+        480
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message?.text }}",
+                    "rightValue": "/start",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "start_command"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "callback_query"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message?.text }}",
+                    "rightValue": "/start",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "other_message"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "04f1f2e3-1d1h-7f8d-2g6g-4d5e6f7g8h9i",
+      "name": "🔀 Message Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        680,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "Привет! 👋\n\n*Это бот управления парсером недвижимости* (Авито + ЦИАН) для долгосрочной аренды в Благовещенске.\n\nВы можете запускать парсинг вручную, включать/выключать автоматический мониторинг и получать помощь.\n\nВыберите действие:",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "replyMarkup": "inlineKeyboard",
+          "inlineKeyboard": {
+            "rows": [
+              {
+                "row": {
+                  "buttons": [
+                    {
+                      "text": "🟢 Парсить только Avito",
+                      "callbackData": "parse_avito"
+                    }
+                  ]
+                }
+              },
+              {
+                "row": {
+                  "buttons": [
+                    {
+                      "text": "🔵 Парсить только ЦИАН",
+                      "callbackData": "parse_cian"
+                    }
+                  ]
+                }
+              },
+              {
+                "row": {
+                  "buttons": [
+                    {
+                      "text": "🟣 Парсить оба источника",
+                      "callbackData": "parse_both"
+                    }
+                  ]
+                }
+              },
+              {
+                "row": {
+                  "buttons": [
+                    {
+                      "text": "⏰ Настроить авто-парсинг",
+                      "callbackData": "schedule_settings"
+                    }
+                  ]
+                }
+              },
+              {
+                "row": {
+                  "buttons": [
+                    {
+                      "text": "▶️ Включить авто-парсинг",
+                      "callbackData": "enable_schedule"
+                    },
+                    {
+                      "text": "⏸️ Выключить авто-парсинг",
+                      "callbackData": "disable_schedule"
+                    }
+                  ]
+                }
+              },
+              {
+                "row": {
+                  "buttons": [
+                    {
+                      "text": "❓ Помощь",
+                      "callbackData": "help"
+                    },
+                    {
+                      "text": "💬 Оставить отзыв",
+                      "callbackData": "feedback"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      "id": "05g2f3e4-2e2i-8g9e-3h7h-5e6f7g8h9i0j",
+      "name": "📨 Send Welcome",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        900,
+        80
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "parse_avito",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "parse_avito"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "parse_cian",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "parse_cian"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "parse_both",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "parse_both"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "schedule_settings",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "schedule_settings"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "enable_schedule",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "enable_schedule"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "disable_schedule",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "disable_schedule"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "help",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "help"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "feedback",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "feedback"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "set_interval_"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "06h3f4e5-3f3j-9h0f-4i8i-6f7g8h9i0j1k",
+      "name": "🔀 Callback Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        900,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_HOST }}/api/v1/workflows/iXAfySHKjPj3DPcm/run",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "source",
+              "value": "avito"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "07i4f5e6-4g4k-0i1g-5j9j-7g8h9i0j1k2l",
+      "name": "🟢 Run Avito Parser",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        100
+      ],
+      "credentials": {
+        "n8nApi": {
+          "id": "YOUR_N8N_API_CREDENTIALS_ID",
+          "name": "n8n API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_HOST }}/api/v1/workflows/iXAfySHKjPj3DPcm/run",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "source",
+              "value": "cian"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "08j5f6e7-5h5l-1j2h-6k0k-8h9i0j1k2l3m",
+      "name": "🔵 Run CIAN Parser",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        220
+      ],
+      "credentials": {
+        "n8nApi": {
+          "id": "YOUR_N8N_API_CREDENTIALS_ID",
+          "name": "n8n API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_HOST }}/api/v1/workflows/iXAfySHKjPj3DPcm/run",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "source",
+              "value": "both"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "09k6f7e8-6i6m-2k3i-7l1l-9i0j1k2l3m4n",
+      "name": "🟣 Run Both Parsers",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        340
+      ],
+      "credentials": {
+        "n8nApi": {
+          "id": "YOUR_N8N_API_CREDENTIALS_ID",
+          "name": "n8n API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.N8N_HOST }}/api/v1/workflows/iXAfySHKjPj3DPcm",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"active\": true\n}",
+        "options": {}
+      },
+      "id": "10l7f8e9-7j7n-3l4j-8m2m-0j1k2l3m4n5o",
+      "name": "▶️ Enable Schedule",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        580
+      ],
+      "credentials": {
+        "n8nApi": {
+          "id": "YOUR_N8N_API_CREDENTIALS_ID",
+          "name": "n8n API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.N8N_HOST }}/api/v1/workflows/iXAfySHKjPj3DPcm",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"active\": false\n}",
+        "options": {}
+      },
+      "id": "11m8f9e0-8k8o-4m5k-9n3n-1k2l3m4n5o6p",
+      "name": "⏸️ Disable Schedule",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        700
+      ],
+      "credentials": {
+        "n8nApi": {
+          "id": "YOUR_N8N_API_CREDENTIALS_ID",
+          "name": "n8n API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "✅ *Запущен парсинг Авито!*\n\nБот начал собирать объявления с Авито. Результаты будут отправлены в течение нескольких минут.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "12n9f0e1-9l9p-5n6l-0o4o-2l3m4n5o6p7q",
+      "name": "✅ Avito Success",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1340,
+        100
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "✅ *Запущен парсинг ЦИАН!*\n\nБот начал собирать объявления с ЦИАН. Результаты будут отправлены в течение нескольких минут.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "13o0f1e2-0m0q-6o7m-1p5p-3m4n5o6p7q8r",
+      "name": "✅ CIAN Success",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1340,
+        220
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "✅ *Запущен парсинг обоих источников!*\n\nБот начал собирать объявления с Авито и ЦИАН. Результаты будут отправлены в течение нескольких минут.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "14p1f2e3-1n1r-7p8n-2q6q-4n5o6p7q8r9s",
+      "name": "✅ Both Success",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1340,
+        340
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "▶️ *Авто-парсинг включен!*\n\nБот будет автоматически парсить объявления каждые 30 минут.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "15q2f3e4-2o2s-8q9o-3r7r-5o6p7q8r9s0t",
+      "name": "✅ Schedule Enabled",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1340,
+        580
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "⏸️ *Авто-парсинг выключен!*\n\nБот остановлен. Вы можете запустить парсинг вручную или включить автоматический режим снова.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "16r3f4e5-3p3t-9r0p-4s8s-6p7q8r9s0t1u",
+      "name": "✅ Schedule Disabled",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1340,
+        700
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "❓ *Справка по боту парсера недвижимости*\n\n*Основные функции:*\n\n🟢 *Парсить только Avito* - запустить сбор объявлений только с Avito\n🔵 *Парсить только ЦИАН* - запустить сбор объявлений только с ЦИАН\n🟣 *Парсить оба источника* - одновременный сбор с обоих сайтов\n\n⏰ *Автоматический режим:*\nВключите авто-парсинг, чтобы бот автоматически собирал новые объявления каждые 30 минут.\n\n📊 *Что парсится:*\n- Квартиры для долгосрочной аренды\n- Город: Благовещенск\n- Цена, площадь, адрес, фото\n- Контакты владельца\n\n💾 *Хранение данных:*\nВсе найденные объявления сохраняются в Google Sheets и отправляются уведомлениями в Telegram.\n\n📞 *Контакт для связи:* @your_username\n\n_Используйте /start для возврата в главное меню_",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "17s4f5e6-4q4u-0s1q-5t9t-7q8r9s0t1u2v",
+      "name": "❓ Help Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        820
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "💬 *Оставить отзыв*\n\nНапишите ваш отзыв или предложение следующим сообщением, и я передам его администратору.\n\n_Чтобы вернуться в меню, используйте /start_",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "18t5f6e7-5r5v-1t2r-6u0u-8r9s0t1u2v3w",
+      "name": "💬 Feedback Prompt",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        940
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "⏰ *Настройка интервала авто-парсинга*\n\nВыберите интервал для автоматического парсинга:",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "replyMarkup": "inlineKeyboard",
+          "inlineKeyboard": {
+            "rows": [
+              {
+                "row": {
+                  "buttons": [
+                    {
+                      "text": "1 минута",
+                      "callbackData": "set_interval_1"
+                    },
+                    {
+                      "text": "5 минут",
+                      "callbackData": "set_interval_5"
+                    }
+                  ]
+                }
+              },
+              {
+                "row": {
+                  "buttons": [
+                    {
+                      "text": "10 минут",
+                      "callbackData": "set_interval_10"
+                    },
+                    {
+                      "text": "15 минут",
+                      "callbackData": "set_interval_15"
+                    }
+                  ]
+                }
+              },
+              {
+                "row": {
+                  "buttons": [
+                    {
+                      "text": "30 минут",
+                      "callbackData": "set_interval_30"
+                    },
+                    {
+                      "text": "1 час",
+                      "callbackData": "set_interval_60"
+                    }
+                  ]
+                }
+              },
+              {
+                "row": {
+                  "buttons": [
+                    {
+                      "text": "2 часа",
+                      "callbackData": "set_interval_120"
+                    },
+                    {
+                      "text": "6 часов",
+                      "callbackData": "set_interval_360"
+                    }
+                  ]
+                }
+              },
+              {
+                "row": {
+                  "buttons": [
+                    {
+                      "text": "« Назад",
+                      "callbackData": "back_to_menu"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      "id": "19u6f7e8-6s6w-2u3s-7v1v-9s0t1u2v3w4x",
+      "name": "⏰ Schedule Settings",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        460
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Получаем callback data\nconst callbackData = $input.item.json.callback_query.data;\n\n// Извлекаем интервал из callback_data (например: \"set_interval_30\" -> 30)\nconst interval = callbackData.replace('set_interval_', '');\n\n// Переводим в cron формат (для n8n)\nlet cronExpression;\nif (interval <= 60) {\n  // Минуты\n  cronExpression = `*/${interval} * * * *`;\n} else {\n  // Часы\n  const hours = interval / 60;\n  cronExpression = `0 */${hours} * * *`;\n}\n\nreturn {\n  json: {\n    interval: parseInt(interval),\n    cronExpression: cronExpression,\n    chat_id: $input.item.json.callback_query.message.chat.id\n  }\n};"
+      },
+      "id": "20v7f8e9-7t7x-3v4t-8w2w-0t1u2v3w4x5y",
+      "name": "⚙️ Calculate Interval",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        1060
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.N8N_HOST }}/api/v1/workflows/iXAfySHKjPj3DPcm",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"nodes\": [\n    {\n      \"parameters\": {\n        \"rule\": {\n          \"interval\": [\n            {\n              \"field\": \"cronExpression\",\n              \"expression\": \"{{ $json.cronExpression }}\"\n            }\n          ]\n        }\n      },\n      \"name\": \"Schedule Trigger\",\n      \"type\": \"n8n-nodes-base.scheduleTrigger\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "21w8f9e0-8u8y-4w5u-9x3x-1u2v3w4x5y6z",
+      "name": "⚙️ Update Schedule",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        1060
+      ],
+      "credentials": {
+        "n8nApi": {
+          "id": "YOUR_N8N_API_CREDENTIALS_ID",
+          "name": "n8n API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "=✅ *Интервал изменён!*\n\nАвто-парсинг будет выполняться каждые {{ $('⚙️ Calculate Interval').item.json.interval }} {{ $('⚙️ Calculate Interval').item.json.interval === 1 ? 'минуту' : ($('⚙️ Calculate Interval').item.json.interval < 5 ? 'минуты' : ($('⚙️ Calculate Interval').item.json.interval < 60 ? 'минут' : ($('⚙️ Calculate Interval').item.json.interval === 60 ? 'час' : ($('⚙️ Calculate Interval').item.json.interval < 300 ? 'часа' : 'часов')))) }}.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "22x9f0e1-9v9z-5x6v-0y4y-2v3w4x5y6z7a",
+      "name": "✅ Interval Updated",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1560,
+        1060
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "📝 *Спасибо за ваше сообщение!*\n\nВаш отзыв был передан администратору.\n\n_Используйте /start для возврата в главное меню_",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "23y0f1e2-0w0a-6y7w-1z5z-3w4x5y6z7a8b",
+      "name": "✅ Feedback Received",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        900,
+        440
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_ADMIN_CHAT_ID",
+        "text": "=💬 *Новый отзыв от пользователя*\n\n*От:* {{ $json.message.from.first_name }} {{ $json.message.from.last_name || '' }} (@{{ $json.message.from.username || 'нет username' }})\n*ID:* {{ $json.message.from.id }}\n\n*Сообщение:*\n{{ $json.message.text }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "24z1f2e3-1x1b-7z8x-2a6a-4x5y6z7a8b9c",
+      "name": "📨 Forward to Admin",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        1180
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "feedback_mode",
+              "name": "feedback_mode",
+              "value": "true",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "25a2f3e4-2y2c-8a9y-3b7b-5y6z7a8b9c0d",
+      "name": "🔧 Set Feedback Mode",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1340,
+        940
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.callback_query.data }}",
+              "value2": "back_to_menu"
+            }
+          ]
+        }
+      },
+      "id": "26b3f4e5-3z3d-9b0z-4c8c-6z7a8b9c0d1e",
+      "name": "🔙 Check Back",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        900,
+        1300
+      ]
+    }
+  ],
+  "connections": {
+    "📱 Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "🔒 Check User ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔒 Check User ID": {
+      "main": [
+        [
+          {
+            "node": "🔀 Message Router",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⛔ Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Message Router": {
+      "main": [
+        [
+          {
+            "node": "📨 Send Welcome",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔀 Callback Router",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "✅ Feedback Received",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📨 Forward to Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Callback Router": {
+      "main": [
+        [
+          {
+            "node": "🟢 Run Avito Parser",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🔵 Run CIAN Parser",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🟣 Run Both Parsers",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⏰ Schedule Settings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "▶️ Enable Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⏸️ Disable Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "❓ Help Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "💬 Feedback Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⚙️ Calculate Interval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🟢 Run Avito Parser": {
+      "main": [
+        [
+          {
+            "node": "✅ Avito Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔵 Run CIAN Parser": {
+      "main": [
+        [
+          {
+            "node": "✅ CIAN Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🟣 Run Both Parsers": {
+      "main": [
+        [
+          {
+            "node": "✅ Both Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "▶️ Enable Schedule": {
+      "main": [
+        [
+          {
+            "node": "✅ Schedule Enabled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏸️ Disable Schedule": {
+      "main": [
+        [
+          {
+            "node": "✅ Schedule Disabled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💬 Feedback Prompt": {
+      "main": [
+        [
+          {
+            "node": "🔧 Set Feedback Mode",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Calculate Interval": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Update Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Update Schedule": {
+      "main": [
+        [
+          {
+            "node": "✅ Interval Updated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-01-23T00:00:00.000Z",
+  "versionId": "1"
+}
