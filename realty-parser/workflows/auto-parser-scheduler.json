@@ -1,0 +1,248 @@
+{
+  "name": "⏰ Auto-Parser Scheduler",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "⏰ Every 15 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [240, 300],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Настройки"
+        },
+        "options": {}
+      },
+      "id": "read-settings",
+      "name": "💾 Read Settings",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [460, 300],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIALS_ID"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Парсим настройки из Google Sheets\nconst rows = $input.all();\nconst settings = {};\n\n// Преобразуем строки в объект настроек\nfor (const row of rows) {\n  const param = row.json['Параметр'];\n  const value = row.json['Значение'];\n  \n  if (param && value !== undefined) {\n    settings[param] = value;\n  }\n}\n\n// Проверяем, включен ли автопарсинг\nconst enabled = settings.enabled === 'true' || settings.enabled === true;\nconst parsers = settings.parsers || 'both';\nconst chat_id = settings.chat_id || '';\n\nconsole.log('Auto-parser settings:', { enabled, parsers, chat_id });\n\nif (!enabled) {\n  return [{\n    json: {\n      skip: true,\n      message: 'Auto-parsing disabled'\n    }\n  }];\n}\n\nif (!chat_id) {\n  return [{\n    json: {\n      skip: true,\n      message: 'No chat_id configured'\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    enabled: true,\n    parsers: parsers,\n    chat_id: chat_id,\n    skip: false\n  }\n}];"
+      },
+      "id": "parse-settings",
+      "name": "🔍 Parse Settings",
+      "type": "n8n-nodes-base.code",
+      "position": [680, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ]
+        }
+      },
+      "id": "check-enabled",
+      "name": "✅ Check Enabled",
+      "type": "n8n-nodes-base.if",
+      "position": [900, 300],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.parsers }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "avito",
+              "output": 0
+            },
+            {
+              "value2": "cian",
+              "output": 1
+            },
+            {
+              "value2": "both",
+              "output": 2
+            }
+          ]
+        }
+      },
+      "id": "router-parsers",
+      "name": "🔀 Router Parsers",
+      "type": "n8n-nodes-base.switch",
+      "position": [1120, 200],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_WEBHOOK_BASE_URL }}/webhook/avito-parser",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}"
+            },
+            {
+              "name": "trigger_source",
+              "value": "auto_scheduler"
+            }
+          ]
+        }
+      },
+      "id": "trigger-avito-auto",
+      "name": "🔗 Trigger Avito",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1340, 100],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_WEBHOOK_BASE_URL }}/webhook/cian-parser",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}"
+            },
+            {
+              "name": "trigger_source",
+              "value": "auto_scheduler"
+            }
+          ]
+        }
+      },
+      "id": "trigger-cian-auto",
+      "name": "🔗 Trigger CIAN",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1340, 220],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_WEBHOOK_BASE_URL }}/webhook/unified-controller",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}"
+            },
+            {
+              "name": "trigger_source",
+              "value": "auto_scheduler"
+            }
+          ]
+        }
+      },
+      "id": "trigger-both-auto",
+      "name": "🔗 Trigger Both",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1340, 340],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "История"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $now.toISO() }}",
+            "Парсер": "={{ $json.parsers }}",
+            "Триггер": "auto_scheduler",
+            "Статус": "success"
+          }
+        }
+      },
+      "id": "log-execution",
+      "name": "📝 Log Execution",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [1560, 220],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIALS_ID"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "⏰ Every 15 Minutes": {
+      "main": [[{"node": "💾 Read Settings", "type": "main", "index": 0}]]
+    },
+    "💾 Read Settings": {
+      "main": [[{"node": "🔍 Parse Settings", "type": "main", "index": 0}]]
+    },
+    "🔍 Parse Settings": {
+      "main": [[{"node": "✅ Check Enabled", "type": "main", "index": 0}]]
+    },
+    "✅ Check Enabled": {
+      "main": [[{"node": "🔀 Router Parsers", "type": "main", "index": 0}]]
+    },
+    "🔀 Router Parsers": {
+      "main": [
+        [{"node": "🔗 Trigger Avito", "type": "main", "index": 0}],
+        [{"node": "🔗 Trigger CIAN", "type": "main", "index": 0}],
+        [{"node": "🔗 Trigger Both", "type": "main", "index": 0}]
+      ]
+    },
+    "🔗 Trigger Avito": {
+      "main": [[{"node": "📝 Log Execution", "type": "main", "index": 0}]]
+    },
+    "🔗 Trigger CIAN": {
+      "main": [[{"node": "📝 Log Execution", "type": "main", "index": 0}]]
+    },
+    "🔗 Trigger Both": {
+      "main": [[{"node": "📝 Log Execution", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "tags": [{"name": "Недвижимость"}, {"name": "Scheduler"}]
+}

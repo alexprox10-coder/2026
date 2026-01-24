@@ -1,0 +1,224 @@
+{
+  "name": "🏢 CIAN Parser - Недвижимость",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cian-parser",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-trigger-cian",
+      "name": "🎯 Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "position": [240, 300],
+      "typeVersion": 2,
+      "webhookId": "cian-parser-webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.cian.ru/search-offers/v2/search-offers-desktop/",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "jsonQuery",
+              "value": "={\"region\":{\"type\":\"location\",\"value\":[4593]},\"room\":{\"type\":\"terms\",\"value\":[1,2]},\"price\":{\"type\":\"range\",\"value\":{\"gte\":1000000,\"lte\":5000000}},\"engine_version\":{\"type\":\"term\",\"value\":2},\"page\":{\"type\":\"term\",\"value\":1}}"
+            }
+          ]
+        },
+        "options": {
+          "headers": {
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "User-Agent",
+                "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+              }
+            ]
+          }
+        }
+      },
+      "id": "fetch-cian",
+      "name": "📥 Fetch CIAN API",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [460, 300],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst items = [];\n\nconst offers = response?.offersSerialized || [];\n\nfor (const offer of offers.slice(0, 20)) {\n  try {\n    items.push({\n      source: 'CIAN',\n      id: offer.id,\n      title: offer.title || `${offer.roomsCount}-комнатная квартира`,\n      price: offer.bargainTerms?.price || 0,\n      priceText: `${(offer.bargainTerms?.price || 0).toLocaleString('ru-RU')} ₽`,\n      address: offer.geo?.address?.[0]?.fullAddress || '',\n      url: `https://www.cian.ru/sale/flat/${offer.id}/`,\n      imageUrl: offer.photos?.[0]?.fullUrl || '',\n      rooms: offer.roomsCount || '',\n      area: offer.totalArea ? `${offer.totalArea} м²` : '',\n      floor: offer.floorNumber ? `${offer.floorNumber}/${offer.building?.floorsCount || '?'}` : '',\n      pubDate: offer.addedTimestamp || new Date().toISOString(),\n      description: offer.description || ''\n    });\n  } catch (e) {\n    console.error('Error parsing CIAN offer:', e.message);\n  }\n}\n\nif (items.length === 0) {\n  return [{\n    json: {\n      error: 'No items found',\n      message: 'Не удалось найти объявления на CIAN.'\n    }\n  }];\n}\n\nconsole.log(`Найдено ${items.length} объявлений с CIAN`);\nreturn items.map(item => ({ json: item }));"
+      },
+      "id": "parse-cian",
+      "name": "🔍 Parse CIAN Response",
+      "type": "n8n-nodes-base.code",
+      "position": [680, 300],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.price }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ]
+        }
+      },
+      "id": "filter-valid-cian",
+      "name": "✅ Filter Valid",
+      "type": "n8n-nodes-base.if",
+      "position": [900, 300],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "telegramText",
+              "value": "={{ \"🏢 **\" + $json.title + \"**\\n\\n\" + \"💰 Цена: \" + $json.priceText + \"\\n\" + ($json.rooms ? \"🛏️ Комнат: \" + $json.rooms + \"\\n\" : \"\") + ($json.area ? \"📐 Площадь: \" + $json.area + \"\\n\" : \"\") + ($json.floor ? \"🏢 Этаж: \" + $json.floor + \"\\n\" : \"\") + ($json.address ? \"📍 \" + $json.address + \"\\n\" : \"\") + \"\\n🔗 [Смотреть на CIAN](\" + $json.url + \")\\n\" + \"⏰ \" + $now.toFormat('dd.MM.yyyy HH:mm') }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "format-telegram-cian",
+      "name": "📝 Format for Telegram",
+      "type": "n8n-nodes-base.set",
+      "position": [1340, 200],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "id": "wait-delay-cian",
+      "name": "⏳ Wait 2 sec",
+      "type": "n8n-nodes-base.wait",
+      "position": [1560, 200],
+      "typeVersion": 1.1,
+      "webhookId": "cian-wait"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('🎯 Webhook Trigger').item.json.body.chat_id }}",
+        "text": "={{ $json.telegramText }}",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "disable_web_page_preview": false
+        }
+      },
+      "id": "send-telegram-cian",
+      "name": "📱 Send to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1780, 200],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Объявления"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $now.toISO() }}",
+            "Источник": "={{ $json.source }}",
+            "URL": "={{ $json.url }}",
+            "Цена": "={{ $json.price }}",
+            "Адрес": "={{ $json.address }}",
+            "Площадь": "={{ $json.area }}",
+            "Комнаты": "={{ $json.rooms }}",
+            "Этаж": "={{ $json.floor }}",
+            "Заголовок": "={{ $json.title }}"
+          },
+          "matchingColumns": ["URL"]
+        }
+      },
+      "id": "save-sheets-cian",
+      "name": "💾 Save to Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [1780, 380],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIALS_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('🎯 Webhook Trigger').item.json.body.chat_id }}",
+        "text": "✅ **Парсинг CIAN завершен!**\\n\\nНайдено объявлений: {{ $('✅ Filter Valid').all().length }}\\nОтправлено: {{ $('✅ Filter Valid').all().length }}\\n\\nВсе результаты сохранены в Google Sheets.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "summary-cian",
+      "name": "📊 Summary",
+      "type": "n8n-nodes-base.telegram",
+      "position": [2000, 300],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "🎯 Webhook Trigger": {
+      "main": [[{"node": "📥 Fetch CIAN API", "type": "main", "index": 0}]]
+    },
+    "📥 Fetch CIAN API": {
+      "main": [[{"node": "🔍 Parse CIAN Response", "type": "main", "index": 0}]]
+    },
+    "🔍 Parse CIAN Response": {
+      "main": [[{"node": "✅ Filter Valid", "type": "main", "index": 0}]]
+    },
+    "✅ Filter Valid": {
+      "main": [[{"node": "📝 Format for Telegram", "type": "main", "index": 0}, {"node": "💾 Save to Sheets", "type": "main", "index": 0}]]
+    },
+    "📝 Format for Telegram": {
+      "main": [[{"node": "⏳ Wait 2 sec", "type": "main", "index": 0}]]
+    },
+    "⏳ Wait 2 sec": {
+      "main": [[{"node": "📱 Send to Telegram", "type": "main", "index": 0}]]
+    },
+    "📱 Send to Telegram": {
+      "main": [[{"node": "📊 Summary", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "tags": [{"name": "Недвижимость"}, {"name": "CIAN"}]
+}

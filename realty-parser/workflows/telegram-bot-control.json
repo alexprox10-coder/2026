@@ -1,0 +1,850 @@
+{
+  "name": "🤖 Парсер Недвижимости - Telegram Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ]
+      },
+      "id": "telegram-trigger",
+      "name": "📱 Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "position": [
+        240,
+        300
+      ],
+      "typeVersion": 1.2,
+      "webhookId": "realty-bot-trigger",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.message?.text || $json.callback_query?.data || 'unknown' }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "/start",
+              "output": 0
+            },
+            {
+              "value2": "/help",
+              "output": 1
+            },
+            {
+              "value2": "/settings",
+              "output": 2
+            },
+            {
+              "operation": "startsWith",
+              "value2": "avito_",
+              "output": 3
+            },
+            {
+              "operation": "startsWith",
+              "value2": "cian_",
+              "output": 4
+            },
+            {
+              "operation": "startsWith",
+              "value2": "both_",
+              "output": 5
+            },
+            {
+              "operation": "startsWith",
+              "value2": "stop_",
+              "output": 6
+            },
+            {
+              "operation": "startsWith",
+              "value2": "start_",
+              "output": 7
+            },
+            {
+              "operation": "startsWith",
+              "value2": "auto_",
+              "output": 8
+            },
+            {
+              "operation": "startsWith",
+              "value2": "help_",
+              "output": 9
+            }
+          ]
+        }
+      },
+      "id": "router-main",
+      "name": "🔀 Router",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        460,
+        300
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message?.chat.id || $json.callback_query?.message.chat.id }}",
+        "text": "🏠 **Парсер-Монитор Недвижимости**\n\nДобро пожаловать! Я помогу отслеживать объявления на Авито и ЦИАН.\n\n**Доступные функции:**\n🏠 Парсить Авито - поиск квартир на Авито\n🏢 Парсить ЦИАН - поиск квартир на ЦИАН\n🏘️ Парсить ОБА - поиск на обоих сайтах\n\n⏸️ Остановить / ▶️ Запустить - управление парсингом\n⏰ Автопарсинг - настройка автоматического поиска\n❓ Помощь - связаться с владельцем\n\n**Выберите действие:**",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🏠 Парсить Авито",
+                    "callbackData": "avito_parse"
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🏢 Парсить ЦИАН",
+                    "callbackData": "cian_parse"
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🏘️ Парсить ОБА",
+                    "callbackData": "both_parse"
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "⏸️ Остановить",
+                    "callbackData": "stop_parse"
+                  },
+                  {
+                    "text": "▶️ Запустить",
+                    "callbackData": "start_parse"
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "⏰ Автопарсинг",
+                    "callbackData": "auto_settings"
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "❓ Помощь",
+                    "callbackData": "help_contact"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "start-message",
+      "name": "💬 Start Message",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        680,
+        140
+      ],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message?.chat.id || $json.callback_query?.message.chat.id }}",
+        "text": "❓ **Помощь**\n\n**Как пользоваться:**\n1. Выберите источник парсинга (Авито, ЦИАН или оба)\n2. Бот найдет актуальные объявления\n3. Получите топ предложений в Telegram\n\n**Автопарсинг:**\nНастройте автоматический поиск с интервалом от 1 минуты.\n\n**Нужна помощь?**\nИспользуйте кнопку \"❓ Помощь\" для связи с владельцем.\n\n**Технические вопросы:**\n• Парсинг занимает 30-60 секунд\n• Результаты сохраняются в Google Sheets\n• AI анализирует и выбирает лучшие предложения\n\nДля возврата в главное меню: /start",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "help-message",
+      "name": "💬 Help Message",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        680,
+        260
+      ],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "🏠 **Запуск парсинга Авито...**\n\nПоиск объявлений в Благовещенске:\n• Квартиры 1-2 комнаты\n• Цена: 1-5 млн ₽\n• Только свежие (за последние 24 часа)\n\nОжидайте результаты через 30-60 секунд...",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "avito-start-msg",
+      "name": "💬 Avito Start",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        900,
+        200
+      ],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_WEBHOOK_BASE_URL }}/webhook/avito-parser",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $json.callback_query.message.chat.id }}"
+            },
+            {
+              "name": "trigger_source",
+              "value": "telegram_bot"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "trigger-avito",
+      "name": "🔗 Trigger Avito Parser",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1120,
+        200
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "🏢 **Запуск парсинга ЦИАН...**\n\nПоиск объявлений в Благовещенске:\n• Квартиры 1-2 комнаты\n• Цена: 1-5 млн ₽\n• Только свежие (за последние 24 часа)\n\nОжидайте результаты через 30-60 секунд...",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "cian-start-msg",
+      "name": "💬 CIAN Start",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        900,
+        340
+      ],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_WEBHOOK_BASE_URL }}/webhook/cian-parser",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $json.callback_query.message.chat.id }}"
+            },
+            {
+              "name": "trigger_source",
+              "value": "telegram_bot"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "trigger-cian",
+      "name": "🔗 Trigger CIAN Parser",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1120,
+        340
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "🏘️ **Запуск парсинга ОБОИХ сайтов...**\n\nПоиск на:\n✅ Авито\n✅ ЦИАН\n\nПараметры:\n• Квартиры 1-2 комнаты в Благовещенске\n• Цена: 1-5 млн ₽\n• Только свежие объявления\n\nРезультаты будут объединены и проанализированы AI.\nОжидайте через 60-90 секунд...",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "both-start-msg",
+      "name": "💬 Both Start",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        900,
+        480
+      ],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_WEBHOOK_BASE_URL }}/webhook/unified-controller",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $json.callback_query.message.chat.id }}"
+            },
+            {
+              "name": "trigger_source",
+              "value": "telegram_bot"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "trigger-both",
+      "name": "🔗 Trigger Both Parsers",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1120,
+        480
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "⏸️ **Парсинг остановлен**\n\nАвтоматический парсинг приостановлен.\nВы можете запустить его заново кнопкой \"▶️ Запустить\".\n\nРучной запуск парсинга доступен в любое время.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "stop-msg",
+      "name": "💬 Stop Message",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        900,
+        620
+      ],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Настройки"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Параметр": "enabled",
+            "Значение": "false"
+          },
+          "matchingColumns": [
+            "Параметр"
+          ],
+          "schema": [
+            {
+              "id": "Параметр",
+              "displayName": "Параметр",
+              "required": false,
+              "defaultMatch": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Значение",
+              "displayName": "Значение",
+              "required": false,
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "update-settings-stop",
+      "name": "💾 Update Settings (Stop)",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1120,
+        620
+      ],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIALS_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "▶️ **Парсинг запущен**\n\nАвтоматический парсинг активирован.\nТекущие настройки автопарсинга будут применены.\n\nДля изменения параметров используйте \"⏰ Автопарсинг\".",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "start-msg",
+      "name": "💬 Start Message",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        900,
+        760
+      ],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Настройки"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Параметр": "enabled",
+            "Значение": "true"
+          },
+          "matchingColumns": [
+            "Параметр"
+          ],
+          "schema": [
+            {
+              "id": "Параметр",
+              "displayName": "Параметр",
+              "required": false,
+              "defaultMatch": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Значение",
+              "displayName": "Значение",
+              "required": false,
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "update-settings-start",
+      "name": "💾 Update Settings (Start)",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1120,
+        760
+      ],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIALS_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "⏰ **Настройка автопарсинга**\n\nВыберите интервал автоматического поиска:\n\n**Доступные интервалы:**\n• 1 минута (очень частый поиск)\n• 5 минут\n• 15 минут (рекомендуется)\n• 30 минут\n• 1 час\n• 3 часа\n• 6 часов\n• 12 часов\n\n**Текущие настройки:**\nИнтервал: 15 минут\nПарсеры: Авито + ЦИАН\nСтатус: ▶️ Активен\n\nДля изменения отправьте команду:\n`/auto [интервал в минутах]`\n\nПример: `/auto 30` - запуск каждые 30 минут",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "⏱️ 1 мин",
+                    "callbackData": "auto_1"
+                  },
+                  {
+                    "text": "⏱️ 5 мин",
+                    "callbackData": "auto_5"
+                  },
+                  {
+                    "text": "⏱️ 15 мин",
+                    "callbackData": "auto_15"
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "⏱️ 30 мин",
+                    "callbackData": "auto_30"
+                  },
+                  {
+                    "text": "⏱️ 1 час",
+                    "callbackData": "auto_60"
+                  },
+                  {
+                    "text": "⏱️ 3 часа",
+                    "callbackData": "auto_180"
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🔙 Назад",
+                    "callbackData": "start"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "auto-settings-msg",
+      "name": "💬 Auto Settings",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        900,
+        900
+      ],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "❓ **Нужна помощь?**\n\n**Связь с владельцем:**\nЕсли у вас есть вопросы, предложения или вы столкнулись с проблемой - напишите мне напрямую.\n\n**Контакт:**\n👤 @YOUR_TELEGRAM_USERNAME\n\n**Часто задаваемые вопросы:**\n\n**Q: Как часто обновляются объявления?**\nA: В режиме автопарсинга - каждые 15 минут (настраивается).\n\n**Q: Почему не приходят результаты?**\nA: Возможно, нет новых объявлений по заданным критериям за последние 24 часа.\n\n**Q: Можно изменить параметры поиска?**\nA: Да, напишите мне для настройки фильтров (цена, район, количество комнат).\n\n**Q: Сколько стоит использование?**\nA: Бот бесплатный для личного использования.\n\n📧 Для прямой связи используйте Telegram: @YOUR_TELEGRAM_USERNAME",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "help-contact-msg",
+      "name": "💬 Help Contact",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        900,
+        1040
+      ],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "callbackQueryId": "={{ $json.callback_query.id }}",
+        "text": "✅ Команда выполнена"
+      },
+      "id": "answer-callback",
+      "name": "✅ Answer Callback",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        1340,
+        500
+      ],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "📱 Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "🔀 Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Router": {
+      "main": [
+        [
+          {
+            "node": "💬 Start Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "💬 Help Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "💬 Auto Settings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "💬 Avito Start",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "💬 CIAN Start",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "💬 Both Start",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "💬 Stop Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "💬 Start Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "💬 Auto Settings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "💬 Help Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💬 Avito Start": {
+      "main": [
+        [
+          {
+            "node": "🔗 Trigger Avito Parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔗 Trigger Avito Parser": {
+      "main": [
+        [
+          {
+            "node": "✅ Answer Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💬 CIAN Start": {
+      "main": [
+        [
+          {
+            "node": "🔗 Trigger CIAN Parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔗 Trigger CIAN Parser": {
+      "main": [
+        [
+          {
+            "node": "✅ Answer Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💬 Both Start": {
+      "main": [
+        [
+          {
+            "node": "🔗 Trigger Both Parsers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔗 Trigger Both Parsers": {
+      "main": [
+        [
+          {
+            "node": "✅ Answer Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💬 Stop Message": {
+      "main": [
+        [
+          {
+            "node": "💾 Update Settings (Stop)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 Update Settings (Stop)": {
+      "main": [
+        [
+          {
+            "node": "✅ Answer Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💬 Start Message": {
+      "main": [
+        [
+          {
+            "node": "💾 Update Settings (Start)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 Update Settings (Start)": {
+      "main": [
+        [
+          {
+            "node": "✅ Answer Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "n8n-instance"
+  },
+  "id": "",
+  "tags": [
+    {
+      "name": "Недвижимость"
+    },
+    {
+      "name": "Telegram Bot"
+    }
+  ]
+}

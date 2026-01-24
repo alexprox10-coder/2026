@@ -1,0 +1,378 @@
+{
+  "name": "🏠 Avito Parser - Недвижимость",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "avito-parser",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-trigger-av",
+      "name": "🎯 Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        240,
+        300
+      ],
+      "typeVersion": 2,
+      "webhookId": "avito-parser-webhook"
+    },
+    {
+      "parameters": {
+        "url": "https://www.avito.ru/blagoveshchensk/kvartiry/prodam?pmax=5000000&pmin=1000000&f=1.2&s=104",
+        "options": {
+          "headers": {
+            "headers": [
+              {
+                "name": "User-Agent",
+                "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+              }
+            ]
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "fetch-avito",
+      "name": "📥 Fetch Avito",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        460,
+        300
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "jsCode": "// Парсинг HTML с Avito\n// ПРИМЕЧАНИЕ: Это демо-код. Реальный парсинг требует адаптации под актуальную структуру HTML Avito\n\nconst html = $input.first().json.body || '';\nconst items = [];\n\n// Извлекаем объявления из HTML\n// Avito использует JSON в <script> тегах для передачи данных\nconst scriptMatches = html.match(/<script[^>]*>window\\.__initialState__[\\s\\S]*?<\\/script>/gi);\n\nif (scriptMatches && scriptMatches.length > 0) {\n  try {\n    // Извлекаем JSON данные\n    const scriptContent = scriptMatches[0].replace(/<\\/?script[^>]*>/gi, '');\n    const jsonMatch = scriptContent.match(/window\\.__initialState__\\s*=\\s*(\\{[\\s\\S]+\\});/);\n    \n    if (jsonMatch) {\n      const data = JSON.parse(jsonMatch[1]);\n      \n      // Ищем объявления в структуре данных\n      // Структура может меняться, это пример\n      const listings = data?.items?.items || data?.catalog?.items || [];\n      \n      for (const listing of listings.slice(0, 20)) {\n        items.push({\n          source: 'Avito',\n          title: listing.title || '',\n          price: listing.price?.value || 0,\n          priceText: listing.price?.string || '',\n          address: listing.location?.address || '',\n          url: `https://www.avito.ru${listing.urlPath || ''}`,\n          imageUrl: listing.images?.[0]?.url || '',\n          rooms: listing.params?.rooms || '',\n          area: listing.params?.area || '',\n          floor: listing.params?.floor || '',\n          pubDate: listing.time || new Date().toISOString(),\n          description: listing.description || ''\n        });\n      }\n    }\n  } catch (e) {\n    console.error('Error parsing Avito data:', e.message);\n  }\n}\n\n// Если JSON парсинг не сработал, пробуем регулярные выражения на HTML\nif (items.length === 0) {\n  // Fallback: простой regex парсинг (менее надежный)\n  const titleMatches = html.matchAll(/<h3[^>]*>([^<]+)<\\/h3>/gi);\n  const priceMatches = html.matchAll(/data-marker=\"item-price\"[^>]*>([^<]+)<\\/span>/gi);\n  \n  const titles = Array.from(titleMatches).map(m => m[1].trim());\n  const prices = Array.from(priceMatches).map(m => m[1].trim());\n  \n  for (let i = 0; i < Math.min(titles.length, prices.length, 20); i++) {\n    items.push({\n      source: 'Avito',\n      title: titles[i],\n      price: parseInt(prices[i].replace(/\\D/g, '')) || 0,\n      priceText: prices[i],\n      url: 'https://www.avito.ru',\n      pubDate: new Date().toISOString()\n    });\n  }\n}\n\nif (items.length === 0) {\n  return [{\n    json: {\n      error: 'No items found',\n      message: 'Не удалось найти объявления. Возможно, структура Avito изменилась.'\n    }\n  }];\n}\n\nconsole.log(`Найдено ${items.length} объявлений с Avito`);\nreturn items.map(item => ({ json: item }));"
+      },
+      "id": "parse-html",
+      "name": "🔍 Parse HTML",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        680,
+        300
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-price",
+              "leftValue": "={{ $json.price }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "has-title",
+              "leftValue": "={{ $json.title }}",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filter-valid",
+      "name": "✅ Filter Valid",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        900,
+        300
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "telegram-text",
+              "name": "telegramText",
+              "value": "={{ \"🏠 **\" + $json.title + \"**\\n\\n\" +\n\"💰 Цена: \" + $json.priceText + \"\\n\" +\n($json.rooms ? \"🛏️ Комнат: \" + $json.rooms + \"\\n\" : \"\") +\n($json.area ? \"📐 Площадь: \" + $json.area + \" м²\\n\" : \"\") +\n($json.floor ? \"🏢 Этаж: \" + $json.floor + \"\\n\" : \"\") +\n($json.address ? \"📍 Адрес: \" + $json.address + \"\\n\" : \"\") +\n\"\\n🔗 [Смотреть на Avito](\" + $json.url + \")\\n\" +\n\"⏰ \" + $now.toFormat('dd.MM.yyyy HH:mm') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "format-telegram",
+      "name": "📝 Format for Telegram",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1340,
+        200
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "id": "wait-delay",
+      "name": "⏳ Wait 2 sec",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        1560,
+        200
+      ],
+      "typeVersion": 1.1,
+      "webhookId": "avito-wait"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('🎯 Webhook Trigger').item.json.body.chat_id }}",
+        "text": "={{ $json.telegramText }}",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "disable_web_page_preview": false
+        }
+      },
+      "id": "send-telegram",
+      "name": "📱 Send to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        1780,
+        200
+      ],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Объявления"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $now.toISO() }}",
+            "Источник": "={{ $json.source }}",
+            "URL": "={{ $json.url }}",
+            "Цена": "={{ $json.price }}",
+            "Цена_Текст": "={{ $json.priceText }}",
+            "Адрес": "={{ $json.address }}",
+            "Площадь": "={{ $json.area }}",
+            "Комнаты": "={{ $json.rooms }}",
+            "Этаж": "={{ $json.floor }}",
+            "Заголовок": "={{ $json.title }}",
+            "Описание": "={{ $json.description }}"
+          },
+          "matchingColumns": [
+            "URL"
+          ],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false
+            },
+            {
+              "id": "Источник",
+              "displayName": "Источник",
+              "required": false
+            },
+            {
+              "id": "URL",
+              "displayName": "URL",
+              "required": false,
+              "defaultMatch": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Цена",
+              "displayName": "Цена",
+              "required": false
+            },
+            {
+              "id": "Адрес",
+              "displayName": "Адрес",
+              "required": false
+            },
+            {
+              "id": "Площадь",
+              "displayName": "Площадь",
+              "required": false
+            },
+            {
+              "id": "Комнаты",
+              "displayName": "Комнаты",
+              "required": false
+            },
+            {
+              "id": "Заголовок",
+              "displayName": "Заголовок",
+              "required": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "save-sheets",
+      "name": "💾 Save to Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1780,
+        380
+      ],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIALS_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('🎯 Webhook Trigger').item.json.body.chat_id }}",
+        "text": "✅ **Парсинг Avito завершен!**\n\nНайдено объявлений: {{ $('✅ Filter Valid').all().length }}\nОтправлено: {{ $('✅ Filter Valid').all().length }}\n\nВсе результаты сохранены в Google Sheets.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "summary-message",
+      "name": "📊 Summary",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        2000,
+        300
+      ],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "🎯 Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "📥 Fetch Avito",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📥 Fetch Avito": {
+      "main": [
+        [
+          {
+            "node": "🔍 Parse HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Parse HTML": {
+      "main": [
+        [
+          {
+            "node": "✅ Filter Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Filter Valid": {
+      "main": [
+        [
+          {
+            "node": "📝 Format for Telegram",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "💾 Save to Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Format for Telegram": {
+      "main": [
+        [
+          {
+            "node": "⏳ Wait 2 sec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏳ Wait 2 sec": {
+      "main": [
+        [
+          {
+            "node": "📱 Send to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📱 Send to Telegram": {
+      "main": [
+        [
+          {
+            "node": "📊 Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "",
+  "tags": [
+    {
+      "name": "Недвижимость"
+    },
+    {
+      "name": "Avito"
+    }
+  ]
+}

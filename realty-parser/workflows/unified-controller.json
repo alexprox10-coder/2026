@@ -1,0 +1,132 @@
+{
+  "name": "🏘️ Unified Controller - ОБА парсера",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "unified-controller",
+        "responseMode": "lastNode"
+      },
+      "id": "webhook-unified",
+      "name": "🎯 Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "position": [240, 300],
+      "typeVersion": 2,
+      "webhookId": "unified-controller-webhook"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.body.chat_id }}",
+        "text": "🏘️ **Запуск объединенного парсинга**\\n\\n⚡ Запускаю парсинг обоих сайтов параллельно:\\n✅ Avito\\n✅ CIAN\\n\\nЭто займет около 60-90 секунд...\\nРезультаты будут объединены и проанализированы AI.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "start-msg-unified",
+      "name": "💬 Start Message",
+      "type": "n8n-nodes-base.telegram",
+      "position": [460, 300],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_WEBHOOK_BASE_URL }}/webhook/avito-parser",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $('🎯 Webhook Trigger').item.json.body.chat_id }}"
+            },
+            {
+              "name": "trigger_source",
+              "value": "unified_controller"
+            }
+          ]
+        }
+      },
+      "id": "call-avito",
+      "name": "🔗 Call Avito Parser",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [680, 200],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_WEBHOOK_BASE_URL }}/webhook/cian-parser",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $('🎯 Webhook Trigger').item.json.body.chat_id }}"
+            },
+            {
+              "name": "trigger_source",
+              "value": "unified_controller"
+            }
+          ]
+        }
+      },
+      "id": "call-cian",
+      "name": "🔗 Call CIAN Parser",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [680, 400],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "amount": 90
+      },
+      "id": "wait-completion",
+      "name": "⏳ Wait for Completion",
+      "type": "n8n-nodes-base.wait",
+      "position": [900, 300],
+      "typeVersion": 1.1,
+      "webhookId": "unified-wait"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('🎯 Webhook Trigger').item.json.body.chat_id }}",
+        "text": "✅ **Объединенный парсинг завершен!**\\n\\n📊 **Статистика:**\\n• Avito: запущен\\n• CIAN: запущен\\n\\nВсе найденные объявления отправлены выше и сохранены в Google Sheets.\\n\\n💡 Используйте таблицу для просмотра полной статистики и сравнения предложений.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "final-summary",
+      "name": "📊 Final Summary",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1120, 300],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "🎯 Webhook Trigger": {
+      "main": [[{"node": "💬 Start Message", "type": "main", "index": 0}]]
+    },
+    "💬 Start Message": {
+      "main": [[{"node": "🔗 Call Avito Parser", "type": "main", "index": 0}, {"node": "🔗 Call CIAN Parser", "type": "main", "index": 0}]]
+    },
+    "🔗 Call Avito Parser": {
+      "main": [[{"node": "⏳ Wait for Completion", "type": "main", "index": 0}]]
+    },
+    "⏳ Wait for Completion": {
+      "main": [[{"node": "📊 Final Summary", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "tags": [{"name": "Недвижимость"}, {"name": "Controller"}]
+}
