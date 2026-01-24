@@ -69,7 +69,7 @@
         "specifyBody": "json",
         "jsonBody": "={\n  \"maxItems\": 20,\n  \"location\": \"Благовещенск\",\n  \"operationType\": \"rent\",\n  \"category\": \"\",\n  \"shortTermRent\": false,\n  \"includeStudio\": false,\n  \"withNeighbors\": false,\n  \"proxyConfiguration\": {\n    \"useApifyProxy\": true,\n    \"apifyProxyGroups\": [\"RESIDENTIAL\"]\n  }\n}",
         "options": {
-          "timeout\": 180000
+          "timeout": 180000
         }
       },
       "id": "run-cian-apify",
