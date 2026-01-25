@@ -1,0 +1,680 @@
+{
+  "name": "🏠 Парсер Недвижимости (Production Ready)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "⏰ Каждые 30 минут",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [-700, 80],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "jsCode": "// Подготовка payload для Schedule триггера\nreturn [{\n  json: {\n    chatId: parseInt($env.DEFAULT_CHAT_ID),\n    triggerSource: 'schedule',\n    timestamp: new Date().toISOString(),\n    validated: true,\n    skipRateLimit: true\n  }\n}];"
+      },
+      "id": "schedule-prepare",
+      "name": "📋 Schedule Prepare",
+      "type": "n8n-nodes-base.code",
+      "position": [-480, 80],
+      "typeVersion": 2,
+      "notes": "Создает правильный payload для scheduled запусков"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "realty-parser-secure",
+        "responseMode": "lastNode",
+        "options": {
+          "webhookSuffix": "={{ $env.WEBHOOK_SECRET }}"
+        }
+      },
+      "id": "webhook-secure",
+      "name": "🎯 Webhook (Secure)",
+      "type": "n8n-nodes-base.webhook",
+      "position": [-700, 240],
+      "typeVersion": 2,
+      "webhookId": "realty-secure",
+      "notes": "Webhook для ручного запуска из Telegram бота"
+    },
+    {
+      "parameters": {
+        "jsCode": "// SECURITY: Validate webhook request\nconst chatId = $json.body?.chat_id;\nconst triggerSource = $json.body?.trigger_source || 'webhook';\n\n// 1. Validate chat_id format\nif (!chatId || !/^-?\\d{7,13}$/.test(String(chatId))) {\n  throw new Error('Invalid chat_id format');\n}\n\n// 2. Check whitelist\nconst allowedChatIds = ($env.ALLOWED_CHAT_IDS || '').split(',').map(id => id.trim());\nif (!allowedChatIds.includes(String(chatId))) {\n  throw new Error(`Unauthorized chat_id: ${chatId}`);\n}\n\n// 3. Sanitize input\nconst sanitizedChatId = parseInt(chatId);\n\nif (isNaN(sanitizedChatId)) {\n  throw new Error('Invalid chat_id: not a number');\n}\n\n// Pass validated data\nreturn [{\n  json: {\n    chatId: sanitizedChatId,\n    triggerSource: triggerSource,\n    timestamp: new Date().toISOString(),\n    validated: true,\n    skipRateLimit: false\n  }\n}];"
+      },
+      "id": "security-validation",
+      "name": "🔐 Security Validation",
+      "type": "n8n-nodes-base.code",
+      "position": [-480, 240],
+      "typeVersion": 2,
+      "notes": "Проверяет безопасность webhook запросов"
+    },
+    {
+      "parameters": {
+        "mode": "append"
+      },
+      "id": "merge-triggers",
+      "name": "🔀 Merge Triggers",
+      "type": "n8n-nodes-base.merge",
+      "position": [-260, 160],
+      "typeVersion": 3,
+      "notes": "Объединяет Schedule и Webhook потоки"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.apify.com/v2/acts/eiD1SmA4A6aojHvYl/runs?token={{ $env.APIFY_API_TOKEN }}&waitForFinish=120",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"startUrls\": [\n    \"https://www.avito.ru/amurskaya_oblast_blagoveschensk/kvartiry/sdam/na_dlitelnyy_srok-ASgBAgICAkSSA8gQ8AeQUg\"\n  ],\n  \"limit\": 20,\n  \"proxyConfiguration\": {\n    \"useApifyProxy\": true,\n    \"apifyProxyGroups\": [\"RESIDENTIAL\"]\n  }\n}",
+        "options": {
+          "timeout": 180000,
+          "retry": {
+            "enabled": true,
+            "maxRetries": 3,
+            "waitBetweenRetries": 5000
+          }
+        }
+      },
+      "id": "run-avito-apify",
+      "name": "🏠 Запуск Авито (Apify)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [0, 120],
+      "typeVersion": 4.2,
+      "notes": "Запуск Apify Actor для парсинга Авито (с retry)",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.apify.com/v2/acts/igolaizola~cian-ru-scraper/runs?token={{ $env.APIFY_API_TOKEN }}&waitForFinish=120",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"maxItems\": 20,\n  \"location\": \"Благовещенск\",\n  \"operationType\": \"rent\",\n  \"category\": \"\",\n  \"shortTermRent\": false,\n  \"includeStudio\": false,\n  \"withNeighbors\": false,\n  \"proxyConfiguration\": {\n    \"useApifyProxy\": true,\n    \"apifyProxyGroups\": [\"RESIDENTIAL\"]\n  }\n}",
+        "options": {
+          "timeout": 180000,
+          "retry": {
+            "enabled": true,
+            "maxRetries": 3,
+            "waitBetweenRetries": 5000
+          }
+        }
+      },
+      "id": "run-cian-apify",
+      "name": "🏢 Запуск ЦИАН (Apify)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [0, 360],
+      "typeVersion": 4.2,
+      "notes": "Запуск Apify Actor для парсинга ЦИАН (с retry)",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.apify.com/v2/datasets/{{ $json.data.defaultDatasetId }}/items?token={{ $env.APIFY_API_TOKEN }}",
+        "options": {
+          "retry": {
+            "enabled": true,
+            "maxRetries": 2,
+            "waitBetweenRetries": 3000
+          }
+        }
+      },
+      "id": "fetch-avito-results",
+      "name": "📥 Результаты Авито",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [224, 120],
+      "typeVersion": 4.2,
+      "notes": "Получение результатов из Apify dataset",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.apify.com/v2/datasets/{{ $json.data.defaultDatasetId }}/items?token={{ $env.APIFY_API_TOKEN }}",
+        "options": {
+          "retry": {
+            "enabled": true,
+            "maxRetries": 2,
+            "waitBetweenRetries": 3000
+          }
+        }
+      },
+      "id": "fetch-cian-results",
+      "name": "📥 Результаты ЦИАН",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [224, 360],
+      "typeVersion": 4.2,
+      "notes": "Получение результатов из Apify dataset",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Обрабатываем результаты Авито с санитизацией\nconst items = $input.all();\nconst results = [];\n\nconst sanitize = (text, maxLength = 200) => {\n  if (!text) return '';\n  return String(text)\n    .replace(/[<>]/g, '')\n    .replace(/[*_`\\[\\]]/g, '\\\\$&')\n    .slice(0, maxLength)\n    .trim();\n};\n\nfor (const item of items) {\n  const data = item.json;\n  if (!data || !data.url) continue;\n  \n  // URL validation\n  try {\n    const url = new URL(data.url);\n    if (!url.hostname.endsWith('avito.ru')) {\n      console.warn('Suspicious URL:', data.url);\n      continue;\n    }\n  } catch (e) {\n    console.warn('Invalid URL:', data.url, e.message);\n    continue;\n  }\n  \n  results.push({\n    json: {\n      id: data.url,\n      title: sanitize(data.title || 'Квартира', 150),\n      price: sanitize(String(data.price || data.priceNum || 'Цена не указана'), 50),\n      address: sanitize(data.address || data.location || 'Адрес не указан', 200),\n      url: data.url,\n      image: data.image || data.imageUrl || data.images?.[0] || null,\n      source: 'Авито',\n      city: 'Благовещенск',\n      timestamp: new Date().toISOString()\n    }\n  });\n}\n\nconsole.log(`Авито: обработано ${results.length} из ${items.length}`);\nreturn results.length > 0 ? results : [{ json: { empty: true, source: 'Авито' } }];"
+      },
+      "id": "process-avito-secure",
+      "name": "🔍 Обработка Авито",
+      "type": "n8n-nodes-base.code",
+      "position": [448, 120],
+      "typeVersion": 2,
+      "notes": "Санитизация и валидация данных Авито"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Обрабатываем результаты ЦИАН с санитизацией\nconst items = $input.all();\nconst results = [];\n\nconst sanitize = (text, maxLength = 200) => {\n  if (!text) return '';\n  return String(text)\n    .replace(/[<>]/g, '')\n    .replace(/[*_`\\[\\]]/g, '\\\\$&')\n    .slice(0, maxLength)\n    .trim();\n};\n\nfor (const item of items) {\n  const data = item.json;\n  if (!data) continue;\n  \n  const cianId = data.cianId || data.id;\n  const url = data.siteUrl || data.url || (cianId ? `https://www.cian.ru/rent/flat/${cianId}/` : null);\n  \n  if (!url) continue;\n  \n  // URL validation\n  try {\n    const urlObj = new URL(url);\n    if (!urlObj.hostname.endsWith('cian.ru')) {\n      console.warn('Suspicious URL:', url);\n      continue;\n    }\n  } catch (e) {\n    console.warn('Invalid URL:', url, e.message);\n    continue;\n  }\n  \n  const address = data.formattedAddress || data.address || data.geo?.address || 'Адрес не указан';\n  const price = data.formattedFullPrice || data.price || data.priceValue || 'Цена не указана';\n  const image = data.mainImage?.full || data.image || data.photo || (data.photos && data.photos[0]) || null;\n  \n  results.push({\n    json: {\n      id: url,\n      title: sanitize(data.title || 'Квартира', 150),\n      price: sanitize(String(price), 50),\n      address: sanitize(address, 200),\n      url: url,\n      image: image,\n      source: 'ЦИАН',\n      city: 'Благовещенск',\n      timestamp: new Date().toISOString()\n    }\n  });\n}\n\nconsole.log(`ЦИАН: обработано ${results.length} из ${items.length}`);\nreturn results.length > 0 ? results : [{ json: { empty: true, source: 'ЦИАН' } }];"
+      },
+      "id": "process-cian-secure",
+      "name": "🔍 Обработка ЦИАН",
+      "type": "n8n-nodes-base.code",
+      "position": [448, 360],
+      "typeVersion": 2,
+      "notes": "Санитизация и валидация данных ЦИАН"
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "options": {}
+      },
+      "id": "merge-results",
+      "name": "📦 Объединить",
+      "type": "n8n-nodes-base.merge",
+      "position": [672, 240],
+      "typeVersion": 3,
+      "notes": "Объединяет результаты Авито и ЦИАН"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Финальная обработка и дедупликация\nconst items = $input.all();\nconst seen = new Set();\nconst results = [];\nconst stats = {\n  total: items.length,\n  duplicates: 0,\n  noImage: 0,\n  empty: 0,\n  valid: 0\n};\n\nfor (const item of items) {\n  const data = item.json;\n  \n  // Skip empty markers\n  if (data.empty) {\n    stats.empty++;\n    continue;\n  }\n  \n  // Validate required fields\n  if (!data.url && !data.id) {\n    console.warn('Missing URL/ID:', data);\n    continue;\n  }\n  \n  // Deduplication\n  const key = data.id || data.url;\n  if (seen.has(key)) {\n    stats.duplicates++;\n    continue;\n  }\n  seen.add(key);\n  \n  // Filter out items without images\n  if (!data.image) {\n    stats.noImage++;\n    continue;\n  }\n  \n  stats.valid++;\n  results.push({\n    json: {\n      id: data.id || data.url,\n      title: data.title || 'Объявление',\n      price: data.price || 'Цена не указана',\n      address: data.address || 'Адрес не указан',\n      url: data.url,\n      image: data.image,\n      source: data.source || 'Неизвестный',\n      city: data.city || 'Благовещенск',\n      timestamp: data.timestamp || new Date().toISOString()\n    }\n  });\n}\n\nconsole.log('📊 Статистика обработки:', JSON.stringify(stats, null, 2));\n\n// Always return at least one item for stats tracking\nif (results.length === 0) {\n  return [{ json: { empty: true, stats } }];\n}\n\n// Add stats to first item\nresults[0].json.stats = stats;\n\nreturn results;"
+      },
+      "id": "final-processing",
+      "name": "✅ Финал",
+      "type": "n8n-nodes-base.code",
+      "position": [896, 240],
+      "typeVersion": 2,
+      "notes": "Дедупликация, валидация, статистика"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.empty }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-empty",
+      "name": "❓ Есть результаты?",
+      "type": "n8n-nodes-base.if",
+      "position": [1120, 240],
+      "typeVersion": 2,
+      "notes": "Проверяет, есть ли валидные результаты"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Объявления",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": ["id"]
+        },
+        "options": {}
+      },
+      "id": "save-sheets",
+      "name": "💾 Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [1344, 140],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "i6jLoqevWyi5TP5S",
+          "name": "РАССЫЛКА КП +ПАРСЕР"
+        }
+      },
+      "notes": "Сохранение в Google Sheets (batch update)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Batch Telegram Sender - отправка группами\nconst items = $input.all();\nconst BATCH_SIZE = 5; // Отправляем по 5 объявлений за раз\nconst messages = [];\n\n// Remove stats object if present\nconst cleanItems = items.filter(item => !item.json.empty && item.json.url);\n\nif (cleanItems.length === 0) {\n  return [{ json: { skip: true, reason: 'No items to send' } }];\n}\n\nfor (let i = 0; i < cleanItems.length; i += BATCH_SIZE) {\n  const batch = cleanItems.slice(i, i + BATCH_SIZE);\n  \n  const text = batch.map(item => {\n    const data = item.json;\n    return `🏠 *${data.title}*\\n📍 ${data.address}\\n💰 ${data.price}\\n🏢 ${data.source}\\n\\n[Открыть](${data.url})`;\n  }).join('\\n\\n---\\n\\n');\n  \n  const batchNum = Math.floor(i / BATCH_SIZE) + 1;\n  const totalBatches = Math.ceil(cleanItems.length / BATCH_SIZE);\n  \n  messages.push({\n    json: {\n      chatId: $('🔀 Merge Triggers').first().json.chatId,\n      text: `📦 *Новые объявления* (${i + 1}-${Math.min(i + BATCH_SIZE, cleanItems.length)} из ${cleanItems.length}):\\n\\n${text}`,\n      parse_mode: 'Markdown',\n      disable_web_page_preview: false,\n      batchInfo: `${batchNum}/${totalBatches}`\n    }\n  });\n}\n\nconsole.log(`📱 Подготовлено ${messages.length} Telegram сообщений для ${cleanItems.length} объявлений`);\nreturn messages;"
+      },
+      "id": "batch-telegram",
+      "name": "📦 Batch Telegram",
+      "type": "n8n-nodes-base.code",
+      "position": [1344, 340],
+      "typeVersion": 2,
+      "notes": "Группирует объявления для эффективной отправки"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "disable_web_page_preview": "={{ $json.disable_web_page_preview }}",
+          "parse_mode": "={{ $json.parse_mode }}"
+        }
+      },
+      "id": "send-telegram",
+      "name": "📱 Отправка в Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1568, 340],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "USF1FBru0jYO1wky",
+          "name": "Telegram ЦИАН+АВИТО+ЯД"
+        }
+      },
+      "notes": "Отправка batch сообщений в Telegram"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Подготовка итогового сообщения со статистикой\nconst finalData = $('✅ Финал').first().json;\nconst stats = finalData.stats || {};\n\nconst chatId = $('🔀 Merge Triggers').first().json.chatId;\nconst triggerSource = $('🔀 Merge Triggers').first().json.triggerSource;\n\nconst duration = Date.now() - new Date($('🔀 Merge Triggers').first().json.timestamp).getTime();\nconst durationSeconds = Math.round(duration / 1000);\n\nconst text = `✅ *Парсинг завершен!*\\n\\n📊 *Статистика:*\\n• Всего обработано: ${stats.total || 0}\\n• Валидных: ${stats.valid || 0}\\n• Дубликатов: ${stats.duplicates || 0}\\n• Без фото: ${stats.noImage || 0}\\n\\n⏱ Время выполнения: ${durationSeconds}с\\n🔄 Источник: ${triggerSource}\\n⏰ Время: ${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Yakutsk' })}`;\n\nreturn [{\n  json: {\n    chatId: chatId,\n    text: text,\n    parse_mode: 'Markdown'\n  }\n}];"
+      },
+      "id": "summary-prepare",
+      "name": "📊 Подготовка итога",
+      "type": "n8n-nodes-base.code",
+      "position": [1344, 540],
+      "typeVersion": 2,
+      "notes": "Формирует итоговое сообщение со статистикой"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "={{ $json.parse_mode }}"
+        }
+      },
+      "id": "summary-send",
+      "name": "📊 Итоговое сообщение",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1568, 540],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "USF1FBru0jYO1wky",
+          "name": "Telegram ЦИАН+АВИТО+ЯД"
+        }
+      },
+      "notes": "Отправка итоговой статистики"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('🔀 Merge Triggers').first().json.chatId }}",
+        "text": "=⚠️ *Нет новых объявлений*\\n\\nВсе найденные объявления уже были обработаны ранее или не прошли валидацию.\\n\\n⏰ Время: {{ new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Yakutsk' }) }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "empty-message",
+      "name": "📭 Сообщение о пустых результатах",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1344, 440],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "USF1FBru0jYO1wky",
+          "name": "Telegram ЦИАН+АВИТО+ЯД"
+        }
+      },
+      "notes": "Уведомление если нет новых объявлений"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error Handler - обработка ошибок с уведомлением\nconst error = $input.first().json;\nconst errorMessage = error.message || error.error || 'Unknown error';\nconst errorContext = {\n  workflow: $workflow.name,\n  execution: $execution.id,\n  timestamp: new Date().toISOString(),\n  error: errorMessage,\n  node: error.node || 'Unknown'\n};\n\nconsole.error('❌ Workflow Error:', JSON.stringify(errorContext, null, 2));\n\n// Prepare error notification\nconst chatId = $env.DEFAULT_CHAT_ID;\nconst text = `❌ *Ошибка парсинга!*\\n\\n🔴 ${errorMessage}\\n\\n🕐 ${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Yakutsk' })}\\n\\n_Проверьте логи n8n для деталей_`;\n\nreturn [{\n  json: {\n    chatId: parseInt(chatId),\n    text: text,\n    parse_mode: 'Markdown',\n    errorContext: errorContext\n  }\n}];"
+      },
+      "id": "error-handler",
+      "name": "⚠️ Error Handler",
+      "type": "n8n-nodes-base.code",
+      "position": [672, 540],
+      "typeVersion": 2,
+      "notes": "Централизованная обработка ошибок"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "={{ $json.parse_mode }}"
+        }
+      },
+      "id": "error-notification",
+      "name": "🚨 Уведомление об ошибке",
+      "type": "n8n-nodes-base.telegram",
+      "position": [896, 540],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "USF1FBru0jYO1wky",
+          "name": "Telegram ЦИАН+АВИТО+ЯД"
+        }
+      },
+      "notes": "Отправка уведомления об ошибке в Telegram"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Monitoring & Metrics Collection\nconst executionStart = new Date($('🔀 Merge Triggers').first().json.timestamp).getTime();\nconst executionEnd = Date.now();\nconst duration = executionEnd - executionStart;\n\nconst finalStats = $('✅ Финал').first().json.stats || {};\n\nconst metrics = {\n  workflow: {\n    name: $workflow.name,\n    executionId: $execution.id,\n    mode: $execution.mode\n  },\n  timing: {\n    start: new Date(executionStart).toISOString(),\n    end: new Date(executionEnd).toISOString(),\n    duration: duration,\n    durationSeconds: Math.round(duration / 1000)\n  },\n  trigger: {\n    source: $('🔀 Merge Triggers').first().json.triggerSource,\n    chatId: $('🔀 Merge Triggers').first().json.chatId\n  },\n  results: {\n    total: finalStats.total || 0,\n    valid: finalStats.valid || 0,\n    duplicates: finalStats.duplicates || 0,\n    noImage: finalStats.noImage || 0,\n    empty: finalStats.empty || 0\n  },\n  nodes: {\n    avito: $('📥 Результаты Авито').all().length,\n    cian: $('📥 Результаты ЦИАН').all().length,\n    merged: $('📦 Объединить').all().length,\n    final: $('✅ Финал').all().length\n  },\n  performance: {\n    itemsPerSecond: finalStats.valid ? (finalStats.valid / (duration / 1000)).toFixed(2) : 0,\n    successRate: finalStats.total ? ((finalStats.valid / finalStats.total) * 100).toFixed(2) + '%' : '0%'\n  }\n};\n\nconsole.log('📈 Workflow Metrics:', JSON.stringify(metrics, null, 2));\n\nreturn [{ json: metrics }];"
+      },
+      "id": "monitoring",
+      "name": "📈 Monitoring",
+      "type": "n8n-nodes-base.code",
+      "position": [1792, 240],
+      "typeVersion": 2,
+      "notes": "Сбор метрик и мониторинг производительности"
+    }
+  ],
+  "connections": {
+    "⏰ Каждые 30 минут": {
+      "main": [
+        [
+          {
+            "node": "📋 Schedule Prepare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Schedule Prepare": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Triggers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎯 Webhook (Secure)": {
+      "main": [
+        [
+          {
+            "node": "🔐 Security Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔐 Security Validation": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Triggers",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "🔀 Merge Triggers": {
+      "main": [
+        [
+          {
+            "node": "🏠 Запуск Авито (Apify)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🏢 Запуск ЦИАН (Apify)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏠 Запуск Авито (Apify)": {
+      "main": [
+        [
+          {
+            "node": "📥 Результаты Авито",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "error": [
+        [
+          {
+            "node": "⚠️ Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 Запуск ЦИАН (Apify)": {
+      "main": [
+        [
+          {
+            "node": "📥 Результаты ЦИАН",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "error": [
+        [
+          {
+            "node": "⚠️ Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📥 Результаты Авито": {
+      "main": [
+        [
+          {
+            "node": "🔍 Обработка Авито",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📥 Результаты ЦИАН": {
+      "main": [
+        [
+          {
+            "node": "🔍 Обработка ЦИАН",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Обработка Авито": {
+      "main": [
+        [
+          {
+            "node": "📦 Объединить",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Обработка ЦИАН": {
+      "main": [
+        [
+          {
+            "node": "📦 Объединить",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "📦 Объединить": {
+      "main": [
+        [
+          {
+            "node": "✅ Финал",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Финал": {
+      "main": [
+        [
+          {
+            "node": "❓ Есть результаты?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Есть результаты?": {
+      "main": [
+        [
+          {
+            "node": "📭 Сообщение о пустых результатах",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "💾 Google Sheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📦 Batch Telegram",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📊 Подготовка итога",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "📈 Monitoring",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 Batch Telegram": {
+      "main": [
+        [
+          {
+            "node": "📱 Отправка в Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📱 Отправка в Telegram": {
+      "main": [
+        [
+          null
+        ]
+      ]
+    },
+    "📊 Подготовка итога": {
+      "main": [
+        [
+          {
+            "node": "📊 Итоговое сообщение",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Итоговое сообщение": {
+      "main": [
+        [
+          null
+        ]
+      ]
+    },
+    "📭 Сообщение о пустых результатах": {
+      "main": [
+        [
+          null
+        ]
+      ]
+    },
+    "⚠️ Error Handler": {
+      "main": [
+        [
+          {
+            "node": "🚨 Уведомление об ошибке",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🚨 Уведомление об ошибке": {
+      "main": [
+        [
+          null
+        ]
+      ]
+    },
+    "📈 Monitoring": {
+      "main": [
+        [
+          null
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "tags": [
+    {
+      "name": "Недвижимость"
+    },
+    {
+      "name": "Production"
+    },
+    {
+      "name": "Optimized"
+    }
+  ],
+  "meta": {
+    "instanceId": "production"
+  }
+}
