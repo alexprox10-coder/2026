@@ -1,0 +1,379 @@
+{
+  "name": "🤖 Telegram Bot - Управление парсером",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"]
+      },
+      "id": "telegram-trigger",
+      "name": "📱 Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "position": [0, 160],
+      "typeVersion": 1.1,
+      "webhookId": "telegram-bot-trigger"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "start-command",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "/start",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-start",
+      "name": "❓ Команда /start?",
+      "type": "n8n-nodes-base.if",
+      "position": [224, 160],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "=🏠 *Парсер недвижимости Авито + ЦИАН*\n\n👋 Привет! Я помогу тебе находить новые объявления о сдаче квартир в Благовещенске.\n\n📋 *Доступные команды:*\n\n▶️ /parse - Запустить парсинг сейчас\n📊 /status - Статус последнего парсинга\n📄 /sheet - Открыть Google таблицу\n❓ /help - Помощь\n\n🔄 *Автоматический режим:*\nПарсинг работает автоматически каждые 30 минут.\nНовые объявления сохраняются в Google Sheets и отправляются сюда.\n\n✅ Всё настроено и работает!",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-welcome",
+      "name": "👋 Приветствие",
+      "type": "n8n-nodes-base.telegram",
+      "position": [448, 80],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "id": "parse-command",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "/parse",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-parse",
+      "name": "❓ Команда /parse?",
+      "type": "n8n-nodes-base.if",
+      "position": [448, 240],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "⏳ Запускаю парсинг...\n\nЭто займет ~2 минуты. Подожди немного!",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-parsing-start",
+      "name": "⏳ Уведомление о запуске",
+      "type": "n8n-nodes-base.telegram",
+      "position": [672, 160],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_WEBHOOK_BASE_URL }}/webhook/realty-parser-secure",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $json.message.chat.id }}\",\n  \"trigger_source\": \"telegram_bot\"\n}",
+        "options": {}
+      },
+      "id": "trigger-parser",
+      "name": "🚀 Запуск парсера",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [896, 160],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "id": "status-command",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "/status",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-status",
+      "name": "❓ Команда /status?",
+      "type": "n8n-nodes-base.if",
+      "position": [448, 400],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "=📊 *Статус парсера*\n\n✅ Workflow активен\n🔄 Режим: Автоматический\n⏰ Частота: каждые 30 минут\n\n📍 Города: Благовещенск\n🏢 Источники: Авито, ЦИАН\n💾 Хранение: Google Sheets\n\n🎯 Парсер работает в штатном режиме!\n\nДля ручного запуска используй /parse",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-status",
+      "name": "📊 Статус",
+      "type": "n8n-nodes-base.telegram",
+      "position": [672, 320],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "id": "sheet-command",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "/sheet",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-sheet",
+      "name": "❓ Команда /sheet?",
+      "type": "n8n-nodes-base.if",
+      "position": [672, 480],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "=📄 *Google Таблица с объявлениями*\n\n[Открыть таблицу](https://docs.google.com/spreadsheets/d/{{ $env.GOOGLE_SHEET_ID }})\n\nВсе найденные объявления сохраняются в лист \"Объявления\".",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "disable_web_page_preview": false
+        }
+      },
+      "id": "send-sheet-link",
+      "name": "📄 Ссылка на таблицу",
+      "type": "n8n-nodes-base.telegram",
+      "position": [896, 400],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "id": "help-command",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "/help",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-help",
+      "name": "❓ Команда /help?",
+      "type": "n8n-nodes-base.if",
+      "position": [896, 560],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "=❓ *Помощь*\n\n*Команды бота:*\n\n/start - Начать работу\n/parse - Запустить парсинг прямо сейчас\n/status - Посмотреть статус работы\n/sheet - Открыть таблицу с объявлениями\n/help - Это сообщение\n\n*Как это работает?*\n\n1️⃣ Парсер автоматически ищет новые объявления каждые 30 минут\n2️⃣ Проверяет Авито и ЦИАН (Благовещенск)\n3️⃣ Сохраняет в Google Sheets\n4️⃣ Отправляет новые объявления сюда\n\n*Нужна помощь?*\n\nПиши своему администратору!",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-help",
+      "name": "❓ Помощь",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1120, 480],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "=❌ Неизвестная команда: {{ $json.message.text }}\n\nДоступные команды:\n/start - Начать\n/parse - Запустить парсинг\n/status - Статус\n/sheet - Таблица\n/help - Помощь",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-unknown",
+      "name": "❌ Неизвестная команда",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1120, 640],
+      "typeVersion": 1.2
+    }
+  ],
+  "connections": {
+    "📱 Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "❓ Команда /start?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Команда /start?": {
+      "main": [
+        [
+          {
+            "node": "👋 Приветствие",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "❓ Команда /parse?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Команда /parse?": {
+      "main": [
+        [
+          {
+            "node": "⏳ Уведомление о запуске",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "❓ Команда /status?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏳ Уведомление о запуске": {
+      "main": [
+        [
+          {
+            "node": "🚀 Запуск парсера",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Команда /status?": {
+      "main": [
+        [
+          {
+            "node": "📊 Статус",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "❓ Команда /sheet?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Команда /sheet?": {
+      "main": [
+        [
+          {
+            "node": "📄 Ссылка на таблицу",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "❓ Команда /help?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Команда /help?": {
+      "main": [
+        [
+          {
+            "node": "❓ Помощь",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "❌ Неизвестная команда",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "Telegram"
+    },
+    {
+      "name": "Bot"
+    }
+  ]
+}
