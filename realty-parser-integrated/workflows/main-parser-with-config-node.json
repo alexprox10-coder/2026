@@ -1,0 +1,325 @@
+{
+  "name": "🏠 Парсер Недвижимости (Secure + Config)",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "webhook_secret",
+              "name": "WEBHOOK_SECRET",
+              "value": "your-random-32-char-secret-here",
+              "type": "string"
+            },
+            {
+              "id": "allowed_chat_ids",
+              "name": "ALLOWED_CHAT_IDS",
+              "value": "7984101063",
+              "type": "string"
+            },
+            {
+              "id": "apify_token",
+              "name": "APIFY_API_TOKEN",
+              "value": "apify_api_YOUR_TOKEN_HERE",
+              "type": "string"
+            },
+            {
+              "id": "google_sheet_id",
+              "name": "GOOGLE_SHEET_ID",
+              "value": "1IptmHSeKMRMAWB8QzYfyj1vjSJ2Pa0ZdrMq--fMuCW8",
+              "type": "string"
+            },
+            {
+              "id": "rate_limit_minutes",
+              "name": "RATE_LIMIT_MINUTES",
+              "value": "5",
+              "type": "number"
+            },
+            {
+              "id": "default_chat_id",
+              "name": "DEFAULT_CHAT_ID",
+              "value": "7984101063",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "config-node",
+      "name": "⚙️ Config",
+      "type": "n8n-nodes-base.set",
+      "position": [-700, 240],
+      "typeVersion": 3.4,
+      "notes": "НАСТРОЙТЕ ЗДЕСЬ:\n1. WEBHOOK_SECRET - ваш секретный токен (32+ символов)\n2. ALLOWED_CHAT_IDS - ваши chat IDs через запятую\n3. APIFY_API_TOKEN - ваш токен Apify\n4. GOOGLE_SHEET_ID - ID вашей таблицы\n5. RATE_LIMIT_MINUTES - минуты между запусками\n6. DEFAULT_CHAT_ID - куда слать если не указан"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "realty-parser-secure",
+        "responseMode": "lastNode",
+        "options": {
+          "webhookSuffix": "=sec-{{ $('⚙️ Config').item.json.WEBHOOK_SECRET }}"
+        }
+      },
+      "id": "webhook-secure",
+      "name": "🎯 Webhook (Secure)",
+      "type": "n8n-nodes-base.webhook",
+      "position": [-480, 240],
+      "typeVersion": 2,
+      "webhookId": "realty-secure"
+    },
+    {
+      "parameters": {
+        "jsCode": "// SECURITY: Validate request\nconst config = $('⚙️ Config').item.json;\nconst chatId = $json.body?.chat_id;\nconst triggerSource = $json.body?.trigger_source;\n\n// 1. Validate chat_id format\nif (!chatId || !/^-?\\d{7,13}$/.test(String(chatId))) {\n  throw new Error('Invalid chat_id format');\n}\n\n// 2. Check whitelist\nconst allowedChatIds = config.ALLOWED_CHAT_IDS.split(',').map(id => id.trim());\nif (!allowedChatIds.includes(String(chatId))) {\n  throw new Error(`Unauthorized chat_id: ${chatId}`);\n}\n\n// 3. Rate limiting check\nconst rateKey = `rate_${chatId}`;\nconst lastRun = parseInt($vars[rateKey] || '0');\nconst now = Date.now();\nconst minInterval = parseInt(config.RATE_LIMIT_MINUTES) * 60 * 1000;\n\nif (now - lastRun < minInterval && triggerSource !== 'schedule') {\n  const waitTime = Math.ceil((minInterval - (now - lastRun)) / 1000 / 60);\n  throw new Error(`Rate limit: wait ${waitTime} minutes`);\n}\n\n// Update rate limit\n$vars[rateKey] = String(now);\n\n// Pass validated data + config\nreturn [{\n  json: {\n    chatId: parseInt(chatId),\n    triggerSource: triggerSource || 'unknown',\n    timestamp: new Date().toISOString(),\n    validated: true,\n    config: config  // Передаём config дальше\n  }\n}];"
+      },
+      "id": "security-validation",
+      "name": "🔐 Security Validation",
+      "type": "n8n-nodes-base.code",
+      "position": [-256, 240],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "⏰ Каждые 30 минут",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [-480, 80],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.apify.com/v2/acts/eiD1SmA4A6aojHvYl/runs?token={{ $('⚙️ Config').item.json.APIFY_API_TOKEN || $json.config.APIFY_API_TOKEN }}&waitForFinish=120",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"startUrls\": [\n    \"https://www.avito.ru/amurskaya_oblast_blagoveschensk/kvartiry/sdam/na_dlitelnyy_srok-ASgBAgICAkSSA8gQ8AeQUg\"\n  ],\n  \"limit\": 20,\n  \"proxyConfiguration\": {\n    \"useApifyProxy\": true,\n    \"apifyProxyGroups\": [\"RESIDENTIAL\"]\n  }\n}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "run-avito-apify",
+      "name": "🏠 Запуск Авито (Apify)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [0, 120],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.apify.com/v2/acts/igolaizola~cian-ru-scraper/runs?token={{ $('⚙️ Config').item.json.APIFY_API_TOKEN || $json.config.APIFY_API_TOKEN }}&waitForFinish=120",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"maxItems\": 20,\n  \"location\": \"Благовещенск\",\n  \"operationType\": \"rent\",\n  \"category\": \"\",\n  \"shortTermRent\": false,\n  \"includeStudio\": false,\n  \"withNeighbors\": false,\n  \"proxyConfiguration\": {\n    \"useApifyProxy\": true,\n    \"apifyProxyGroups\": [\"RESIDENTIAL\"]\n  }\n}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "run-cian-apify",
+      "name": "🏢 Запуск ЦИАН (Apify)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [0, 360],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "url": "=https://api.apify.com/v2/datasets/{{ $json.data.defaultDatasetId }}/items?token={{ $('⚙️ Config').item.json.APIFY_API_TOKEN }}",
+        "options": {}
+      },
+      "id": "fetch-avito-results",
+      "name": "📥 Результаты Авито",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [224, 120],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "url": "=https://api.apify.com/v2/datasets/{{ $json.data.defaultDatasetId }}/items?token={{ $('⚙️ Config').item.json.APIFY_API_TOKEN }}",
+        "options": {}
+      },
+      "id": "fetch-cian-results",
+      "name": "📥 Результаты ЦИАН",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [224, 360],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "jsCode": "// Обрабатываем результаты Авито с санитизацией\nconst items = $input.all();\nconst results = [];\n\nconst sanitize = (text, maxLength = 200) => {\n  if (!text) return '';\n  return String(text)\n    .replace(/[<>]/g, '')\n    .replace(/[*_`\\[\\]]/g, '\\\\$&')\n    .slice(0, maxLength)\n    .trim();\n};\n\nfor (const item of items) {\n  const data = item.json;\n  if (!data || !data.url) continue;\n  \n  try {\n    const url = new URL(data.url);\n    if (!url.hostname.endsWith('avito.ru')) {\n      console.warn('Suspicious URL:', data.url);\n      continue;\n    }\n  } catch (e) {\n    continue;\n  }\n  \n  results.push({\n    json: {\n      id: data.url,\n      title: sanitize(data.title || 'Квартира', 150),\n      price: sanitize(String(data.price || data.priceNum || 'Цена не указана'), 50),\n      address: sanitize(data.address || data.location || 'Адрес не указан', 200),\n      url: data.url,\n      image: data.image || data.imageUrl || data.images?.[0] || null,\n      source: 'Авито',\n      city: 'Благовещенск',\n      timestamp: new Date().toISOString()\n    }\n  });\n}\n\nreturn results.length > 0 ? results : [{ json: { empty: true } }];"
+      },
+      "id": "process-avito-secure",
+      "name": "🔍 Обработка Авито",
+      "type": "n8n-nodes-base.code",
+      "position": [448, 120],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "// Обрабатываем результаты ЦИАН с санитизацией\nconst items = $input.all();\nconst results = [];\n\nconst sanitize = (text, maxLength = 200) => {\n  if (!text) return '';\n  return String(text)\n    .replace(/[<>]/g, '')\n    .replace(/[*_`\\[\\]]/g, '\\\\$&')\n    .slice(0, maxLength)\n    .trim();\n};\n\nfor (const item of items) {\n  const data = item.json;\n  if (!data) continue;\n  \n  const cianId = data.cianId || data.id;\n  const url = data.siteUrl || data.url || (cianId ? `https://www.cian.ru/rent/flat/${cianId}/` : null);\n  \n  if (!url) continue;\n  \n  try {\n    const urlObj = new URL(url);\n    if (!urlObj.hostname.endsWith('cian.ru')) {\n      console.warn('Suspicious URL:', url);\n      continue;\n    }\n  } catch (e) {\n    continue;\n  }\n  \n  const address = data.formattedAddress || data.address || data.geo?.address || 'Адрес не указан';\n  const price = data.formattedFullPrice || data.price || data.priceValue || 'Цена не указана';\n  const image = data.mainImage?.full || data.image || data.photo || (data.photos && data.photos[0]) || null;\n  \n  results.push({\n    json: {\n      id: url,\n      title: sanitize(data.title || 'Квартира', 150),\n      price: sanitize(String(price), 50),\n      address: sanitize(address, 200),\n      url: url,\n      image: image,\n      source: 'ЦИАН',\n      city: 'Благовещенск',\n      timestamp: new Date().toISOString()\n    }\n  });\n}\n\nreturn results.length > 0 ? results : [{ json: { empty: true } }];"
+      },
+      "id": "process-cian-secure",
+      "name": "🔍 Обработка ЦИАН",
+      "type": "n8n-nodes-base.code",
+      "position": [448, 360],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {},
+      "id": "merge-results",
+      "name": "📦 Объединить",
+      "type": "n8n-nodes-base.merge",
+      "position": [672, 240],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "jsCode": "// Финальная обработка и дедупликация\nconst items = $input.all();\nconst seen = new Set();\nconst results = [];\n\nfor (const item of items) {\n  const data = item.json;\n  if (data.empty) continue;\n  if (!data.url && !data.id) continue;\n  \n  const key = data.id || data.url;\n  if (seen.has(key)) continue;\n  seen.add(key);\n  \n  if (!data.image) continue;\n  \n  results.push({\n    json: {\n      id: data.id || data.url,\n      title: data.title || 'Объявление',\n      price: data.price || 'Цена не указана',\n      address: data.address || 'Адрес не указан',\n      url: data.url,\n      image: data.image,\n      source: data.source || 'Неизвестный',\n      city: data.city || 'Благовещенск',\n      timestamp: data.timestamp || new Date().toISOString()\n    }\n  });\n}\n\nconsole.log(`Найдено уникальных: ${results.length}`);\nreturn results.length > 0 ? results : [{ json: { empty: true } }];"
+      },
+      "id": "final-processing",
+      "name": "✅ Финал",
+      "type": "n8n-nodes-base.code",
+      "position": [896, 240],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('⚙️ Config').item.json.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Объявления",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": ["id"]
+        }
+      },
+      "id": "save-sheets",
+      "name": "💾 Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [1120, 140],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "i6jLoqevWyi5TP5S",
+          "name": "РАССЫЛКА КП +ПАРСЕР"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "id": "wait-telegram",
+      "name": "⏳ Wait 3s",
+      "type": "n8n-nodes-base.wait",
+      "position": [1120, 340],
+      "typeVersion": 1.1,
+      "webhookId": "wait-tel"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('🔐 Security Validation').item.json.chatId || $('⚙️ Config').item.json.DEFAULT_CHAT_ID }}",
+        "text": "=🏠 Новое!\n\n📍 {{ $json.address }}\n💰 {{ $json.price }}\n🏢 {{ $json.source }}\n\n[Открыть]({{ $json.url }})",
+        "additionalFields": {
+          "disable_web_page_preview": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-telegram",
+      "name": "📱 Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1344, 340],
+      "typeVersion": 1.2,
+      "webhookId": "tel-send",
+      "credentials": {
+        "telegramApi": {
+          "id": "USF1FBru0jYO1wky",
+          "name": "Telegram ЦИАН+АВИТО+ЯД"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('🔐 Security Validation').item.json.chatId || $('⚙️ Config').item.json.DEFAULT_CHAT_ID }}",
+        "text": "=✅ Готово!\n\nНайдено: {{ $('✅ Финал').all().length }}\nОтправлено: {{ $('✅ Финал').all().length }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "summary",
+      "name": "📊 Итог",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1568, 240],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "USF1FBru0jYO1wky",
+          "name": "Telegram ЦИАН+АВИТО+ЯД"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "⚙️ Config": {
+      "main": [[{"node": "🎯 Webhook (Secure)", "type": "main", "index": 0}]]
+    },
+    "🎯 Webhook (Secure)": {
+      "main": [[{"node": "🔐 Security Validation", "type": "main", "index": 0}]]
+    },
+    "🔐 Security Validation": {
+      "main": [[{"node": "🏠 Запуск Авито (Apify)", "type": "main", "index": 0}, {"node": "🏢 Запуск ЦИАН (Apify)", "type": "main", "index": 0}]]
+    },
+    "⏰ Каждые 30 минут": {
+      "main": [[{"node": "⚙️ Config", "type": "main", "index": 0}]]
+    },
+    "🏠 Запуск Авито (Apify)": {
+      "main": [[{"node": "📥 Результаты Авито", "type": "main", "index": 0}]]
+    },
+    "🏢 Запуск ЦИАН (Apify)": {
+      "main": [[{"node": "📥 Результаты ЦИАН", "type": "main", "index": 0}]]
+    },
+    "📥 Результаты Авито": {
+      "main": [[{"node": "🔍 Обработка Авито", "type": "main", "index": 0}]]
+    },
+    "📥 Результаты ЦИАН": {
+      "main": [[{"node": "🔍 Обработка ЦИАН", "type": "main", "index": 0}]]
+    },
+    "🔍 Обработка Авито": {
+      "main": [[{"node": "📦 Объединить", "type": "main", "index": 0}]]
+    },
+    "🔍 Обработка ЦИАН": {
+      "main": [[{"node": "📦 Объединить", "type": "main", "index": 1}]]
+    },
+    "📦 Объединить": {
+      "main": [[{"node": "✅ Финал", "type": "main", "index": 0}]]
+    },
+    "✅ Финал": {
+      "main": [[{"node": "💾 Sheets", "type": "main", "index": 0}, {"node": "⏳ Wait 3s", "type": "main", "index": 0}]]
+    },
+    "⏳ Wait 3s": {
+      "main": [[{"node": "📱 Telegram", "type": "main", "index": 0}]]
+    },
+    "📱 Telegram": {
+      "main": [[{"node": "📊 Итог", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [{"name": "Недвижимость"}, {"name": "Production"}]
+}
