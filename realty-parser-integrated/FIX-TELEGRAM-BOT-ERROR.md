@@ -38,22 +38,19 @@ n8n HTTP Request typeVersion 4.2 не поддерживает сложные ex
 В Code node добавьте этот JavaScript код:
 
 ```javascript
-// Получаем данные из предыдущего node
-const item = $input.first();
-
 // Создаём payload для webhook
-return [{
+return {
   json: {
-    chat_id: item.json.message.chat.id,
+    chat_id: $json.message.chat.id,
     trigger_source: "telegram_bot"
   }
-}];
+};
 ```
 
 Этот код:
-- Использует `$input.first()` для получения данных (правильный синтаксис для Code node v2)
+- Использует `$json` напрямую для доступа к данным (правильный синтаксис для Code node v2)
 - Берёт chat_id из Telegram сообщения
-- Создаёт чистый JSON объект
+- Возвращает объект (НЕ массив) с полем `json`
 - Передаёт его дальше в HTTP Request
 
 #### Шаг 3: Исправьте HTTP Request node "🚀 Запуск парсера"
@@ -167,14 +164,12 @@ return [{
 
 ```javascript
 // Code node "📦 Подготовка данных"
-const item = $input.first();
-
-return [{
+return {
   json: {
-    chat_id: item.json.message.chat.id,
+    chat_id: $json.message.chat.id,
     trigger_source: "telegram_bot"
   }
-}];
+};
 ```
 
 Затем в HTTP Request:
@@ -203,14 +198,12 @@ return [{
 
 **Code node "📦 Подготовка данных" содержит:**
 ```javascript
-const item = $input.first();
-
-return [{
+return {
   json: {
-    chat_id: item.json.message.chat.id,
+    chat_id: $json.message.chat.id,
     trigger_source: "telegram_bot"
   }
-}];
+};
 ```
 
 **HTTP Request "🚀 Запуск парсера" JSON Body:**
@@ -314,22 +307,19 @@ ALLOWED_CHAT_IDS = 7984101063
 
 **JavaScript Code:**
 ```javascript
-// Получаем данные из предыдущего node
-const item = $input.first();
-
 // Создаём payload для webhook
-return [{
+return {
   json: {
-    chat_id: item.json.message.chat.id,
+    chat_id: $json.message.chat.id,
     trigger_source: "telegram_bot"
   }
-}];
+};
 ```
 
 **Что делает:**
-- Использует `$input.first()` для получения данных (Code node v2 syntax)
+- Использует `$json` напрямую для доступа к данным (Code node v2 syntax)
 - Извлекает chat_id из Telegram сообщения
-- Создаёт чистый JSON объект
+- Возвращает объект (НЕ массив!) с полем `json`
 - Передаёт в следующий node
 
 ---
@@ -389,13 +379,12 @@ return [{
 1. Добавьте Code node между "⏳ Уведомление" и "🚀 Запуск парсера"
 2. Название: "📦 Подготовка данных"
 3. JavaScript код:
-   const item = $input.first();
-   return [{
+   return {
      json: {
-       chat_id: item.json.message.chat.id,
+       chat_id: $json.message.chat.id,
        trigger_source: "telegram_bot"
      }
-   }];
+   };
 4. В "🚀 Запуск парсера" → JSON Body: ={{ $json }}
 5. Соедините: ⏳ → 📦 → 🚀
 6. Save и test
