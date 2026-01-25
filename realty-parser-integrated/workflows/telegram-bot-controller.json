@@ -102,7 +102,7 @@
         "url": "={{ $env.N8N_WEBHOOK_BASE_URL }}/webhook/realty-parser-secure",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"chat_id\": {{ $json.message.chat.id }},\n  \"trigger_source\": \"telegram_bot\"\n}",
+        "jsonBody": "={ \"chat_id\": {{ $json.message.chat.id }}, \"trigger_source\": \"telegram_bot\" }",
         "options": {}
       },
       "id": "trigger-parser",

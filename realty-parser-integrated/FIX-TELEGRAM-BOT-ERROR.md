@@ -41,23 +41,17 @@ The service was not able to process your request
 
 **Должно быть (ПРАВИЛЬНО):**
 ```json
-={
-  "chat_id": {{ $json.message.chat.id }},
-  "trigger_source": "telegram_bot"
-}
+={ "chat_id": {{ $json.message.chat.id }}, "trigger_source": "telegram_bot" }
 ```
 
 **Изменения:**
 1. Добавьте `=` в начало (перед `{`)
 2. Уберите **кавычки** вокруг `{{ $json.message.chat.id }}`
-3. Уберите **одну пару** фигурных скобок: `{{` → `{`, `}}` → `}`
+3. Оставьте `{{ }}` только вокруг expression, НЕ вокруг всего объекта
 
 **В поле JSON Body должно быть:**
 ```
-={
-  "chat_id": {{ $json.message.chat.id }},
-  "trigger_source": "telegram_bot"
-}
+={ "chat_id": {{ $json.message.chat.id }}, "trigger_source": "telegram_bot" }
 ```
 
 #### Шаг 3: Проверьте URL
@@ -122,9 +116,7 @@ The service was not able to process your request
 
 ✅ **ПРАВИЛЬНО:**
 ```json
-={
-  "chat_id": {{ $json.message.chat.id }}
-}
+={ "chat_id": {{ $json.message.chat.id }}, "trigger_source": "telegram_bot" }
 ```
 
 **Правила:**
@@ -261,10 +253,7 @@ ALLOWED_CHAT_IDS = 7984101063
 
 **JSON:**
 ```
-={
-  "chat_id": {{ $json.message.chat.id }},
-  "trigger_source": "telegram_bot"
-}
+={ "chat_id": {{ $json.message.chat.id }}, "trigger_source": "telegram_bot" }
 ```
 
 **Options:** Default
@@ -288,7 +277,7 @@ ALLOWED_CHAT_IDS = 7984101063
 2. В поле JSON измените:
    ```
    Было: {"chat_id": "{{ $json.message.chat.id }}", ...}
-   Стало: ={"chat_id": {{ $json.message.chat.id }}, ...}
+   Стало: ={ "chat_id": {{ $json.message.chat.id }}, "trigger_source": "telegram_bot" }
    ```
 3. Save
 4. Telegram → /parse → Должно работать!
