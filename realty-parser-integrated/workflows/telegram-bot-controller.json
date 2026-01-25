@@ -98,7 +98,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Получаем данные из предыдущего node\nconst item = $input.first();\n\n// Создаём payload для webhook\nreturn [{\n  json: {\n    chat_id: item.json.message.chat.id,\n    trigger_source: \"telegram_bot\"\n  }\n}];"
+        "jsCode": "// Создаём payload для webhook\nreturn {\n  json: {\n    chat_id: $json.message.chat.id,\n    trigger_source: \"telegram_bot\"\n  }\n};"
       },
       "id": "prepare-webhook-body",
       "name": "📦 Подготовка данных",
