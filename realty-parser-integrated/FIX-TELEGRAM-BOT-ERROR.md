@@ -38,15 +38,20 @@ n8n HTTP Request typeVersion 4.2 не поддерживает сложные ex
 В Code node добавьте этот JavaScript код:
 
 ```javascript
+// Получаем данные из предыдущего node
+const item = $input.first();
+
+// Создаём payload для webhook
 return [{
   json: {
-    chat_id: $input.item.json.message.chat.id,
+    chat_id: item.json.message.chat.id,
     trigger_source: "telegram_bot"
   }
 }];
 ```
 
 Этот код:
+- Использует `$input.first()` для получения данных (правильный синтаксис для Code node v2)
 - Берёт chat_id из Telegram сообщения
 - Создаёт чистый JSON объект
 - Передаёт его дальше в HTTP Request
@@ -162,9 +167,11 @@ return [{
 
 ```javascript
 // Code node "📦 Подготовка данных"
+const item = $input.first();
+
 return [{
   json: {
-    chat_id: $input.item.json.message.chat.id,
+    chat_id: item.json.message.chat.id,
     trigger_source: "telegram_bot"
   }
 }];
@@ -196,9 +203,11 @@ return [{
 
 **Code node "📦 Подготовка данных" содержит:**
 ```javascript
+const item = $input.first();
+
 return [{
   json: {
-    chat_id: $input.item.json.message.chat.id,
+    chat_id: item.json.message.chat.id,
     trigger_source: "telegram_bot"
   }
 }];
@@ -305,15 +314,20 @@ ALLOWED_CHAT_IDS = 7984101063
 
 **JavaScript Code:**
 ```javascript
+// Получаем данные из предыдущего node
+const item = $input.first();
+
+// Создаём payload для webhook
 return [{
   json: {
-    chat_id: $input.item.json.message.chat.id,
+    chat_id: item.json.message.chat.id,
     trigger_source: "telegram_bot"
   }
 }];
 ```
 
 **Что делает:**
+- Использует `$input.first()` для получения данных (Code node v2 syntax)
 - Извлекает chat_id из Telegram сообщения
 - Создаёт чистый JSON объект
 - Передаёт в следующий node
@@ -375,9 +389,10 @@ return [{
 1. Добавьте Code node между "⏳ Уведомление" и "🚀 Запуск парсера"
 2. Название: "📦 Подготовка данных"
 3. JavaScript код:
+   const item = $input.first();
    return [{
      json: {
-       chat_id: $input.item.json.message.chat.id,
+       chat_id: item.json.message.chat.id,
        trigger_source: "telegram_bot"
      }
    }];
