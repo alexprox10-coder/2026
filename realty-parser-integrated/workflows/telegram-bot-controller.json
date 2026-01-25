@@ -98,11 +98,21 @@
     },
     {
       "parameters": {
+        "jsCode": "return [{\n  json: {\n    chat_id: $input.item.json.message.chat.id,\n    trigger_source: \"telegram_bot\"\n  }\n}];"
+      },
+      "id": "prepare-webhook-body",
+      "name": "📦 Подготовка данных",
+      "type": "n8n-nodes-base.code",
+      "position": [784, 160],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
         "method": "POST",
         "url": "={{ $env.N8N_WEBHOOK_BASE_URL }}/webhook/realty-parser-secure",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={ \"chat_id\": {{ $json.message.chat.id }}, \"trigger_source\": \"telegram_bot\" }",
+        "jsonBody": "={{ $json }}",
         "options": {}
       },
       "id": "trigger-parser",
@@ -299,6 +309,17 @@
       ]
     },
     "⏳ Уведомление о запуске": {
+      "main": [
+        [
+          {
+            "node": "📦 Подготовка данных",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 Подготовка данных": {
       "main": [
         [
           {
