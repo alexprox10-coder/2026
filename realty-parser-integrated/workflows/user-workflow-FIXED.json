@@ -401,6 +401,51 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message ? 'message' : 'callback_query' }}",
+              "operation": "equals",
+              "value2": "message"
+            }
+          ]
+        }
+      },
+      "id": "check-event-type",
+      "name": "❓ Это message или callback?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "operation": "answerQuery",
+        "queryId": "={{ $json.callback_query.id }}",
+        "additionalFields": {
+          "text": "✅ Запускаю..."
+        }
+      },
+      "id": "answer-callback",
+      "name": "✅ Answer Callback Query",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -160,
+        160
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "USF1FBru0jYO1wky",
+          "name": "Telegram ЦИАН+АВИТО+ЯД"
+        }
+      }
+    },
+    {
+      "parameters": {
         "updates": [
           "message",
           "callback_query"
@@ -770,16 +815,28 @@
       "main": [
         [
           {
-            "node": "Send a text message",
+            "node": "❓ Это message или callback?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Send a text message": {
+    "❓ Это message или callback?": {
       "main": [
         [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "✅ Answer Callback Query",
+            "type": "main",
+            "index": 0
+          },
           {
             "node": "Switch",
             "type": "main",
@@ -787,6 +844,12 @@
           }
         ]
       ]
+    },
+    "Send a text message": {
+      "main": [[]]
+    },
+    "✅ Answer Callback Query": {
+      "main": [[]]
     },
     "Switch": {
       "main": [
