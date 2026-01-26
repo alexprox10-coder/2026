@@ -352,16 +352,18 @@
     },
     {
       "parameters": {
+        "operation": "sendPhoto",
         "chatId": "7984101063",
-        "text": "=*Новое предложение!*\n\n📍 *{{ $json.address }}*\n💰 *{{ $json.price }}*\n🔗 [Открыть]({{ $json.url }})\n",
+        "binaryData": false,
+        "photo": "={{ $json.image || 'https://via.placeholder.com/400x300?text=No+Image' }}",
         "additionalFields": {
-          "disable_web_page_preview": false,
+          "caption": "=🏠 *Новое предложение!*\n\n📍 *{{ $json.address }}*\n💰 *{{ $json.price }}*\n🔗 [Открыть]({{ $json.url }})\n\n_Источник: {{ $json.source }}_",
           "parse_mode": "Markdown"
         }
       },
       "name": "Telegram",
       "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1,
+      "typeVersion": 1.2,
       "position": [
         1904,
         160
