@@ -425,7 +425,7 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $json.message.chat.id }}",
+        "chatId": "={{ $json.message?.chat?.id || $json.callback_query?.message?.chat?.id }}",
         "text": "Привет! Выбери, что хочешь сделать:",
         "replyMarkup": "inlineKeyboard",
         "inlineKeyboard": {

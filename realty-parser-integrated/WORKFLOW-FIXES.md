@@ -105,6 +105,32 @@
 
 ---
 
+### Проблема #4: Send a text message - пустой chat_id
+
+**Симптом:** "Bad Request: chat_id is empty" при нажатии кнопки
+
+**Причина:**
+```json
+"chatId": "={{ $json.message.chat.id }}"  // ❌ Работает только для message
+```
+
+Когда пользователь нажимает кнопку, приходит `callback_query`, а не `message`. У них разная структура:
+- **message**: `$json.message.chat.id`
+- **callback_query**: `$json.callback_query.message.chat.id`
+
+**Исправление:**
+```json
+"chatId": "={{ $json.message?.chat?.id || $json.callback_query?.message?.chat?.id }}"
+```
+
+**Обоснование:**
+- Использует optional chaining (`?.`) для безопасного доступа
+- Сначала пытается получить chat_id из message
+- Если нет - получает из callback_query.message
+- Работает и для текстовых команд (/start), и для нажатий кнопок
+
+---
+
 ## ✅ Как теперь работает workflow
 
 ### Правильный Data Flow:
