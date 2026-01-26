@@ -732,6 +732,64 @@
           "name": "Telegram ЦИАН+АВИТО+ЯД"
         }
       }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-image-check",
+              "leftValue": "={{ $json.image !== null && $json.image !== undefined && $json.image !== '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-has-image",
+      "name": "🖼️ Есть ли фото?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "7984101063",
+        "binaryData": false,
+        "photo": "={{ $json.image }}",
+        "additionalFields": {
+          "caption": "=🏠 *Новое предложение!*\n\n📍 *{{ $json.address }}*\n💰 *{{ $json.price }}*\n🔗 [Открыть]({{ $json.url }})\n\n_Источник: {{ $json.source }}_",
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-with-photo",
+      "name": "Telegram (с фото)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2352,
+        320
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "USF1FBru0jYO1wky",
+          "name": "Telegram ЦИАН+АВИТО+ЯД"
+        }
+      }
     }
   ],
   "pinData": {
@@ -907,7 +965,7 @@
       "main": [
         [
           {
-            "node": "Telegram",
+            "node": "Telegram (с фото)",
             "type": "main",
             "index": 0
           }
