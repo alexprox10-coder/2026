@@ -45,7 +45,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.apify.com/v2/acts/igolaizola~cian-ru-scraper/runs?token={{ $env.APIFY_API_TOKEN }}&waitForFinish=120",
+        "url": "https://api.apify.com/v2/acts/CBn1BidHkyYcqYpPd/runs?token={{ $env.APIFY_API_TOKEN }}&waitForFinish=120",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "{\n  \"maxItems\": 20,\n  \"location\": \"Благовещенск\",\n  \"operationType\": \"rent\",\n  \"category\": \"\",\n  \"shortTermRent\": false,\n  \"includeStudio\": false,\n  \"withNeighbors\": false,\n  \"proxyConfiguration\": {\n    \"useApifyProxy\": true,\n    \"apifyProxyGroups\": [\"RESIDENTIAL\"]\n  }\n}",
