@@ -411,10 +411,11 @@
             {
               "id": "is-message-check",
               "leftValue": "={{ $json.message !== undefined }}",
-              "rightValue": "true",
+              "rightValue": "",
               "operator": {
                 "type": "boolean",
-                "operation": "true"
+                "operation": "true",
+                "singleValue": true
               }
             }
           ],
