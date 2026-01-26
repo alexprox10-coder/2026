@@ -652,6 +652,29 @@
       ],
       "id": "cbb3608f-5cf7-429d-94bc-a8a15ba90c18",
       "name": "Switch"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query?.message?.chat?.id }}",
+        "text": "📊 *Ваша таблица с объявлениями:*\n\n🔗 [Открыть Google Sheets](https://docs.google.com/spreadsheets/d/1IptmHSeKMRMAWB8QzYfyj1vjSJ2Pa0ZdrMq--fMuCW8/edit?usp=drivesdk)\n\nВ этой таблице сохраняются все найденные объявления с Авито и ЦИАН.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "table-link-sender",
+      "name": "📄 Отправить ссылку на таблицу",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -80,
+        400
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "USF1FBru0jYO1wky",
+          "name": "Telegram ЦИАН+АВИТО+ЯД"
+        }
+      }
     }
   ],
   "pinData": {
@@ -893,7 +916,7 @@
         ],
         [
           {
-            "node": "Google Sheets Append",
+            "node": "📄 Отправить ссылку на таблицу",
             "type": "main",
             "index": 0
           }
