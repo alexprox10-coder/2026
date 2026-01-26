@@ -448,6 +448,7 @@
         -160,
         160
       ],
+      "continueOnFail": true,
       "credentials": {
         "telegramApi": {
           "id": "USF1FBru0jYO1wky",
