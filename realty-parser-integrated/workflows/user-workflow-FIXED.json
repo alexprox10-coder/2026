@@ -402,19 +402,29 @@
     {
       "parameters": {
         "conditions": {
-          "string": [
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
             {
-              "value1": "={{ $json.message ? 'message' : 'callback_query' }}",
-              "operation": "equals",
-              "value2": "message"
+              "id": "is-message-check",
+              "leftValue": "={{ $json.message !== undefined }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
             }
-          ]
+          ],
+          "combinator": "and"
         }
       },
       "id": "check-event-type",
       "name": "❓ Это message или callback?",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
+      "typeVersion": 2,
       "position": [
         -240,
         -120
