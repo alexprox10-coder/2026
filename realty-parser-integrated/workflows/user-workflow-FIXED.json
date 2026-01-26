@@ -92,7 +92,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Обрабатываем результаты Авито\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const data = item.json;\n  if (!data || !data.url) continue;\n  \n  results.push({\n    json: {\n      id: data.url,\n      title: data.title || 'Квартира',\n      price: data.price || data.priceNum || 'Цена не указана',\n      address: data.address || data.location || 'Адрес не указан',\n      url: data.url,\n      image: data.image || data.imageUrl || data.images?.[0] || null,\n      source: 'Авито',\n      city: 'Благовещенск',\n      timestamp: new Date().toISOString()\n    }\n  });\n}\n\nreturn results.length > 0 ? results : [{ json: { empty: true } }];"
+        "jsCode": "// Обрабатываем результаты Авито\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const data = item.json;\n  if (!data || !data.url) continue;\n  \n  // Извлекаем изображение из разных возможных полей\n  let image = null;\n  if (data.image && typeof data.image === 'string') {\n    image = data.image;\n  } else if (data.imageUrl && typeof data.imageUrl === 'string') {\n    image = data.imageUrl;\n  } else if (data.images && Array.isArray(data.images) && data.images.length > 0) {\n    // Если images это массив объектов с URL\n    image = typeof data.images[0] === 'string' ? data.images[0] : data.images[0]?.url || data.images[0]?.src;\n  } else if (data.img && typeof data.img === 'string') {\n    image = data.img;\n  }\n  \n  results.push({\n    json: {\n      id: data.url,\n      title: data.title || 'Квартира',\n      price: data.price || data.priceNum || 'Цена не указана',\n      address: data.address || data.location || 'Адрес не указан',\n      url: data.url,\n      image: image,\n      source: 'Авито',\n      city: 'Благовещенск',\n      timestamp: new Date().toISOString()\n    }\n  });\n}\n\nreturn results.length > 0 ? results : [{ json: { empty: true } }];"
       },
       "id": "2d1a4cec-c8a3-4367-8cfd-90e5dae408a2",
       "name": "Обработка Авито",
@@ -677,6 +677,61 @@
           "name": "Telegram ЦИАН+АВИТО+ЯД"
         }
       }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-image-check",
+              "leftValue": "={{ $json.image !== null && $json.image !== undefined && $json.image !== '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-has-image",
+      "name": "🖼️ Есть ли фото?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "7984101063",
+        "text": "=🏠 *Новое предложение!*\n\n📍 *{{ $json.address }}*\n💰 *{{ $json.price }}*\n🔗 [Открыть]({{ $json.url }})\n\n_Источник: {{ $json.source }}_",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-no-photo",
+      "name": "Telegram (без фото)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2000,
+        320
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "USF1FBru0jYO1wky",
+          "name": "Telegram ЦИАН+АВИТО+ЯД"
+        }
+      }
     }
   ],
   "pinData": {
@@ -841,7 +896,25 @@
       "main": [
         [
           {
+            "node": "🖼️ Есть ли фото?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🖼️ Есть ли фото?": {
+      "main": [
+        [
+          {
             "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram (без фото)",
             "type": "main",
             "index": 0
           }
