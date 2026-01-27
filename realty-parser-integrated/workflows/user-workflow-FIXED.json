@@ -705,6 +705,34 @@
           "name": "Telegram ЦИАН+АВИТО+ЯД"
         }
       }
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "7984101063",
+        "binaryData": false,
+        "photo": "={{ $json.image }}",
+        "additionalFields": {
+          "caption": "=🏠 *Новое предложение!*\n\n📍 *{{ $json.address }}*\n💰 *{{ $json.price }}*\n🔗 [Открыть]({{ $json.url }})\n\n_Источник: {{ $json.source }}_",
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-with-photo",
+      "name": "Telegram (с фото)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2352,
+        320
+      ],
+      "continueOnFail": true,
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "telegramApi": {
+          "id": "USF1FBru0jYO1wky",
+          "name": "Telegram ЦИАН+АВИТО+ЯД"
+        }
+      }
     }
   ],
   "pinData": {
@@ -880,11 +908,23 @@
       "main": [
         [
           {
-            "node": "Telegram",
+            "node": "Telegram (с фото)",
             "type": "main",
             "index": 0
           }
         ],
+        [
+          {
+            "node": "Telegram (без фото)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram (с фото)": {
+      "main": [[]],
+      "error": [
         [
           {
             "node": "Telegram (без фото)",

@@ -725,6 +725,8 @@
         2352,
         320
       ],
+      "continueOnFail": true,
+      "onError": "continueErrorOutput",
       "credentials": {
         "telegramApi": {
           "id": "USF1FBru0jYO1wky",
@@ -911,6 +913,18 @@
             "index": 0
           }
         ],
+        [
+          {
+            "node": "Telegram (без фото)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram (с фото)": {
+      "main": [[]],
+      "error": [
         [
           {
             "node": "Telegram (без фото)",
