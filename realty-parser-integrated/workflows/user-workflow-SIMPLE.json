@@ -351,33 +351,6 @@
       }
     },
     {
-      "parameters": {
-        "operation": "sendPhoto",
-        "chatId": "7984101063",
-        "binaryData": false,
-        "photo": "={{ $json.image || 'https://via.placeholder.com/400x300?text=No+Image' }}",
-        "additionalFields": {
-          "caption": "=🏠 *Новое предложение!*\n\n📍 *{{ $json.address }}*\n💰 *{{ $json.price }}*\n🔗 [Открыть]({{ $json.url }})\n\n_Источник: {{ $json.source }}_",
-          "parse_mode": "Markdown"
-        }
-      },
-      "name": "Telegram",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
-      "position": [
-        1904,
-        160
-      ],
-      "id": "1a7f43a1-25e2-4b04-9bec-643217f358b7",
-      "webhookId": "68669db0-4808-41c7-88ac-d8e2c9650216",
-      "credentials": {
-        "telegramApi": {
-          "id": "USF1FBru0jYO1wky",
-          "name": "Telegram ЦИАН+АВИТО+ЯД"
-        }
-      }
-    },
-    {
       "parameters": {},
       "name": "No New Offers",
       "type": "n8n-nodes-base.noOp",
