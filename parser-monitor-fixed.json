@@ -1,5 +1,5 @@
 {
-  "name": "Парсер-Монитор Недвижимости - ИСПРАВЛЕНО ФИНАЛ",
+  "name": "Парсер-Монитор Недвижимости - ИСПРАВЛЕНО ФИНАЛ v2",
   "nodes": [
     {
       "parameters": {
@@ -92,7 +92,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Обрабатываем результаты Авито - ИСПРАВЛЕННАЯ ВЕРСИЯ\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const data = item.json;\n  if (!data || !data.url) continue;\n  \n  // Извлекаем изображение - проверяем ВСЕ возможные поля\n  let image = null;\n  \n  // Прямые поля\n  if (data.image && typeof data.image === 'string' && data.image.startsWith('http')) {\n    image = data.image;\n  } else if (data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.startsWith('http')) {\n    image = data.imageUrl;\n  } else if (data.img && typeof data.img === 'string' && data.img.startsWith('http')) {\n    image = data.img;\n  } else if (data.photo && typeof data.photo === 'string' && data.photo.startsWith('http')) {\n    image = data.photo;\n  } else if (data.thumbnail && typeof data.thumbnail === 'string' && data.thumbnail.startsWith('http')) {\n    image = data.thumbnail;\n  } else if (data.mainImage && typeof data.mainImage === 'string' && data.mainImage.startsWith('http')) {\n    image = data.mainImage;\n  }\n  \n  // Массив images\n  if (!image && data.images && Array.isArray(data.images) && data.images.length > 0) {\n    const firstImg = data.images[0];\n    if (typeof firstImg === 'string' && firstImg.startsWith('http')) {\n      image = firstImg;\n    } else if (firstImg && typeof firstImg === 'object') {\n      image = firstImg['636x476'] || firstImg['1280x960'] || firstImg.main || firstImg.url || firstImg.src || firstImg.href || firstImg.full || firstImg.large || firstImg.medium || null;\n      if (!image) {\n        const values = Object.values(firstImg);\n        for (const v of values) {\n          if (typeof v === 'string' && v.startsWith('http')) {\n            image = v;\n            break;\n          }\n        }\n      }\n    }\n  }\n  \n  // Массив photos\n  if (!image && data.photos && Array.isArray(data.photos) && data.photos.length > 0) {\n    const firstPhoto = data.photos[0];\n    if (typeof firstPhoto === 'string' && firstPhoto.startsWith('http')) {\n      image = firstPhoto;\n    } else if (firstPhoto && typeof firstPhoto === 'object') {\n      image = firstPhoto.url || firstPhoto.src || firstPhoto.href || firstPhoto.full || firstPhoto['636x476'] || firstPhoto['1280x960'] || null;\n    }\n  }\n  \n  // Извлекаем цену - проверяем разные форматы\n  let price = 'Цена не указана';\n  if (data.price) {\n    if (typeof data.price === 'string') {\n      price = data.price.replace(/[^\\d\\s]/g, '').trim() || data.price;\n    } else if (typeof data.price === 'number') {\n      price = data.price.toString();\n    } else if (typeof data.price === 'object') {\n      price = data.price.value || data.price.amount || data.price.rub || JSON.stringify(data.price);\n    }\n  } else if (data.priceNum) {\n    price = data.priceNum.toString();\n  } else if (data.priceValue) {\n    price = data.priceValue.toString();\n  }\n  \n  // Извлекаем адрес\n  let address = 'Адрес не указан';\n  if (data.address && typeof data.address === 'string') {\n    address = data.address;\n  } else if (data.location && typeof data.location === 'string') {\n    address = data.location;\n  } else if (data.geo && data.geo.address) {\n    address = data.geo.address;\n  } else if (data.geo && data.geo.formattedAddress) {\n    address = data.geo.formattedAddress;\n  }\n  \n  // Извлекаем заголовок\n  let title = data.title || data.name || 'Квартира';\n  \n  results.push({\n    json: {\n      id: data.url,\n      title: title,\n      price: price,\n      address: address,\n      url: data.url,\n      image: image,\n      source: 'Авито',\n      city: 'Благовещенск',\n      timestamp: new Date().toISOString()\n    }\n  });\n}\n\nreturn results.length > 0 ? results : [];"
+        "jsCode": "// Обрабатываем результаты Авито - ИСПРАВЛЕННАЯ ВЕРСИЯ v2\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const data = item.json;\n  if (!data || !data.url) continue;\n  \n  // Извлекаем цену - проверяем разные форматы\n  let price = 'Цена не указана';\n  if (data.price) {\n    if (typeof data.price === 'string') {\n      // Извлекаем только цифры\n      const nums = data.price.match(/\\d+/g);\n      if (nums) {\n        price = nums.join('');\n      } else {\n        price = data.price;\n      }\n    } else if (typeof data.price === 'number') {\n      price = data.price.toString();\n    } else if (typeof data.price === 'object') {\n      price = data.price.value || data.price.amount || data.price.rub || data.price.text || JSON.stringify(data.price);\n    }\n  } else if (data.priceNum) {\n    price = data.priceNum.toString();\n  } else if (data.priceValue) {\n    price = data.priceValue.toString();\n  } else if (data.priceText) {\n    const nums = data.priceText.match(/\\d+/g);\n    if (nums) price = nums.join('');\n  }\n  \n  // Извлекаем адрес - проверяем ВСЕ возможные поля\n  let address = '';\n  \n  // Прямые поля адреса\n  if (data.address && typeof data.address === 'string' && data.address.length > 3) {\n    address = data.address;\n  } else if (data.location && typeof data.location === 'string' && data.location.length > 3) {\n    address = data.location;\n  } else if (data.locationText && typeof data.locationText === 'string') {\n    address = data.locationText;\n  } else if (data.addressText && typeof data.addressText === 'string') {\n    address = data.addressText;\n  }\n  \n  // Проверяем вложенные объекты geo/location\n  if (!address && data.geo) {\n    if (data.geo.address) address = data.geo.address;\n    else if (data.geo.formattedAddress) address = data.geo.formattedAddress;\n    else if (data.geo.street) address = data.geo.street;\n    else if (data.geo.location) address = data.geo.location;\n  }\n  \n  if (!address && data.location && typeof data.location === 'object') {\n    if (data.location.address) address = data.location.address;\n    else if (data.location.street) address = data.location.street;\n    else if (data.location.text) address = data.location.text;\n  }\n  \n  // Пробуем извлечь из title\n  if (!address && data.title) {\n    // Ищем паттерны адреса в заголовке: \"ул.\", \"пр.\", \"ш.\", \"пер.\"\n    const titleMatch = data.title.match(/(?:ул\\.|улица|пр\\.|проспект|ш\\.|шоссе|пер\\.|переулок|б-р|бульвар|наб\\.|набережная)[^,]*/i);\n    if (titleMatch) {\n      address = titleMatch[0].trim();\n    }\n  }\n  \n  // Пробуем извлечь из description\n  if (!address && data.description) {\n    const descMatch = data.description.match(/(?:адрес|находится|расположен)[:\\s]*([^,.]+)/i);\n    if (descMatch) {\n      address = descMatch[1].trim();\n    }\n  }\n  \n  // Если всё ещё нет адреса\n  if (!address) {\n    address = 'Адрес не указан';\n  }\n  \n  // Извлекаем заголовок\n  let title = data.title || data.name || 'Квартира';\n  \n  results.push({\n    json: {\n      id: data.url,\n      title: title,\n      price: price,\n      address: address,\n      url: data.url,\n      source: 'Авито',\n      city: 'Благовещенск',\n      timestamp: new Date().toISOString()\n    }\n  });\n}\n\nreturn results.length > 0 ? results : [];"
       },
       "id": "1d9a6c6a-6449-403d-938d-9e9f649e982f",
       "name": "Обработка Авито",
@@ -105,7 +105,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Обрабатываем результаты ЦИАН\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const data = item.json;\n  if (!data) continue;\n  \n  // ЦИАН: получаем URL\n  const cianId = data.cianId || data.id;\n  const url = data.siteUrl || data.url || (cianId ? `https://www.cian.ru/rent/flat/${cianId}/` : null);\n  \n  if (!url) continue;\n  \n  // Получаем адрес\n  const address = data.formattedAddress || data.address || data.geo?.address || data.geo?.formattedAddress || 'Адрес не указан';\n  \n  // Получаем цену\n  let price = 'Цена не указана';\n  if (data.formattedFullPrice) {\n    price = data.formattedFullPrice;\n  } else if (data.price) {\n    price = typeof data.price === 'number' ? data.price.toString() : data.price;\n  } else if (data.priceValue) {\n    price = data.priceValue.toString();\n  } else if (data.bargainTerms?.price) {\n    price = data.bargainTerms.price.toString();\n  }\n  \n  // Получаем фото - проверяем все варианты\n  let image = null;\n  \n  if (data.mainImage) {\n    if (typeof data.mainImage === 'string' && data.mainImage.startsWith('http')) {\n      image = data.mainImage;\n    } else if (typeof data.mainImage === 'object') {\n      image = data.mainImage.full || data.mainImage.large || data.mainImage.medium || data.mainImage.url || null;\n    }\n  }\n  \n  if (!image && data.photos && Array.isArray(data.photos) && data.photos.length > 0) {\n    const firstPhoto = data.photos[0];\n    if (typeof firstPhoto === 'string' && firstPhoto.startsWith('http')) {\n      image = firstPhoto;\n    } else if (firstPhoto && typeof firstPhoto === 'object') {\n      image = firstPhoto.full || firstPhoto.large || firstPhoto.medium || firstPhoto.url || null;\n    }\n  }\n  \n  if (!image && data.image && typeof data.image === 'string' && data.image.startsWith('http')) {\n    image = data.image;\n  }\n  \n  if (!image && data.photo && typeof data.photo === 'string' && data.photo.startsWith('http')) {\n    image = data.photo;\n  }\n  \n  results.push({\n    json: {\n      id: url,\n      title: data.title || 'Квартира',\n      price: price,\n      address: address,\n      url: url,\n      image: image,\n      source: 'ЦИАН',\n      city: 'Благовещенск',\n      timestamp: new Date().toISOString()\n    }\n  });\n}\n\nreturn results;"
+        "jsCode": "// Обрабатываем результаты ЦИАН\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const data = item.json;\n  if (!data) continue;\n  \n  // ЦИАН: получаем URL\n  const cianId = data.cianId || data.id;\n  const url = data.siteUrl || data.url || (cianId ? `https://www.cian.ru/rent/flat/${cianId}/` : null);\n  \n  if (!url) continue;\n  \n  // Получаем адрес\n  const address = data.formattedAddress || data.address || data.geo?.address || data.geo?.formattedAddress || 'Адрес не указан';\n  \n  // Получаем цену\n  let price = 'Цена не указана';\n  if (data.formattedFullPrice) {\n    price = data.formattedFullPrice;\n  } else if (data.price) {\n    price = typeof data.price === 'number' ? data.price.toString() : data.price;\n  } else if (data.priceValue) {\n    price = data.priceValue.toString();\n  } else if (data.bargainTerms?.price) {\n    price = data.bargainTerms.price.toString();\n  }\n  \n  results.push({\n    json: {\n      id: url,\n      title: data.title || 'Квартира',\n      price: price,\n      address: address,\n      url: url,\n      source: 'ЦИАН',\n      city: 'Благовещенск',\n      timestamp: new Date().toISOString()\n    }\n  });\n}\n\nreturn results;"
       },
       "id": "ac217b53-32db-4ca4-9c52-3b8f48e8be51",
       "name": "Обработка ЦИАН",
@@ -129,7 +129,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Фильтруем данные и убираем пустые\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const data = item.json;\n  \n  // Пропускаем если нет URL\n  if (!data || !data.url) continue;\n  \n  results.push({\n    json: {\n      id: data.id || data.url,\n      title: data.title || 'Объявление',\n      price: data.price || 'Цена не указана',\n      address: data.address || 'Адрес не указан',\n      url: data.url,\n      image: data.image || null,\n      source: data.source || 'Неизвестно',\n      city: data.city || 'Благовещенск',\n      timestamp: data.timestamp || new Date().toISOString()\n    }\n  });\n}\n\nreturn results;"
+        "jsCode": "// Фильтруем данные и убираем пустые\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const data = item.json;\n  \n  // Пропускаем если нет URL\n  if (!data || !data.url) continue;\n  \n  results.push({\n    json: {\n      id: data.id || data.url,\n      title: data.title || 'Объявление',\n      price: data.price || 'Цена не указана',\n      address: data.address || 'Адрес не указан',\n      url: data.url,\n      source: data.source || 'Неизвестно',\n      city: data.city || 'Благовещенск',\n      timestamp: data.timestamp || new Date().toISOString()\n    }\n  });\n}\n\nreturn results;"
       },
       "id": "b3fcabb8-0da2-427f-b63b-e7947a8d8770",
       "name": "Фильтр данных",
@@ -181,13 +181,7 @@
             {
               "id": "message-field",
               "name": "message",
-              "value": "=🏠 <b>Новое предложение!</b>\n\n📍 {{ $json.address }}\n💰 {{ $json.price }}\n\n🔗 <a href=\"{{ $json.url }}\">Открыть объявление</a>\n\nИсточник: {{ $json.source }}",
-              "type": "string"
-            },
-            {
-              "id": "45166755-a0b4-456c-b407-a1cd676b442b",
-              "name": "image",
-              "value": "={{ $json.image }}",
+              "value": "=🏠 Новое предложение!\n\n📍 {{ $json.address }}\n💰 {{ $json.price }}\n\n🔗 Открыть объявление\n\nИсточник: {{ $json.source }}",
               "type": "string"
             },
             {
@@ -496,45 +490,19 @@
     },
     {
       "parameters": {
-        "operation": "sendPhoto",
-        "chatId": "7984101063",
-        "file": "={{ $json.image }}",
-        "additionalFields": {
-          "caption": "={{ $json.message }}",
-          "parse_mode": "HTML"
-        }
-      },
-      "id": "62255429-0913-4cda-8596-cef4c38bf9a4",
-      "name": "Telegram (С ФОТО)",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
-      "position": [
-        3344,
-        1104
-      ],
-      "webhookId": "14a330a2-0ae3-4c2a-9889-73a782ab2674",
-      "credentials": {
-        "telegramApi": {
-          "id": "USF1FBru0jYO1wky",
-          "name": "Telegram ЦИАН+АВИТО+ЯД"
-        }
-      }
-    },
-    {
-      "parameters": {
         "chatId": "7984101063",
         "text": "={{ $json.message }}\n\n{{ $json.url }}",
         "additionalFields": {
-          "parse_mode": "HTML"
+          "appendAttribution": false
         }
       },
       "id": "72ecd4ca-2482-4e59-96ba-b3379a131b1f",
-      "name": "Telegram (БЕЗ фото)",
+      "name": "Отправить в Telegram",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        3360,
-        1312
+        3136,
+        1104
       ],
       "webhookId": "14a330a2-0ae3-4c2a-9889-73a782ab2674",
       "credentials": {
@@ -543,40 +511,6 @@
           "name": "Telegram ЦИАН+АВИТО+ЯД"
         }
       }
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "20dee9f9-bb4b-4b1a-a910-b4dfe0bee1d4",
-              "leftValue": "={{ $json.image && $json.image.length > 0 && $json.image.startsWith('http') }}",
-              "rightValue": "",
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        3120,
-        1104
-      ],
-      "id": "0190305c-74e6-4572-b5d4-91e6ddfd9c0e",
-      "name": "Has Image?"
     }
   ],
   "pinData": {},
@@ -694,7 +628,7 @@
       "main": [
         [
           {
-            "node": "Has Image?",
+            "node": "Отправить в Telegram",
             "type": "main",
             "index": 0
           }
@@ -770,29 +704,6 @@
             "index": 0
           }
         ]
-      ]
-    },
-    "Has Image?": {
-      "main": [
-        [
-          {
-            "node": "Telegram (С ФОТО)",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Telegram (БЕЗ фото)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Telegram (С ФОТО)": {
-      "main": [
-        []
       ]
     }
   },
