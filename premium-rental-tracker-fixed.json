@@ -1,0 +1,320 @@
+{
+  "name": "Premium Rental Seeker Tracker - ИСПРАВЛЕНО",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"triggerAtHour": 9}]
+        }
+      },
+      "id": "b21eb4b2-0f0c-4538-a815-a608739c9e2b",
+      "name": "Schedule Scraping",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [-448, 48]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {"id": "id-1", "name": "minPrice", "value": 50000, "type": "number"},
+            {"id": "id-2", "name": "maxPrice", "value": 80000, "type": "number"},
+            {"id": "id-3", "name": "minSearchCount", "value": 3, "type": "number"},
+            {"id": "id-4", "name": "avitoApiKey", "value": "YOUR_APIFY_TOKEN", "type": "string"},
+            {"id": "id-5", "name": "cianApiKey", "value": "YOUR_APIFY_TOKEN", "type": "string"}
+          ]
+        },
+        "options": {}
+      },
+      "id": "26a4ee4a-f96b-4d78-a378-459f8b87c0fb",
+      "name": "Workflow Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-224, 96]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/D81KRIfXBnQ4hg8Bz/runs",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {"name": "token", "value": "={{ $('Workflow Configuration').item.json.avitoApiKey }}"},
+            {"name": "waitForFinish", "value": "300"}
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{"name": "Content-Type", "value": "application/json"}]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"startUrls\": [{\"url\": \"https://www.avito.ru/amurskaya_oblast_blagoveschensk/kvartiry/sdam/na_dlitelnyy_srok-ASgBAgICAkSSA8gQ8AeQUg\"}], \"maxItems\": 100}",
+        "options": {"timeout": 300000}
+      },
+      "id": "75c166fa-3f2d-466c-81cd-a583a1bfc13c",
+      "name": "Scrape Avito Profiles",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.apify.com/v2/datasets/{{ $json.data.defaultDatasetId }}/items?token={{ $('Workflow Configuration').item.json.avitoApiKey }}",
+        "options": {}
+      },
+      "id": "avito-results-node",
+      "name": "Get Avito Results",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [224, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/igolaizola~cian-ru-scraper/runs",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {"name": "token", "value": "={{ $('Workflow Configuration').item.json.cianApiKey }}"},
+            {"name": "waitForFinish", "value": "120"}
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{"name": "Content-Type", "value": "application/json"}]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"maxItems\": 100, \"location\": \"Благовещенск\", \"operationType\": \"rent\"}",
+        "options": {"timeout": 300000}
+      },
+      "id": "16a9e35a-8fef-43b2-9336-1ae66a70e401",
+      "name": "Scrape CIAN Profiles",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [0, 192]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.apify.com/v2/datasets/{{ $json.data.defaultDatasetId }}/items?token={{ $('Workflow Configuration').item.json.cianApiKey }}",
+        "options": {}
+      },
+      "id": "cian-results-node",
+      "name": "Get CIAN Results",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [224, 192]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const data = item.json;\n  if (!data || !data.url) continue;\n  \n  let cleanUrl = data.url.split('?')[0];\n  \n  let price = '';\n  if (data.price) {\n    if (typeof data.price === 'string') {\n      const nums = data.price.match(/\\d+/g);\n      if (nums) price = nums.join('');\n    } else if (typeof data.price === 'number') {\n      price = data.price.toString();\n    }\n  }\n  if (!price) price = '0';\n  \n  let address = data.address || data.location || '';\n  if (data.geo) address = data.geo.address || data.geo.formattedAddress || address;\n  if (!address) address = 'Благовещенск';\n  \n  results.push({\n    json: {\n      userId: data.userId || data.authorId || data.sellerId || 'unknown',\n      userName: data.userName || data.authorName || data.sellerName || 'Не указано',\n      price: parseInt(price) || 0,\n      searchDate: new Date().toISOString(),\n      platform: 'Avito',\n      profileUrl: cleanUrl,\n      phone: data.phone || data.phoneNumber || '',\n      email: data.email || '',\n      address: address\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "7880372d-a6aa-4cb7-97cd-3b614b43508a",
+      "name": "Transform Avito Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [448, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const data = item.json;\n  if (!data) continue;\n  \n  const cianId = data.cianId || data.id;\n  let url = data.siteUrl || data.url || (cianId ? 'https://www.cian.ru/rent/flat/' + cianId + '/' : '');\n  if (!url) continue;\n  url = url.split('?')[0];\n  \n  let address = data.formattedAddress || data.address || '';\n  if (data.geo) address = data.geo.address || data.geo.formattedAddress || address;\n  if (!address) address = 'Благовещенск';\n  \n  let price = 0;\n  if (data.formattedFullPrice) {\n    const nums = data.formattedFullPrice.match(/\\d+/g);\n    if (nums) price = parseInt(nums.join(''));\n  } else if (data.price) {\n    price = typeof data.price === 'number' ? data.price : parseInt(data.price) || 0;\n  } else if (data.bargainTerms && data.bargainTerms.price) {\n    price = data.bargainTerms.price;\n  }\n  \n  results.push({\n    json: {\n      userId: data.userId || data.authorId || data.ownerId || 'unknown',\n      userName: data.userName || data.authorName || data.ownerName || 'Не указано',\n      price: price,\n      searchDate: new Date().toISOString(),\n      platform: 'CIAN',\n      profileUrl: url,\n      phone: data.phone || data.phoneNumber || '',\n      email: data.email || '',\n      address: address\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "e9c1540c-0897-49ab-b91d-933f4d56ffaf",
+      "name": "Transform CIAN Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [448, 192]
+    },
+    {
+      "parameters": {},
+      "id": "e1ff7a84-b1b5-4d12-97cc-ae3ee4b5ff3a",
+      "name": "Merge Avito and CIAN Data",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [672, 96]
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {"fieldToAggregate": "userId"},
+            {"fieldToAggregate": "searchDate", "renameField": true, "outputFieldName": "searchCount"},
+            {"fieldToAggregate": "searchDate", "renameField": true, "outputFieldName": "firstSeen"},
+            {"fieldToAggregate": "searchDate", "renameField": true, "outputFieldName": "lastSeen"},
+            {"fieldToAggregate": "platform", "renameField": true, "outputFieldName": "platforms"},
+            {"fieldToAggregate": "price", "renameField": true, "outputFieldName": "avgPrice"},
+            {"fieldToAggregate": "userName"},
+            {"fieldToAggregate": "profileUrl"},
+            {"fieldToAggregate": "phone"},
+            {"fieldToAggregate": "email"},
+            {"fieldToAggregate": "address"}
+          ]
+        },
+        "options": {}
+      },
+      "id": "4dcb09ae-75ad-4186-b6e4-aaba91caed3f",
+      "name": "Track Search Duration",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [896, 96]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {"id": "id-1", "leftValue": "={{ $json.avgPrice }}", "rightValue": "={{ $('Workflow Configuration').item.json.minPrice }}", "operator": {"type": "number", "operation": "gte"}},
+            {"id": "id-2", "leftValue": "={{ $json.avgPrice }}", "rightValue": "={{ $('Workflow Configuration').item.json.maxPrice }}", "operator": {"type": "number", "operation": "lte"}},
+            {"id": "id-3", "leftValue": "={{ $json.searchCount }}", "rightValue": "={{ $('Workflow Configuration').item.json.minSearchCount }}", "operator": {"type": "number", "operation": "gte"}}
+          ]
+        },
+        "options": {}
+      },
+      "id": "98e3acad-5ab4-4247-b2c1-e09bbe348d47",
+      "name": "Filter by Price Range",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [1120, 96]
+    },
+    {
+      "parameters": {
+        "model": {"__rl": true, "mode": "id", "value": "gpt-4o-mini"},
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "b0337663-fa93-40b5-be02-6585d98caaac",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [1476, 528],
+      "credentials": {"openAiApi": {"id": "z2q1VGFI2x4sb43r", "name": "OpenAi 2026"}}
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n\t\t\"isQualified\": {\"type\": \"boolean\", \"description\": \"Whether this person is a qualified premium rental seeker\"},\n\t\t\"urgencyScore\": {\"type\": \"number\", \"description\": \"Urgency score from 1-10\"},\n\t\t\"recommendation\": {\"type\": \"string\", \"description\": \"Recommendation for outreach\"},\n\t\t\"keyInsights\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}, \"description\": \"Key insights\"}\n\t},\n\t\"required\": [\"isQualified\", \"urgencyScore\", \"recommendation\", \"keyInsights\"]\n}",
+        "autoFix": true
+      },
+      "id": "7ca5d524-0f5e-45a6-b807-8ed8b57af858",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [1544, 320]
+    },
+    {
+      "parameters": {},
+      "id": "d14c5891-070b-479c-b151-a00e6b4328cd",
+      "name": "Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [1416, 320]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze this rental seeker profile:\n\n- User: {{ $json.userName }}\n- Search Count: {{ $json.searchCount }}\n- First Seen: {{ $json.firstSeen }}\n- Last Seen: {{ $json.lastSeen }}\n- Average Price Range: {{ $json.avgPrice }} RUB/month\n- Platforms: {{ $json.platforms }}\n- Address: {{ $json.address }}\n- Contact: {{ $json.phone || 'N/A' }}, {{ $json.email || 'N/A' }}\n\nEvaluate based on:\n1. Search persistence\n2. Price range alignment (50-80k RUB/month)\n3. Cross-platform activity\n4. Search duration\n\nProvide qualification assessment with urgency score and outreach recommendations.",
+        "hasOutputParser": true,
+        "options": {"systemMessage": "You are an expert real estate analyst specializing in identifying qualified premium rental leads."}
+      },
+      "id": "d095dd00-29a8-4251-be27-915585f6e34d",
+      "name": "Analyze Rental Seekers",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [1344, 96]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": false, "leftValue": "", "typeValidation": "loose"},
+          "conditions": [
+            {"id": "id-1", "leftValue": "={{ $json.output.isQualified }}", "rightValue": true, "operator": {"type": "boolean", "operation": "equals"}},
+            {"id": "id-2", "leftValue": "={{ $json.output.urgencyScore }}", "rightValue": 6, "operator": {"type": "number", "operation": "gte"}}
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7c9efe89-8b47-42a0-b700-0b2e20bb38d8",
+      "name": "Route Qualified Leads",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [1912, 96]
+    },
+    {
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "id": "edcb1310-39be-4402-936a-dce2eb0fc5d9",
+      "name": "Telegram Bot Control",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [-448, 288],
+      "webhookId": "62de7fb3-f22c-454d-97d6-2a43ca52c4c5",
+      "credentials": {"telegramApi": {"id": "sBegr8MZX7eZ7dIX", "name": "ТГ НОВОСТИ"}}
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Bot Control').item.json.message.chat.id }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {"appendAttribution": false}
+      },
+      "id": "177f2981-39f2-4848-bcb6-70fe00a776bc",
+      "name": "Send Results to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2360, 96],
+      "credentials": {"telegramApi": {"id": "sBegr8MZX7eZ7dIX", "name": "ТГ НОВОСТИ"}}
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "Запущен поиск премиальных арендаторов. Результаты будут отправлены после анализа.",
+        "additionalFields": {"appendAttribution": false}
+      },
+      "id": "9ce45a99-97f3-4bb1-b7c6-c7749c02d98b",
+      "name": "Send Confirmation to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [-224, 336],
+      "credentials": {"telegramApi": {"id": "sBegr8MZX7eZ7dIX", "name": "ТГ НОВОСТИ"}}
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $('Analyze Rental Seekers').item.json;\nconst output = data.output || {};\n\nlet insights = '';\nif (output.keyInsights && Array.isArray(output.keyInsights)) {\n  insights = output.keyInsights.map((s, i) => (i + 1) + '. ' + s).join('\\n');\n}\n\nconst msg = 'Квалифицированный лид найден!\\n\\n' +\n  'Пользователь: ' + (data.userName || 'Не указано') + '\\n' +\n  'Оценка срочности: ' + (output.urgencyScore || 0) + '/10\\n' +\n  'Средняя цена: ' + (data.avgPrice || 0) + ' руб/мес\\n' +\n  'Количество поисков: ' + (data.searchCount || 0) + '\\n' +\n  'Адрес: ' + (data.address || 'Не указан') + '\\n' +\n  'Платформы: ' + (data.platforms || '') + '\\n\\n' +\n  'Контакты:\\n' +\n  'Телефон: ' + (data.phone || 'Не указан') + '\\n' +\n  'Email: ' + (data.email || 'Не указан') + '\\n\\n' +\n  'Рекомендация: ' + (output.recommendation || '') + '\\n\\n' +\n  'Ключевые инсайты:\\n' + insights + '\\n\\n' +\n  (data.profileUrl || '');\n\nreturn [{ json: { message: msg } }];"
+      },
+      "id": "439d6b03-585a-4915-911a-be6b84329eb1",
+      "name": "Format Telegram Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2136, 96]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Scraping": {"main": [[{"node": "Workflow Configuration", "type": "main", "index": 0}]]},
+    "Workflow Configuration": {"main": [[{"node": "Scrape Avito Profiles", "type": "main", "index": 0}, {"node": "Scrape CIAN Profiles", "type": "main", "index": 0}]]},
+    "Scrape Avito Profiles": {"main": [[{"node": "Get Avito Results", "type": "main", "index": 0}]]},
+    "Get Avito Results": {"main": [[{"node": "Transform Avito Data", "type": "main", "index": 0}]]},
+    "Scrape CIAN Profiles": {"main": [[{"node": "Get CIAN Results", "type": "main", "index": 0}]]},
+    "Get CIAN Results": {"main": [[{"node": "Transform CIAN Data", "type": "main", "index": 0}]]},
+    "Transform Avito Data": {"main": [[{"node": "Merge Avito and CIAN Data", "type": "main", "index": 0}]]},
+    "Transform CIAN Data": {"main": [[{"node": "Merge Avito and CIAN Data", "type": "main", "index": 1}]]},
+    "Merge Avito and CIAN Data": {"main": [[{"node": "Track Search Duration", "type": "main", "index": 0}]]},
+    "Track Search Duration": {"main": [[{"node": "Filter by Price Range", "type": "main", "index": 0}]]},
+    "Filter by Price Range": {"main": [[{"node": "Analyze Rental Seekers", "type": "main", "index": 0}]]},
+    "OpenAI Chat Model": {"ai_languageModel": [[{"node": "Analyze Rental Seekers", "type": "ai_languageModel", "index": 0}, {"node": "Structured Output Parser", "type": "ai_languageModel", "index": 0}]]},
+    "Structured Output Parser": {"ai_outputParser": [[{"node": "Analyze Rental Seekers", "type": "ai_outputParser", "index": 0}]]},
+    "Window Buffer Memory": {"ai_memory": [[{"node": "Analyze Rental Seekers", "type": "ai_memory", "index": 0}]]},
+    "Analyze Rental Seekers": {"main": [[{"node": "Route Qualified Leads", "type": "main", "index": 0}]]},
+    "Telegram Bot Control": {"main": [[{"node": "Workflow Configuration", "type": "main", "index": 0}, {"node": "Send Confirmation to Telegram", "type": "main", "index": 0}]]},
+    "Route Qualified Leads": {"main": [[{"node": "Format Telegram Message", "type": "main", "index": 0}]]},
+    "Format Telegram Message": {"main": [[{"node": "Send Results to Telegram", "type": "main", "index": 0}]]}
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "meta": {"templateCredsSetupCompleted": true},
+  "id": "9K8VjGuRCz53hpUw",
+  "tags": []
+}
