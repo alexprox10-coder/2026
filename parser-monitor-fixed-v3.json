@@ -28,7 +28,7 @@
         "url": "https://api.apify.com/v2/acts/D81KRIfXBnQ4hg8Bz/runs?token=YOUR_APIFY_TOKEN&waitForFinish=300",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "{\n  \"startUrls\": [\n    \"https://www.avito.ru/amurskaya_oblast_blagoveschensk/kvartiry/sdam/na_dlitelnyy_srok-ASgBAgICAkSSA8gQ8AeQUg\"\n  ],\n  \"limit\": 20,\n  \"proxyConfiguration\": {\n    \"useApifyProxy\": true,\n    \"apifyProxyGroups\": [\"RESIDENTIAL\"]\n  }\n}",
+        "jsonBody": "{\n  \"startUrls\": [\n    { \"url\": \"https://www.avito.ru/amurskaya_oblast_blagoveschensk/kvartiry/sdam/na_dlitelnyy_srok-ASgBAgICAkSSA8gQ8AeQUg\" }\n  ],\n  \"limit\": 20,\n  \"proxyConfiguration\": {\n    \"useApifyProxy\": true,\n    \"apifyProxyGroups\": [\"RESIDENTIAL\"]\n  }\n}",
         "options": {
           "timeout": 300000
         }
