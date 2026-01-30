@@ -1,0 +1,820 @@
+{
+  "name": "Парсер-Монитор Недвижимости - Авито + ЦИАН_V2.0",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "c2961590-7889-4ba1-92e7-43f2fc6ecb42",
+      "name": "Каждые 30 минут",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        58048,
+        17888
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/D81KRIfXBnQ4hg8Bz/runs?token=YOUR_APIFY_TOKEN&waitForFinish=600",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"startUrls\": [\n    {\n      \"url\": \"https://www.avito.ru/amurskaya_oblast_blagoveschensk/kvartiry/sdam/na_dlitelnyy_srok-ASgBAgICAkSSA8gQ8AeQUg\"\n    }\n  ],\n  \"limit\": 20,\n  \"proxyConfiguration\": {\n    \"useApifyProxy\": true,\n    \"apifyProxyGroups\": [\"RESIDENTIAL\"]\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 600000
+        }
+      },
+      "id": "40376b30-b4d0-4a16-a15f-bf764f495e69",
+      "name": "Запуск Авито",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        58464,
+        17552
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/CBn1BidHkyYcqYpPd/runs?token=YOUR_APIFY_TOKEN&waitForFinish=600",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"maxItems\": 20,\n  \"location\": \"Благовещенск\",\n  \"operationType\": \"rent\",\n  \"category\": \"\",\n  \"shortTermRent\": false,\n  \"includeStudio\": false,\n  \"withNeighbors\": false,\n  \"proxyConfiguration\": {\n    \"useApifyProxy\": true,\n    \"apifyProxyGroups\": [\"RESIDENTIAL\"]\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 600000
+        }
+      },
+      "id": "f5cadbd2-3876-4f4f-98d3-fb6feaa30cbf",
+      "name": "Запуск ЦИАН",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        58448,
+        17920
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.apify.com/v2/datasets/' + $json.data.defaultDatasetId + '/items?token=YOUR_APIFY_TOKEN' }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "0136965a-98ee-479d-b027-8178c99208fe",
+      "name": "Результаты Авито",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        58688,
+        17552
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.apify.com/v2/datasets/' + $json.data.defaultDatasetId + '/items?token=YOUR_APIFY_TOKEN' }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "f9c06e78-c510-46a5-901f-1d445745f342",
+      "name": "Результаты ЦИАН",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        58672,
+        17920
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const firstItem = $input.first();\nconst body = firstItem.json.body;\nconst results = [];\n\nif (!body || (Array.isArray(body) && body.length === 0)) {\n  return [{ json: { empty: true } }];\n}\n\nconst dataArray = Array.isArray(body) ? body : [body];\n\nfor (const listing of dataArray) {\n  if (!listing || typeof listing !== 'object') continue;\n  \n  const url = listing.sourceLink || listing.url || listing.link;\n  if (!url) continue;\n  \n  let price = '';\n  if (listing.priceText) {\n    price = listing.priceText;\n  } else if (listing.price) {\n    price = String(listing.price);\n  }\n  \n  let address = listing.location || listing.address || 'Благовещенск';\n  \n  results.push({\n    json: {\n      id: url,\n      title: listing.title || 'Квартира',\n      price: price,\n      address: address,\n      url: url,\n      source: 'Авито',\n      city: 'Благовещенск',\n      timestamp: new Date().toISOString()\n    }\n  });\n}\n\nreturn results.length > 0 ? results : [{ json: { empty: true } }];"
+      },
+      "id": "e1126c94-b067-4ffd-8eb0-53dc52483624",
+      "name": "Обработка Авито",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        58896,
+        17552
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  let data = item.json.body;\n  \n  if (!data || (Array.isArray(data) && data.length === 0)) continue;\n  \n  const dataArray = Array.isArray(data) ? data : [data];\n  \n  for (const listing of dataArray) {\n    if (!listing || typeof listing !== 'object') continue;\n    \n    const cianId = listing.cianId || listing.id;\n    let url = listing.fullUrl || listing.url || listing.siteUrl;\n    if (!url && cianId) {\n      url = 'https://www.cian.ru/rent/flat/' + cianId + '/';\n    }\n    if (!url) continue;\n    \n    let address = listing.formattedAddress || listing.address || listing.location || 'Благовещенск';\n    if (typeof address === 'object') {\n      address = address.formattedAddress || address.address || 'Благовещенск';\n    }\n    \n    let price = '';\n    if (listing.formattedFullPrice) {\n      price = listing.formattedFullPrice;\n    } else if (listing.bargainTerms && listing.bargainTerms.priceRur) {\n      price = String(listing.bargainTerms.priceRur);\n    } else if (listing.price) {\n      price = String(listing.price);\n    }\n    \n    results.push({\n      json: {\n        id: url,\n        title: listing.title || 'Квартира',\n        price: price,\n        address: address,\n        url: url,\n        source: 'ЦИАН',\n        city: 'Благовещенск',\n        timestamp: new Date().toISOString()\n      }\n    });\n  }\n}\n\nreturn results.length > 0 ? results : [{ json: { empty: true } }];"
+      },
+      "id": "56f866aa-e1e0-4769-997e-302af1cbcaf7",
+      "name": "Обработка ЦИАН",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        58896,
+        17920
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst validListings = [];\n\nfor (const item of items) {\n  const data = item.json;\n  if (data.empty === true) continue;\n  if (!data.url) continue;\n  validListings.push(item);\n}\n\nreturn validListings;"
+      },
+      "name": "Parse HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        59344,
+        17728
+      ],
+      "id": "a925373a-f938-49de-bd50-62b2dd775b30"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "check-url",
+              "leftValue": "={{ $json.url }}",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "IF Has New",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        59552,
+        17728
+      ],
+      "id": "8767e830-dfb9-4605-943e-6dded5458e6e"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1IptmHSeKMRMAWB8QzYfyj1vjSJ2Pa0ZdrMq--fMuCW8",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Объявления",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "price",
+              "displayName": "price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "address",
+              "displayName": "address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "city",
+              "displayName": "city",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "name": "Google Sheets Append",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        59888,
+        17584
+      ],
+      "id": "31e30623-bc03-4c63-a5ff-69ee72c5a0c7",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "i6jLoqevWyi5TP5S",
+          "name": "РАССЫЛКА КП +ПАРСЕР"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "name": "No New Offers",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        59904,
+        17872
+      ],
+      "id": "0830bcc3-832c-40a8-97e4-81e88dd0b20e"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-message-check",
+              "leftValue": "={{ $json.message }}",
+              "operator": {
+                "type": "object",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "332897e3-7ce8-43a2-a659-8317f6ee3cd6",
+      "name": "❓ Это message или callback?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        58224,
+        17440
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $json.callback_query.id }}",
+        "additionalFields": {
+          "text": "✅ Запускаю..."
+        }
+      },
+      "id": "dedca17d-4854-49ad-b5ed-f61351863c89",
+      "name": "✅ Answer Callback Query",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        58432,
+        17728
+      ],
+      "webhookId": "c75ed649-693d-464e-a82d-9b9106dcdd1b",
+      "credentials": {
+        "telegramApi": {
+          "id": "USF1FBru0jYO1wky",
+          "name": "Telegram ЦИАН+АВИТО+ЯД"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "id": "204cccb2-2598-494a-9d2d-a6fdd5bcb829",
+      "name": "📱 Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "position": [
+        58016,
+        17312
+      ],
+      "typeVersion": 1.1,
+      "webhookId": "telegram-bot-trigger",
+      "credentials": {
+        "telegramApi": {
+          "id": "USF1FBru0jYO1wky",
+          "name": "Telegram ЦИАН+АВИТО+ЯД"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message?.chat?.id || $json.callback_query?.message?.chat?.id }}",
+        "text": "Привет! Выбери, что хочешь сделать:",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🏢 Авито",
+                    "additionalFields": {
+                      "callback_data": "avito"
+                    }
+                  },
+                  {
+                    "text": "🏠 ЦИАН",
+                    "additionalFields": {
+                      "callback_data": "cian"
+                    }
+                  },
+                  {
+                    "text": "🚀 Оба сайта",
+                    "additionalFields": {
+                      "callback_data": "both"
+                    }
+                  },
+                  {
+                    "text": "📄 Таблица",
+                    "additionalFields": {
+                      "callback_data": "table"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        58400,
+        17312
+      ],
+      "id": "f3f6f6bb-a80d-4fb9-8a39-e7c519c026bf",
+      "name": "Send a text message",
+      "webhookId": "be476606-c0b4-4b07-9abf-5064245f83df",
+      "credentials": {
+        "telegramApi": {
+          "id": "USF1FBru0jYO1wky",
+          "name": "Telegram ЦИАН+АВИТО+ЯД"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "avito",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "fc0749b2-158b-4063-8bb3-01b362ef5219"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Avito"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "bbd60b18-c56b-434a-932d-3949461a9459",
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "cian",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "CIAN"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "72d833a4-cd28-4be4-96e0-01c0ba2fc162",
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "both",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Both"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9384a626-e995-42d2-a8dd-11916815dc45",
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "table",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Table"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        58096,
+        17616
+      ],
+      "id": "e9a94818-ea3c-47a2-89b9-4b45161a1a44",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query?.message?.chat?.id }}",
+        "text": "📊 *Ваша таблица с объявлениями:*\n\n🔗 [Открыть Google Sheets](https://docs.google.com/spreadsheets/d/1IptmHSeKMRMAWB8QzYfyj1vjSJ2Pa0ZdrMq--fMuCW8/edit?usp=drivesdk)\n\nВ этой таблице сохраняются все найденные объявления с Авито и ЦИАН.",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "74fab2cc-883a-4d16-a1b0-9ff27103e3ae",
+      "name": "📄 Отправить ссылку на таблицу",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        58256,
+        18032
+      ],
+      "webhookId": "b6fd4897-e4e4-4e03-8dc4-c5f7390dfd70",
+      "credentials": {
+        "telegramApi": {
+          "id": "USF1FBru0jYO1wky",
+          "name": "Telegram ЦИАН+АВИТО+ЯД"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "7984101063",
+        "text": "=🏠 Новое предложение!\n\n📍 {{ $json.address }}\n💰 {{ $json.price }}\n🔗 Открыть объявление\n\nИсточник: {{ $json.source }}\n\n{{ $json.url }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": false
+        }
+      },
+      "id": "b71034ca-11a7-443d-94fc-c611731d23f9",
+      "name": "Telegram (с превью)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        60112,
+        17712
+      ],
+      "webhookId": "d9976bbb-8555-4097-a548-c402d11861a0",
+      "credentials": {
+        "telegramApi": {
+          "id": "USF1FBru0jYO1wky",
+          "name": "Telegram ЦИАН+АВИТО+ЯД"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Каждые 30 минут": {
+      "main": [
+        [
+          {
+            "node": "Запуск Авито",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Запуск ЦИАН",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Запуск Авито": {
+      "main": [
+        [
+          {
+            "node": "Результаты Авито",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Запуск ЦИАН": {
+      "main": [
+        [
+          {
+            "node": "Результаты ЦИАН",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Результаты Авито": {
+      "main": [
+        [
+          {
+            "node": "Обработка Авито",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Результаты ЦИАН": {
+      "main": [
+        [
+          {
+            "node": "Обработка ЦИАН",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Обработка Авито": {
+      "main": [
+        [
+          {
+            "node": "Parse HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Обработка ЦИАН": {
+      "main": [
+        [
+          {
+            "node": "Parse HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse HTML": {
+      "main": [
+        [
+          {
+            "node": "IF Has New",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Has New": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets Append",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram (с превью)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No New Offers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📱 Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "❓ Это message или callback?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Это message или callback?": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "✅ Answer Callback Query",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Запуск Авито",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Запуск ЦИАН",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Запуск Авито",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Запуск ЦИАН",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📄 Отправить ссылку на таблицу",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "0ac1b585-964e-4891-a762-6300361efc3d",
+  "meta": {
+    "instanceId": "765204dad1252b83f02cda2aef408fe630b40079715ac6587529a3064b7e68c7"
+  },
+  "id": "L0Xf8CLdEkSEbqZP",
+  "tags": []
+}
