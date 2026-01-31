@@ -1,0 +1,419 @@
+{
+  "name": "Авито Парсер - Telegram Бот",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message", "callback_query"],
+        "additionalFields": {}
+      },
+      "id": "telegram-trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "position": [250, 300],
+      "typeVersion": 1.1,
+      "credentials": {
+        "telegramApi": {
+          "id": "USF1FBru0jYO1wky",
+          "name": "Telegram ЦИАН+АВИТО+ЯД"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-message",
+              "leftValue": "={{ $json.message }}",
+              "operator": {
+                "type": "object",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-message-type",
+      "name": "Это сообщение?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message?.chat?.id || $json.callback_query?.message?.chat?.id }}",
+        "text": "🏠 Привет! Выбери действие:",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🔍 Запустить Авито",
+                    "additionalFields": {
+                      "callback_data": "start_avito"
+                    }
+                  },
+                  {
+                    "text": "📊 Таблица",
+                    "additionalFields": {
+                      "callback_data": "show_table"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "send-menu",
+      "name": "Отправить меню",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [650, 200],
+      "credentials": {
+        "telegramApi": {
+          "id": "USF1FBru0jYO1wky",
+          "name": "Telegram ЦИАН+АВИТО+ЯД"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "start_avito",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Авито"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "show_table",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Таблица"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "switch-action",
+      "name": "Выбор действия",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [650, 400]
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $json.callback_query.id }}",
+        "additionalFields": {
+          "text": "⏳ Запускаю парсер Авито..."
+        }
+      },
+      "id": "answer-callback",
+      "name": "Ответ на кнопку",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [850, 350],
+      "credentials": {
+        "telegramApi": {
+          "id": "USF1FBru0jYO1wky",
+          "name": "Telegram ЦИАН+АВИТО+ЯД"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/D81KRIfXBnQ4hg8Bz/runs?token=YOUR_APIFY_TOKEN&waitForFinish=600",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"startUrls\": [\n    {\n      \"url\": \"https://www.avito.ru/amurskaya_oblast_blagoveschensk/kvartiry/sdam/na_dlitelnyy_srok-ASgBAgICAkSSA8gQ8AeQUg\"\n    }\n  ],\n  \"limit\": 20,\n  \"proxyConfiguration\": {\n    \"useApifyProxy\": true,\n    \"apifyProxyGroups\": [\"RESIDENTIAL\"]\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 600000
+        }
+      },
+      "id": "run-avito",
+      "name": "Запуск Авито парсера",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1050, 350]
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.apify.com/v2/datasets/' + $json.data.defaultDatasetId + '/items?token=YOUR_APIFY_TOKEN' }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "get-results",
+      "name": "Получить результаты",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1250, 350]
+    },
+    {
+      "parameters": {
+        "jsCode": "const firstItem = $input.first();\nconst body = firstItem.json.body;\nconst results = [];\n\nif (!body || (Array.isArray(body) && body.length === 0)) {\n  return [{ json: { empty: true } }];\n}\n\nconst dataArray = Array.isArray(body) ? body : [body];\n\nfor (const listing of dataArray) {\n  if (!listing || typeof listing !== 'object') continue;\n  \n  const url = listing.sourceLink || listing.url || listing.link;\n  if (!url) continue;\n  \n  let price = '';\n  if (listing.priceText) {\n    price = listing.priceText;\n  } else if (listing.price) {\n    price = String(listing.price) + ' ₽';\n  }\n  \n  let address = listing.location || listing.address || 'Благовещенск';\n  \n  results.push({\n    json: {\n      id: url,\n      title: listing.title || 'Квартира',\n      price: price,\n      address: address,\n      url: url,\n      source: 'Авито',\n      timestamp: new Date().toISOString()\n    }\n  });\n}\n\nreturn results.length > 0 ? results : [{ json: { empty: true } }];"
+      },
+      "id": "process-avito",
+      "name": "Обработка данных",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1450, 350]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "has-url",
+              "leftValue": "={{ $json.url }}",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filter-valid",
+      "name": "Есть URL?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1650, 350]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot7906817029:AAHlqi5MKQ0pNlAcTPLpUP0np_xfC3zWxSM/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"7984101063\",\n  \"text\": \"🏠 Новое предложение!\\n\\n📍 {{ $json.address }}\\n💰 {{ $json.price }}\\n🔗 Открыть объявление\\n\\nИсточник: Авито\\n\\n{{ $json.url }}\",\n  \"link_preview_options\": {\n    \"is_disabled\": false,\n    \"prefer_large_media\": true,\n    \"show_above_text\": false\n  }\n}",
+        "options": {}
+      },
+      "id": "send-telegram",
+      "name": "Отправить в Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1850, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query?.message?.chat?.id }}",
+        "text": "📊 Ваша таблица:\n\nhttps://docs.google.com/spreadsheets/d/1IptmHSeKMRMAWB8QzYfyj1vjSJ2Pa0ZdrMq--fMuCW8/edit",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "send-table-link",
+      "name": "Ссылка на таблицу",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [850, 500],
+      "credentials": {
+        "telegramApi": {
+          "id": "USF1FBru0jYO1wky",
+          "name": "Telegram ЦИАН+АВИТО+ЯД"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "no-results",
+      "name": "Нет результатов",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1850, 450]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Это сообщение?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Это сообщение?": {
+      "main": [
+        [
+          {
+            "node": "Отправить меню",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Выбор действия",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Выбор действия": {
+      "main": [
+        [
+          {
+            "node": "Ответ на кнопку",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ссылка на таблицу",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ответ на кнопку": {
+      "main": [
+        [
+          {
+            "node": "Запуск Авито парсера",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Запуск Авито парсера": {
+      "main": [
+        [
+          {
+            "node": "Получить результаты",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Получить результаты": {
+      "main": [
+        [
+          {
+            "node": "Обработка данных",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Обработка данных": {
+      "main": [
+        [
+          {
+            "node": "Есть URL?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Есть URL?": {
+      "main": [
+        [
+          {
+            "node": "Отправить в Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Нет результатов",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "avito-bot-v1",
+  "meta": {
+    "instanceId": "avito-telegram-bot"
+  },
+  "id": "avito-bot-new",
+  "tags": []
+}
