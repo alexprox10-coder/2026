@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Личный кабинет — Parser SaaS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+<body class="dashboard-body">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="../index.html" class="logo">
+                <span class="logo-icon">◈</span>
+                <span class="logo-text">Parser<span class="logo-highlight">SaaS</span></span>
+            </a>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" data-page="dashboard">
+                <i class="fas fa-home"></i>
+                <span>Дашборд</span>
+            </a>
+            <a href="#" class="nav-item" data-page="parser">
+                <i class="fas fa-search"></i>
+                <span>Парсинг</span>
+            </a>
+            <a href="#" class="nav-item" data-page="results">
+                <i class="fas fa-database"></i>
+                <span>Результаты</span>
+            </a>
+            <a href="#" class="nav-item" data-page="export">
+                <i class="fas fa-download"></i>
+                <span>Экспорт</span>
+            </a>
+            <a href="#" class="nav-item" data-page="integrations">
+                <i class="fas fa-plug"></i>
+                <span>Интеграции</span>
+            </a>
+            <a href="#" class="nav-item" data-page="settings">
+                <i class="fas fa-cog"></i>
+                <span>Настройки</span>
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="plan-info">
+                <span class="plan-badge">Free</span>
+                <span class="plan-usage">47/100 объявлений</span>
+            </div>
+            <a href="#" class="upgrade-btn">
+                <i class="fas fa-arrow-up"></i>
+                Улучшить план
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <button class="menu-toggle" id="menuToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="header-search">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Поиск...">
+            </div>
+            <div class="header-actions">
+                <button class="header-btn notification-btn">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge">3</span>
+                </button>
+                <div class="user-menu">
+                    <div class="user-avatar">ИП</div>
+                    <div class="user-info">
+                        <span class="user-name">Иван Петров</span>
+                        <span class="user-email">ivan@example.com</span>
+                    </div>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- Page: Dashboard -->
+        <div class="page active" id="page-dashboard">
+            <div class="page-header">
+                <h1>Добро пожаловать, Иван!</h1>
+                <p>Вот обзор вашей активности за сегодня</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card glass">
+                    <div class="stat-icon" style="background: var(--gradient-green);">
+                        <i class="fas fa-list"></i>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-value">1,247</span>
+                        <span class="stat-label">Всего объявлений</span>
+                    </div>
+                    <span class="stat-change positive">+12%</span>
+                </div>
+                <div class="stat-card glass">
+                    <div class="stat-icon" style="background: var(--gradient-indigo);">
+                        <i class="fas fa-sync"></i>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-value">23</span>
+                        <span class="stat-label">Запусков сегодня</span>
+                    </div>
+                    <span class="stat-change positive">+5</span>
+                </div>
+                <div class="stat-card glass">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-value">47</span>
+                        <span class="stat-label">Уведомлений</span>
+                    </div>
+                    <span class="stat-change">Сегодня</span>
+                </div>
+                <div class="stat-card glass">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-value">53/100</span>
+                        <span class="stat-label">Лимит на день</span>
+                    </div>
+                    <span class="stat-change">Осталось</span>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="recent-activity glass">
+                    <div class="card-header">
+                        <h3>Последние объявления</h3>
+                        <a href="#" class="view-all">Смотреть все</a>
+                    </div>
+                    <div class="activity-list">
+                        <div class="activity-item">
+                            <div class="activity-img" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+                            <div class="activity-info">
+                                <span class="activity-title">2-к квартира, 54 м², 7/9 эт.</span>
+                                <span class="activity-meta">Avito • Москва • 5 мин назад</span>
+                            </div>
+                            <span class="activity-price">45 000 ₽</span>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-img" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"></div>
+                            <div class="activity-info">
+                                <span class="activity-title">1-к квартира, 38 м², 3/12 эт.</span>
+                                <span class="activity-meta">ЦИАН • СПб • 12 мин назад</span>
+                            </div>
+                            <span class="activity-price">32 000 ₽</span>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-img" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);"></div>
+                            <div class="activity-info">
+                                <span class="activity-title">3-к квартира, 78 м², 5/16 эт.</span>
+                                <span class="activity-meta">Avito • Казань • 18 мин назад</span>
+                            </div>
+                            <span class="activity-price">65 000 ₽</span>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-img" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);"></div>
+                            <div class="activity-info">
+                                <span class="activity-title">Студия, 25 м², 2/5 эт.</span>
+                                <span class="activity-meta">ЦИАН • Новосибирск • 24 мин назад</span>
+                            </div>
+                            <span class="activity-price">22 000 ₽</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quick-actions glass">
+                    <div class="card-header">
+                        <h3>Быстрые действия</h3>
+                    </div>
+                    <div class="actions-grid">
+                        <button class="action-btn" onclick="showPage('parser')">
+                            <i class="fas fa-play"></i>
+                            <span>Новый парсинг</span>
+                        </button>
+                        <button class="action-btn" onclick="showPage('export')">
+                            <i class="fas fa-file-excel"></i>
+                            <span>Экспорт Excel</span>
+                        </button>
+                        <button class="action-btn" onclick="showPage('integrations')">
+                            <i class="fab fa-telegram"></i>
+                            <span>Telegram</span>
+                        </button>
+                        <button class="action-btn" onclick="showPage('settings')">
+                            <i class="fas fa-cog"></i>
+                            <span>Настройки</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page: Parser -->
+        <div class="page" id="page-parser">
+            <div class="page-header">
+                <h1>Запустить парсинг</h1>
+                <p>Настройте параметры и запустите сбор объявлений</p>
+            </div>
+
+            <div class="parser-container">
+                <div class="parser-form glass">
+                    <h3>Параметры парсинга</h3>
+
+                    <div class="form-section">
+                        <label class="form-label">Источник</label>
+                        <div class="source-selector">
+                            <label class="source-option">
+                                <input type="checkbox" name="source" value="avito" checked>
+                                <span class="source-card">
+                                    <img src="https://www.avito.ru/favicon.ico" alt="Avito" onerror="this.style.display='none'">
+                                    <span>Avito</span>
+                                </span>
+                            </label>
+                            <label class="source-option">
+                                <input type="checkbox" name="source" value="cian" checked>
+                                <span class="source-card">
+                                    <img src="https://www.cian.ru/favicon.ico" alt="ЦИАН" onerror="this.style.display='none'">
+                                    <span>ЦИАН</span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <label class="form-label">Город</label>
+                        <select class="form-select" id="citySelect">
+                            <option value="moscow">Москва</option>
+                            <option value="spb">Санкт-Петербург</option>
+                            <option value="kazan">Казань</option>
+                            <option value="novosibirsk">Новосибирск</option>
+                            <option value="ekb">Екатеринбург</option>
+                            <option value="krasnodar">Краснодар</option>
+                            <option value="nizhny">Нижний Новгород</option>
+                            <option value="blagoveshchensk">Благовещенск</option>
+                        </select>
+                    </div>
+
+                    <div class="form-section">
+                        <label class="form-label">Категория</label>
+                        <select class="form-select" id="categorySelect">
+                            <option value="rent">Аренда квартир</option>
+                            <option value="sale">Продажа квартир</option>
+                            <option value="rooms">Комнаты</option>
+                            <option value="houses">Дома, дачи</option>
+                            <option value="commercial">Коммерческая недвижимость</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-section">
+                            <label class="form-label">Цена от</label>
+                            <input type="number" class="form-input" placeholder="0" id="priceFrom">
+                        </div>
+                        <div class="form-section">
+                            <label class="form-label">Цена до</label>
+                            <input type="number" class="form-input" placeholder="999999" id="priceTo">
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <label class="form-label">Количество объявлений</label>
+                        <input type="range" class="form-range" min="10" max="100" value="20" id="limitRange">
+                        <div class="range-labels">
+                            <span>10</span>
+                            <span id="limitValue">20</span>
+                            <span>100</span>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <label class="form-label">Ключевые слова (опционально)</label>
+                        <input type="text" class="form-input" placeholder="студия, евроремонт, центр" id="keywords">
+                    </div>
+
+                    <button class="btn btn-primary btn-lg btn-block" id="startParsingBtn">
+                        <i class="fas fa-play"></i>
+                        Запустить парсинг
+                    </button>
+                </div>
+
+                <div class="parser-status glass">
+                    <h3>Статус парсинга</h3>
+                    <div class="status-content" id="parserStatus">
+                        <div class="status-idle">
+                            <i class="fas fa-pause-circle"></i>
+                            <span>Парсинг не запущен</span>
+                            <p>Настройте параметры и нажмите "Запустить"</p>
+                        </div>
+                    </div>
+                    <div class="status-log" id="statusLog">
+                        <div class="log-entry info">
+                            <span class="log-time">10:24:15</span>
+                            <span class="log-text">Система готова к работе</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page: Results -->
+        <div class="page" id="page-results">
+            <div class="page-header">
+                <h1>Результаты парсинга</h1>
+                <p>Все собранные объявления</p>
+            </div>
+
+            <div class="results-toolbar glass">
+                <div class="toolbar-left">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Поиск по объявлениям...">
+                    </div>
+                    <select class="form-select small">
+                        <option>Все источники</option>
+                        <option>Avito</option>
+                        <option>ЦИАН</option>
+                    </select>
+                    <select class="form-select small">
+                        <option>Все города</option>
+                        <option>Москва</option>
+                        <option>СПб</option>
+                    </select>
+                </div>
+                <div class="toolbar-right">
+                    <button class="btn btn-outline btn-sm">
+                        <i class="fas fa-filter"></i>
+                        Фильтры
+                    </button>
+                    <button class="btn btn-primary btn-sm" onclick="showPage('export')">
+                        <i class="fas fa-download"></i>
+                        Экспорт
+                    </button>
+                </div>
+            </div>
+
+            <div class="results-table glass">
+                <table>
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="selectAll"></th>
+                            <th>Фото</th>
+                            <th>Заголовок</th>
+                            <th>Цена</th>
+                            <th>Город</th>
+                            <th>Источник</th>
+                            <th>Дата</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTableBody">
+                        <!-- Results will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="results-pagination">
+                <span>Показано 1-20 из 1,247</span>
+                <div class="pagination-controls">
+                    <button class="btn btn-ghost btn-sm"><i class="fas fa-chevron-left"></i></button>
+                    <button class="btn btn-sm active">1</button>
+                    <button class="btn btn-ghost btn-sm">2</button>
+                    <button class="btn btn-ghost btn-sm">3</button>
+                    <span>...</span>
+                    <button class="btn btn-ghost btn-sm">63</button>
+                    <button class="btn btn-ghost btn-sm"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page: Export -->
+        <div class="page" id="page-export">
+            <div class="page-header">
+                <h1>Экспорт данных</h1>
+                <p>Выгрузите данные в удобном формате</p>
+            </div>
+
+            <div class="export-grid">
+                <div class="export-card glass">
+                    <div class="export-icon">
+                        <i class="fas fa-file-excel"></i>
+                    </div>
+                    <h3>Excel (.xlsx)</h3>
+                    <p>Скачайте данные в формате Excel для работы в таблицах</p>
+                    <button class="btn btn-primary btn-block" onclick="exportData('excel')">
+                        <i class="fas fa-download"></i>
+                        Скачать Excel
+                    </button>
+                </div>
+
+                <div class="export-card glass">
+                    <div class="export-icon">
+                        <i class="fas fa-file-csv"></i>
+                    </div>
+                    <h3>CSV</h3>
+                    <p>Универсальный формат для импорта в любые системы</p>
+                    <button class="btn btn-outline btn-block" onclick="exportData('csv')">
+                        <i class="fas fa-download"></i>
+                        Скачать CSV
+                    </button>
+                </div>
+
+                <div class="export-card glass">
+                    <div class="export-icon" style="color: #0F9D58;">
+                        <i class="fab fa-google"></i>
+                    </div>
+                    <h3>Google Sheets</h3>
+                    <p>Автоматическая выгрузка в вашу Google таблицу</p>
+                    <button class="btn btn-outline btn-block" onclick="connectGoogleSheets()">
+                        <i class="fas fa-link"></i>
+                        Подключить
+                    </button>
+                </div>
+
+                <div class="export-card glass">
+                    <div class="export-icon" style="color: #0088cc;">
+                        <i class="fab fa-telegram"></i>
+                    </div>
+                    <h3>Telegram</h3>
+                    <p>Получайте новые объявления прямо в Telegram</p>
+                    <button class="btn btn-outline btn-block" onclick="showPage('integrations')">
+                        <i class="fas fa-cog"></i>
+                        Настроить
+                    </button>
+                </div>
+
+                <div class="export-card glass">
+                    <div class="export-icon" style="color: #EA4335;">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <h3>Email</h3>
+                    <p>Отчёты на почту по расписанию</p>
+                    <button class="btn btn-outline btn-block" onclick="configureEmail()">
+                        <i class="fas fa-cog"></i>
+                        Настроить
+                    </button>
+                </div>
+
+                <div class="export-card glass">
+                    <div class="export-icon" style="color: #6366f1;">
+                        <i class="fas fa-code"></i>
+                    </div>
+                    <h3>API / Webhook</h3>
+                    <p>Интеграция с вашими системами через API</p>
+                    <button class="btn btn-outline btn-block" disabled>
+                        <i class="fas fa-lock"></i>
+                        Pro план
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page: Integrations -->
+        <div class="page" id="page-integrations">
+            <div class="page-header">
+                <h1>Интеграции</h1>
+                <p>Подключите внешние сервисы для автоматизации</p>
+            </div>
+
+            <div class="integrations-grid">
+                <div class="integration-card glass">
+                    <div class="integration-header">
+                        <div class="integration-icon telegram">
+                            <i class="fab fa-telegram"></i>
+                        </div>
+                        <div class="integration-status connected">
+                            <i class="fas fa-check-circle"></i>
+                            Подключено
+                        </div>
+                    </div>
+                    <h3>Telegram Bot</h3>
+                    <p>Получайте уведомления о новых объявлениях</p>
+                    <div class="integration-config">
+                        <div class="config-item">
+                            <span>Chat ID:</span>
+                            <code>7984101063</code>
+                        </div>
+                        <div class="config-item">
+                            <span>Bot:</span>
+                            <code>@CIAN_MONITOR24_bot</code>
+                        </div>
+                    </div>
+                    <div class="integration-actions">
+                        <button class="btn btn-outline btn-sm">Тест</button>
+                        <button class="btn btn-ghost btn-sm">Отключить</button>
+                    </div>
+                </div>
+
+                <div class="integration-card glass">
+                    <div class="integration-header">
+                        <div class="integration-icon google">
+                            <i class="fab fa-google"></i>
+                        </div>
+                        <div class="integration-status">
+                            <i class="fas fa-circle"></i>
+                            Не подключено
+                        </div>
+                    </div>
+                    <h3>Google Sheets</h3>
+                    <p>Автоматическая выгрузка в Google таблицы</p>
+                    <button class="btn btn-primary btn-block">
+                        <i class="fas fa-plus"></i>
+                        Подключить
+                    </button>
+                </div>
+
+                <div class="integration-card glass">
+                    <div class="integration-header">
+                        <div class="integration-icon email">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <div class="integration-status">
+                            <i class="fas fa-circle"></i>
+                            Не подключено
+                        </div>
+                    </div>
+                    <h3>Email уведомления</h3>
+                    <p>Отчёты и уведомления на почту</p>
+                    <button class="btn btn-primary btn-block" id="configureEmailBtn">
+                        <i class="fas fa-plus"></i>
+                        Настроить
+                    </button>
+                </div>
+
+                <div class="integration-card glass disabled">
+                    <div class="integration-header">
+                        <div class="integration-icon amocrm">
+                            <span>amo</span>
+                        </div>
+                        <span class="pro-badge">Pro</span>
+                    </div>
+                    <h3>amoCRM</h3>
+                    <p>Автоматическое создание сделок</p>
+                    <button class="btn btn-outline btn-block" disabled>
+                        <i class="fas fa-lock"></i>
+                        Требуется Pro
+                    </button>
+                </div>
+
+                <div class="integration-card glass disabled">
+                    <div class="integration-header">
+                        <div class="integration-icon bitrix">
+                            <i class="fas fa-b"></i>
+                        </div>
+                        <span class="pro-badge">Pro</span>
+                    </div>
+                    <h3>Bitrix24</h3>
+                    <p>Интеграция с Bitrix24 CRM</p>
+                    <button class="btn btn-outline btn-block" disabled>
+                        <i class="fas fa-lock"></i>
+                        Требуется Pro
+                    </button>
+                </div>
+
+                <div class="integration-card glass disabled">
+                    <div class="integration-header">
+                        <div class="integration-icon webhook">
+                            <i class="fas fa-code"></i>
+                        </div>
+                        <span class="pro-badge">Pro</span>
+                    </div>
+                    <h3>Webhook</h3>
+                    <p>Отправка данных на ваш сервер</p>
+                    <button class="btn btn-outline btn-block" disabled>
+                        <i class="fas fa-lock"></i>
+                        Требуется Pro
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page: Settings -->
+        <div class="page" id="page-settings">
+            <div class="page-header">
+                <h1>Настройки</h1>
+                <p>Управление аккаунтом и уведомлениями</p>
+            </div>
+
+            <div class="settings-grid">
+                <div class="settings-section glass">
+                    <h3>Профиль</h3>
+                    <div class="form-group">
+                        <label class="form-label">Имя</label>
+                        <input type="text" class="form-input" value="Иван Петров">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" value="ivan@example.com">
+                    </div>
+                    <button class="btn btn-primary">Сохранить</button>
+                </div>
+
+                <div class="settings-section glass">
+                    <h3>Уведомления</h3>
+                    <div class="toggle-setting">
+                        <div class="toggle-info">
+                            <span>Email уведомления</span>
+                            <p>Получать отчёты на почту</p>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="toggle-setting">
+                        <div class="toggle-info">
+                            <span>Telegram уведомления</span>
+                            <p>Новые объявления в бот</p>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="toggle-setting">
+                        <div class="toggle-info">
+                            <span>Звуковые уведомления</span>
+                            <p>Звук при новых данных</p>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="settings-section glass">
+                    <h3>Тарифный план</h3>
+                    <div class="current-plan">
+                        <div class="plan-header">
+                            <span class="plan-name">Free</span>
+                            <span class="plan-price">0 ₽/мес</span>
+                        </div>
+                        <ul class="plan-features">
+                            <li><i class="fas fa-check"></i> 100 объявлений/день</li>
+                            <li><i class="fas fa-check"></i> 1 город</li>
+                            <li><i class="fas fa-check"></i> Excel экспорт</li>
+                            <li><i class="fas fa-times"></i> API доступ</li>
+                        </ul>
+                    </div>
+                    <a href="../index.html#pricing" class="btn btn-primary btn-block">
+                        <i class="fas fa-arrow-up"></i>
+                        Улучшить план
+                    </a>
+                </div>
+
+                <div class="settings-section glass danger">
+                    <h3>Опасная зона</h3>
+                    <p>Необратимые действия с аккаунтом</p>
+                    <button class="btn btn-outline danger">
+                        <i class="fas fa-trash"></i>
+                        Удалить аккаунт
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modals -->
+    <div class="modal" id="emailModal">
+        <div class="modal-content glass">
+            <div class="modal-header">
+                <h3>Настройка Email уведомлений</h3>
+                <button class="modal-close" onclick="closeModal('emailModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Email для уведомлений</label>
+                    <input type="email" class="form-input" placeholder="your@email.com" id="notificationEmail">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Частота отчётов</label>
+                    <select class="form-select" id="emailFrequency">
+                        <option value="realtime">Мгновенно (каждое объявление)</option>
+                        <option value="hourly">Каждый час</option>
+                        <option value="daily">Ежедневно</option>
+                        <option value="weekly">Еженедельно</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeModal('emailModal')">Отмена</button>
+                <button class="btn btn-primary" onclick="saveEmailSettings()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>
