@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avito-Cian Parser SaaS — Парсинг объявлений в один клик</title>
+    <meta name="description" content="Автоматический парсинг Avito и ЦИАН. Тысячи объявлений за минуты без блокировок. Экспорт в Telegram, CRM, Excel.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="container nav-container">
+            <a href="/" class="logo">
+                <span class="logo-icon">◈</span>
+                <span class="logo-text">Parser<span class="logo-highlight">SaaS</span></span>
+            </a>
+            <div class="nav-links" id="navLinks">
+                <a href="#features">Преимущества</a>
+                <a href="#how-it-works">Как работает</a>
+                <a href="#pricing">Тарифы</a>
+                <a href="#reviews">Отзывы</a>
+                <a href="#faq">FAQ</a>
+            </div>
+            <div class="nav-actions">
+                <a href="dashboard/login.html" class="btn btn-ghost">Войти</a>
+                <a href="dashboard/register.html" class="btn btn-primary">Начать бесплатно</a>
+            </div>
+            <button class="mobile-menu-btn" id="mobileMenuBtn">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="hero">
+        <div class="hero-bg">
+            <div class="hero-gradient"></div>
+            <div class="hero-grid"></div>
+        </div>
+        <div class="container hero-container">
+            <div class="hero-content" data-aos="fade-up">
+                <div class="hero-badge">
+                    <span class="badge-dot"></span>
+                    Новинка 2026 — ИИ-анализ объявлений
+                </div>
+                <h1 class="hero-title">
+                    Парсинг <span class="gradient-text">Avito</span> и <span class="gradient-text">ЦИАН</span> в один клик — тысячи объявлений за минуты
+                </h1>
+                <p class="hero-subtitle">
+                    Без блокировок, мгновенный запуск, данные приходят в Telegram, CRM, Excel или Google Sheets. <strong>Бесплатный тариф навсегда.</strong>
+                </p>
+                <div class="hero-cta">
+                    <a href="dashboard/register.html" class="btn btn-primary btn-lg">
+                        <i class="fas fa-rocket"></i>
+                        Начать бесплатно
+                    </a>
+                    <a href="#demo" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-play"></i>
+                        Смотреть демо
+                    </a>
+                </div>
+                <div class="hero-trust">
+                    <div class="trust-item">
+                        <i class="fab fa-telegram"></i>
+                        <span>Telegram</span>
+                    </div>
+                    <div class="trust-item">
+                        <i class="fas fa-file-excel"></i>
+                        <span>Excel</span>
+                    </div>
+                    <div class="trust-item">
+                        <i class="fas fa-chart-line"></i>
+                        <span>amoCRM</span>
+                    </div>
+                    <div class="trust-divider"></div>
+                    <div class="trust-stat">
+                        <strong>500+</strong> пользователей
+                    </div>
+                    <div class="trust-stat">
+                        <i class="fas fa-shield-alt"></i> Без банов с 2025
+                    </div>
+                </div>
+            </div>
+            <div class="hero-visual" data-aos="fade-left" data-aos-delay="200">
+                <div class="dashboard-mockup">
+                    <div class="mockup-header">
+                        <div class="mockup-dots">
+                            <span></span><span></span><span></span>
+                        </div>
+                        <span class="mockup-title">Личный кабинет</span>
+                    </div>
+                    <div class="mockup-content">
+                        <div class="mockup-sidebar">
+                            <div class="sidebar-item active"><i class="fas fa-home"></i></div>
+                            <div class="sidebar-item"><i class="fas fa-search"></i></div>
+                            <div class="sidebar-item"><i class="fas fa-chart-bar"></i></div>
+                            <div class="sidebar-item"><i class="fas fa-cog"></i></div>
+                        </div>
+                        <div class="mockup-main">
+                            <div class="stat-cards">
+                                <div class="stat-card">
+                                    <span class="stat-value">12,847</span>
+                                    <span class="stat-label">Объявлений</span>
+                                </div>
+                                <div class="stat-card">
+                                    <span class="stat-value">98%</span>
+                                    <span class="stat-label">Успешных</span>
+                                </div>
+                            </div>
+                            <div class="listing-preview">
+                                <div class="listing-item">
+                                    <div class="listing-img"></div>
+                                    <div class="listing-info">
+                                        <span class="listing-title">2-к квартира, 54 м²</span>
+                                        <span class="listing-price">45 000 ₽/мес</span>
+                                    </div>
+                                </div>
+                                <div class="listing-item">
+                                    <div class="listing-img"></div>
+                                    <div class="listing-info">
+                                        <span class="listing-title">1-к квартира, 38 м²</span>
+                                        <span class="listing-price">32 000 ₽/мес</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="telegram-mockup">
+                    <div class="tg-header">
+                        <i class="fab fa-telegram"></i>
+                        <span>Parser Bot</span>
+                    </div>
+                    <div class="tg-message">
+                        <span class="tg-emoji">🏠</span> Новое предложение!<br>
+                        <span class="tg-line">📍 ул. Ленина, 42</span>
+                        <span class="tg-line">💰 35 000 ₽</span>
+                        <span class="tg-link">🔗 Открыть объявление</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="hero-scroll">
+            <a href="#features">
+                <i class="fas fa-chevron-down"></i>
+            </a>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header" data-aos="fade-up">
+                <span class="section-badge">Возможности</span>
+                <h2 class="section-title">Почему выбирают нас</h2>
+                <p class="section-subtitle">Всё, что нужно для эффективного мониторинга объявлений</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card glass" data-aos="fade-up" data-aos-delay="0">
+                    <div class="feature-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h3>Мгновенный запуск</h3>
+                    <p>Начните парсинг за 30 секунд. Никаких сложных настроек — просто укажите город и категорию.</p>
+                </div>
+                <div class="feature-card glass" data-aos="fade-up" data-aos-delay="100">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3>Обход всех защит</h3>
+                    <p>Наши прокси и алгоритмы обходят защиту Avito и ЦИАН. Ваш аккаунт в безопасности.</p>
+                </div>
+                <div class="feature-card glass" data-aos="fade-up" data-aos-delay="200">
+                    <div class="feature-icon">
+                        <i class="fas fa-share-alt"></i>
+                    </div>
+                    <h3>Экспорт куда угодно</h3>
+                    <p>Telegram-бот, amoCRM, Bitrix24, email, Google Sheets, Excel — данные там, где вам удобно.</p>
+                </div>
+                <div class="feature-card glass" data-aos="fade-up" data-aos-delay="300">
+                    <div class="feature-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h3>Расписание парсинга</h3>
+                    <p>Настройте автоматический запуск каждые 15 минут, час или день. Мониторинг цен включён.</p>
+                </div>
+                <div class="feature-card glass" data-aos="fade-up" data-aos-delay="400">
+                    <div class="feature-icon">
+                        <i class="fas fa-server"></i>
+                    </div>
+                    <h3>Прокси-ротация</h3>
+                    <p>Тысячи резидентных прокси автоматически меняются. Никаких блокировок и капч.</p>
+                </div>
+                <div class="feature-card glass" data-aos="fade-up" data-aos-delay="500">
+                    <div class="feature-icon">
+                        <i class="fas fa-headset"></i>
+                    </div>
+                    <h3>Поддержка 24/7</h3>
+                    <p>Умный чат-бот и живые специалисты помогут в любое время. Среднее время ответа — 5 минут.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="how-it-works" id="how-it-works">
+        <div class="container">
+            <div class="section-header" data-aos="fade-up">
+                <span class="section-badge">Процесс</span>
+                <h2 class="section-title">Как это работает</h2>
+                <p class="section-subtitle">От регистрации до данных — всего 5 простых шагов</p>
+            </div>
+            <div class="timeline">
+                <div class="timeline-item" data-aos="fade-right" data-aos-delay="0">
+                    <div class="timeline-number">1</div>
+                    <div class="timeline-content glass">
+                        <div class="timeline-icon"><i class="fas fa-user-plus"></i></div>
+                        <h3>Регистрация</h3>
+                        <p>Создайте аккаунт за 30 секунд через email или Telegram</p>
+                    </div>
+                </div>
+                <div class="timeline-item" data-aos="fade-left" data-aos-delay="100">
+                    <div class="timeline-number">2</div>
+                    <div class="timeline-content glass">
+                        <div class="timeline-icon"><i class="fas fa-credit-card"></i></div>
+                        <h3>Выбор тарифа</h3>
+                        <p>Бесплатный навсегда или Pro для неограниченного парсинга</p>
+                    </div>
+                </div>
+                <div class="timeline-item" data-aos="fade-right" data-aos-delay="200">
+                    <div class="timeline-number">3</div>
+                    <div class="timeline-content glass">
+                        <div class="timeline-icon"><i class="fas fa-sliders-h"></i></div>
+                        <h3>Настройка параметров</h3>
+                        <p>Укажите город, категорию, ценовой диапазон и ключевые слова</p>
+                    </div>
+                </div>
+                <div class="timeline-item" data-aos="fade-left" data-aos-delay="300">
+                    <div class="timeline-number">4</div>
+                    <div class="timeline-content glass">
+                        <div class="timeline-icon"><i class="fas fa-play-circle"></i></div>
+                        <h3>Запуск парсинга</h3>
+                        <p>Нажмите кнопку — и наши серверы начнут сбор данных</p>
+                    </div>
+                </div>
+                <div class="timeline-item" data-aos="fade-right" data-aos-delay="400">
+                    <div class="timeline-number">5</div>
+                    <div class="timeline-content glass">
+                        <div class="timeline-icon"><i class="fas fa-download"></i></div>
+                        <h3>Получение данных</h3>
+                        <p>Данные приходят в Telegram, на почту или в таблицу автоматически</p>
+                    </div>
+                </div>
+                <div class="timeline-item" data-aos="fade-left" data-aos-delay="500">
+                    <div class="timeline-number">6</div>
+                    <div class="timeline-content glass">
+                        <div class="timeline-icon"><i class="fas fa-sync-alt"></i></div>
+                        <h3>Анализ и повтор</h3>
+                        <p>Анализируйте данные и настройте автоматический мониторинг</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section class="pricing" id="pricing">
+        <div class="container">
+            <div class="section-header" data-aos="fade-up">
+                <span class="section-badge">Тарифы</span>
+                <h2 class="section-title">Выберите свой план</h2>
+                <p class="section-subtitle">Начните бесплатно, масштабируйтесь когда будете готовы</p>
+            </div>
+            <div class="pricing-toggle" data-aos="fade-up">
+                <span class="toggle-label active" data-period="monthly">Ежемесячно</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="pricingToggle">
+                    <span class="toggle-slider"></span>
+                </label>
+                <span class="toggle-label" data-period="yearly">
+                    Ежегодно
+                    <span class="discount-badge">-20%</span>
+                </span>
+            </div>
+            <div class="pricing-grid">
+                <div class="pricing-card glass" data-aos="fade-up" data-aos-delay="0">
+                    <div class="pricing-header">
+                        <h3 class="pricing-name">Free</h3>
+                        <div class="pricing-price">
+                            <span class="price-amount" data-monthly="0" data-yearly="0">0</span>
+                            <span class="price-currency">₽</span>
+                            <span class="price-period">/мес</span>
+                        </div>
+                        <p class="pricing-desc">Для знакомства с сервисом</p>
+                    </div>
+                    <ul class="pricing-features">
+                        <li class="included"><i class="fas fa-check"></i> 100 объявлений/день</li>
+                        <li class="included"><i class="fas fa-check"></i> 1 город</li>
+                        <li class="included"><i class="fas fa-check"></i> Экспорт в Excel</li>
+                        <li class="included"><i class="fas fa-check"></i> Telegram-уведомления</li>
+                        <li class="excluded"><i class="fas fa-times"></i> API доступ</li>
+                        <li class="excluded"><i class="fas fa-times"></i> Приоритетная поддержка</li>
+                    </ul>
+                    <a href="dashboard/register.html" class="btn btn-outline btn-block">Начать бесплатно</a>
+                </div>
+                <div class="pricing-card glass popular" data-aos="fade-up" data-aos-delay="100">
+                    <div class="popular-badge">Самый популярный</div>
+                    <div class="pricing-header">
+                        <h3 class="pricing-name">Basic</h3>
+                        <div class="pricing-price">
+                            <span class="price-amount" data-monthly="990" data-yearly="792">990</span>
+                            <span class="price-currency">₽</span>
+                            <span class="price-period">/мес</span>
+                        </div>
+                        <p class="pricing-desc">Для активных пользователей</p>
+                    </div>
+                    <ul class="pricing-features">
+                        <li class="included"><i class="fas fa-check"></i> 1 000 объявлений/день</li>
+                        <li class="included"><i class="fas fa-check"></i> 5 городов</li>
+                        <li class="included"><i class="fas fa-check"></i> Все форматы экспорта</li>
+                        <li class="included"><i class="fas fa-check"></i> Telegram + Email</li>
+                        <li class="included"><i class="fas fa-check"></i> Расписание парсинга</li>
+                        <li class="excluded"><i class="fas fa-times"></i> API доступ</li>
+                    </ul>
+                    <a href="dashboard/register.html?plan=basic" class="btn btn-primary btn-block">Выбрать план</a>
+                </div>
+                <div class="pricing-card glass" data-aos="fade-up" data-aos-delay="200">
+                    <div class="pricing-header">
+                        <h3 class="pricing-name">Pro</h3>
+                        <div class="pricing-price">
+                            <span class="price-amount" data-monthly="2990" data-yearly="2392">2 990</span>
+                            <span class="price-currency">₽</span>
+                            <span class="price-period">/мес</span>
+                        </div>
+                        <p class="pricing-desc">Для бизнеса и агентств</p>
+                    </div>
+                    <ul class="pricing-features">
+                        <li class="included"><i class="fas fa-check"></i> 10 000 объявлений/день</li>
+                        <li class="included"><i class="fas fa-check"></i> Все города России</li>
+                        <li class="included"><i class="fas fa-check"></i> Все форматы экспорта</li>
+                        <li class="included"><i class="fas fa-check"></i> CRM интеграции</li>
+                        <li class="included"><i class="fas fa-check"></i> API доступ</li>
+                        <li class="included"><i class="fas fa-check"></i> Приоритетная поддержка</li>
+                    </ul>
+                    <a href="dashboard/register.html?plan=pro" class="btn btn-outline btn-block">Выбрать план</a>
+                </div>
+                <div class="pricing-card glass enterprise" data-aos="fade-up" data-aos-delay="300">
+                    <div class="pricing-header">
+                        <h3 class="pricing-name">Enterprise</h3>
+                        <div class="pricing-price">
+                            <span class="price-amount">По запросу</span>
+                        </div>
+                        <p class="pricing-desc">Индивидуальные решения</p>
+                    </div>
+                    <ul class="pricing-features">
+                        <li class="included"><i class="fas fa-check"></i> Безлимитный парсинг</li>
+                        <li class="included"><i class="fas fa-check"></i> Выделенные серверы</li>
+                        <li class="included"><i class="fas fa-check"></i> Кастомные интеграции</li>
+                        <li class="included"><i class="fas fa-check"></i> SLA 99.9%</li>
+                        <li class="included"><i class="fas fa-check"></i> Персональный менеджер</li>
+                        <li class="included"><i class="fas fa-check"></i> On-premise установка</li>
+                    </ul>
+                    <a href="#contact" class="btn btn-outline btn-block">Связаться с нами</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Data Example Section -->
+    <section class="data-example" id="demo">
+        <div class="container">
+            <div class="section-header" data-aos="fade-up">
+                <span class="section-badge">Пример</span>
+                <h2 class="section-title">Как выглядят данные</h2>
+                <p class="section-subtitle">Реальный пример выгрузки объявлений с Avito</p>
+            </div>
+            <div class="data-table-wrapper glass" data-aos="fade-up">
+                <div class="table-controls">
+                    <div class="table-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Поиск по объявлениям...">
+                    </div>
+                    <div class="table-actions">
+                        <button class="btn btn-sm btn-outline"><i class="fas fa-filter"></i> Фильтр</button>
+                        <button class="btn btn-sm btn-primary"><i class="fas fa-download"></i> Скачать Excel</button>
+                    </div>
+                </div>
+                <div class="table-scroll">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Фото</th>
+                                <th>Заголовок</th>
+                                <th>Цена</th>
+                                <th>Город</th>
+                                <th>Метраж</th>
+                                <th>Дата</th>
+                                <th>Ссылка</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><div class="table-img" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div></td>
+                                <td>2-к квартира, 54 м², 7/9 эт.</td>
+                                <td class="price">45 000 ₽/мес</td>
+                                <td>Москва</td>
+                                <td>54 м²</td>
+                                <td>Сегодня</td>
+                                <td><a href="#" class="table-link"><i class="fas fa-external-link-alt"></i></a></td>
+                            </tr>
+                            <tr>
+                                <td><div class="table-img" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"></div></td>
+                                <td>1-к квартира, 38 м², 3/12 эт.</td>
+                                <td class="price">32 000 ₽/мес</td>
+                                <td>Санкт-Петербург</td>
+                                <td>38 м²</td>
+                                <td>Сегодня</td>
+                                <td><a href="#" class="table-link"><i class="fas fa-external-link-alt"></i></a></td>
+                            </tr>
+                            <tr>
+                                <td><div class="table-img" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);"></div></td>
+                                <td>3-к квартира, 78 м², 5/16 эт.</td>
+                                <td class="price">65 000 ₽/мес</td>
+                                <td>Казань</td>
+                                <td>78 м²</td>
+                                <td>Вчера</td>
+                                <td><a href="#" class="table-link"><i class="fas fa-external-link-alt"></i></a></td>
+                            </tr>
+                            <tr>
+                                <td><div class="table-img" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);"></div></td>
+                                <td>Студия, 25 м², 2/5 эт.</td>
+                                <td class="price">22 000 ₽/мес</td>
+                                <td>Новосибирск</td>
+                                <td>25 м²</td>
+                                <td>Вчера</td>
+                                <td><a href="#" class="table-link"><i class="fas fa-external-link-alt"></i></a></td>
+                            </tr>
+                            <tr>
+                                <td><div class="table-img" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);"></div></td>
+                                <td>2-к квартира, 48 м², 4/9 эт.</td>
+                                <td class="price">38 000 ₽/мес</td>
+                                <td>Екатеринбург</td>
+                                <td>48 м²</td>
+                                <td>2 дня назад</td>
+                                <td><a href="#" class="table-link"><i class="fas fa-external-link-alt"></i></a></td>
+                            </tr>
+                            <tr>
+                                <td><div class="table-img" style="background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);"></div></td>
+                                <td>1-к квартира, 42 м², 8/17 эт.</td>
+                                <td class="price">35 000 ₽/мес</td>
+                                <td>Краснодар</td>
+                                <td>42 м²</td>
+                                <td>2 дня назад</td>
+                                <td><a href="#" class="table-link"><i class="fas fa-external-link-alt"></i></a></td>
+                            </tr>
+                            <tr>
+                                <td><div class="table-img" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);"></div></td>
+                                <td>4-к квартира, 95 м², 6/10 эт.</td>
+                                <td class="price">85 000 ₽/мес</td>
+                                <td>Москва</td>
+                                <td>95 м²</td>
+                                <td>3 дня назад</td>
+                                <td><a href="#" class="table-link"><i class="fas fa-external-link-alt"></i></a></td>
+                            </tr>
+                            <tr>
+                                <td><div class="table-img" style="background: linear-gradient(135deg, #d299c2 0%, #fef9d7 100%);"></div></td>
+                                <td>2-к квартира, 56 м², 3/5 эт.</td>
+                                <td class="price">42 000 ₽/мес</td>
+                                <td>Нижний Новгород</td>
+                                <td>56 м²</td>
+                                <td>3 дня назад</td>
+                                <td><a href="#" class="table-link"><i class="fas fa-external-link-alt"></i></a></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="table-footer">
+                    <span>Показано 8 из 12,847 объявлений</span>
+                    <div class="table-pagination">
+                        <button class="btn btn-sm btn-ghost"><i class="fas fa-chevron-left"></i></button>
+                        <span>1 / 1606</span>
+                        <button class="btn btn-sm btn-ghost"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>
+            </div>
+            <div class="data-actions" data-aos="fade-up">
+                <a href="#" class="btn btn-outline"><i class="fas fa-file-excel"></i> Скачать пример в Excel</a>
+                <a href="#" class="btn btn-outline"><i class="fab fa-telegram"></i> Посмотреть в Telegram</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Reviews Section -->
+    <section class="reviews" id="reviews">
+        <div class="container">
+            <div class="section-header" data-aos="fade-up">
+                <span class="section-badge">Отзывы</span>
+                <h2 class="section-title">Что говорят клиенты</h2>
+                <p class="section-subtitle">Более 500 довольных пользователей по всей России</p>
+            </div>
+            <div class="reviews-grid">
+                <div class="review-card glass" data-aos="fade-up" data-aos-delay="0">
+                    <div class="review-stars">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <p class="review-text">"Сэкономил 3 часа в день на мониторинге объявлений. Теперь все данные приходят в Telegram автоматически. Рекомендую!"</p>
+                    <div class="review-author">
+                        <div class="author-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">ИС</div>
+                        <div class="author-info">
+                            <span class="author-name">Иван Смирнов</span>
+                            <span class="author-role">Риелтор, Москва</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="review-card glass" data-aos="fade-up" data-aos-delay="100">
+                    <div class="review-stars">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <p class="review-text">"Идеальное решение для мониторинга конкурентов. Интеграция с amoCRM работает отлично, все лиды сразу в системе."</p>
+                    <div class="review-author">
+                        <div class="author-avatar" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">АК</div>
+                        <div class="author-info">
+                            <span class="author-name">Анна Козлова</span>
+                            <span class="author-role">Владелец магазина, Wildberries</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="review-card glass" data-aos="fade-up" data-aos-delay="200">
+                    <div class="review-stars">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <p class="review-text">"За 2 года использования ни одной блокировки. Поддержка отвечает моментально. Лучший парсер на рынке!"</p>
+                    <div class="review-author">
+                        <div class="author-avatar" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">ДП</div>
+                        <div class="author-info">
+                            <span class="author-name">Дмитрий Петров</span>
+                            <span class="author-role">Менеджер по продажам, СПб</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="review-card glass" data-aos="fade-up" data-aos-delay="300">
+                    <div class="review-stars">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <p class="review-text">"Перешли с ручного сбора данных на автоматический. ROI окупился за первую неделю. Очень доволен!"</p>
+                    <div class="review-author">
+                        <div class="author-avatar" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">МВ</div>
+                        <div class="author-info">
+                            <span class="author-name">Максим Волков</span>
+                            <span class="author-role">Директор агентства, Казань</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="review-card glass" data-aos="fade-up" data-aos-delay="400">
+                    <div class="review-stars">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <p class="review-text">"Простой интерфейс, мощные возможности. Даже бесплатного тарифа хватило для старта. Теперь на Pro!"</p>
+                    <div class="review-author">
+                        <div class="author-avatar" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">ЕС</div>
+                        <div class="author-info">
+                            <span class="author-name">Елена Сидорова</span>
+                            <span class="author-role">Частный риелтор, Краснодар</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="review-card glass" data-aos="fade-up" data-aos-delay="500">
+                    <div class="review-stars">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <p class="review-text">"API интеграция позволила автоматизировать весь процесс. Данные льются в нашу CRM без участия человека."</p>
+                    <div class="review-author">
+                        <div class="author-avatar" style="background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);">АН</div>
+                        <div class="author-info">
+                            <span class="author-name">Алексей Новиков</span>
+                            <span class="author-role">CTO, IT-компания</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq" id="faq">
+        <div class="container">
+            <div class="section-header" data-aos="fade-up">
+                <span class="section-badge">FAQ</span>
+                <h2 class="section-title">Частые вопросы</h2>
+                <p class="section-subtitle">Ответы на популярные вопросы о сервисе</p>
+            </div>
+            <div class="faq-list" data-aos="fade-up">
+                <div class="faq-item glass">
+                    <button class="faq-question">
+                        <span>Легально ли парсить Avito и ЦИАН?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Парсинг публично доступной информации не запрещён законом. Мы собираем только открытые данные объявлений, которые видны всем пользователям. Сервис не нарушает ничьих прав и не получает доступ к закрытой информации.</p>
+                    </div>
+                </div>
+                <div class="faq-item glass">
+                    <button class="faq-question">
+                        <span>Банят ли аккаунты при использовании парсера?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Нет! Наш сервис использует собственные серверы и прокси для сбора данных. Ваш личный аккаунт на Avito или ЦИАН никак не связан с парсингом и не подвергается риску блокировки.</p>
+                    </div>
+                </div>
+                <div class="faq-item glass">
+                    <button class="faq-question">
+                        <span>Как подключить Telegram-бота?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Очень просто! В личном кабинете нажмите "Подключить Telegram", перейдите по ссылке к боту и нажмите /start. Бот автоматически привяжется к вашему аккаунту и начнёт отправлять уведомления о новых объявлениях.</p>
+                    </div>
+                </div>
+                <div class="faq-item glass">
+                    <button class="faq-question">
+                        <span>Есть ли бесплатный тариф?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Да! Бесплатный тариф доступен навсегда без ограничения по времени. Вы получаете 100 объявлений в день, 1 город и экспорт в Excel/Telegram. Этого достаточно для знакомства с сервисом и небольших задач.</p>
+                    </div>
+                </div>
+                <div class="faq-item glass">
+                    <button class="faq-question">
+                        <span>Какие форматы экспорта поддерживаются?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Мы поддерживаем: Excel (.xlsx), CSV, JSON, Google Sheets (прямая интеграция), Telegram-бот, Email-рассылку, Webhook, API, а также CRM-системы (amoCRM, Bitrix24, HubSpot).</p>
+                    </div>
+                </div>
+                <div class="faq-item glass">
+                    <button class="faq-question">
+                        <span>Сколько времени занимает парсинг?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Скорость зависит от количества объявлений. В среднем: 100 объявлений — 1-2 минуты, 1000 объявлений — 5-10 минут, 10000 объявлений — 30-60 минут. Вы получите уведомление по завершении.</p>
+                    </div>
+                </div>
+                <div class="faq-item glass">
+                    <button class="faq-question">
+                        <span>Как оплатить подписку?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Принимаем банковские карты (Visa, MasterCard, МИР), ЮMoney, QIWI, криптовалюту, а также безналичную оплату для юридических лиц. Автопродление можно отключить в любой момент.</p>
+                    </div>
+                </div>
+                <div class="faq-item glass">
+                    <button class="faq-question">
+                        <span>Есть ли техническая поддержка?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Да! Поддержка работает 24/7. Бесплатные тарифы — чат-бот и база знаний. Платные тарифы — живые специалисты в чате и Telegram. Enterprise — персональный менеджер и телефонная линия.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container">
+            <div class="cta-box glass" data-aos="fade-up">
+                <h2>Готовы начать парсинг?</h2>
+                <p>Присоединяйтесь к 500+ пользователям, которые уже автоматизировали сбор объявлений</p>
+                <div class="cta-buttons">
+                    <a href="dashboard/register.html" class="btn btn-primary btn-lg">
+                        <i class="fas fa-rocket"></i>
+                        Начать бесплатно
+                    </a>
+                    <a href="#pricing" class="btn btn-ghost btn-lg">Посмотреть тарифы</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <a href="/" class="logo">
+                        <span class="logo-icon">◈</span>
+                        <span class="logo-text">Parser<span class="logo-highlight">SaaS</span></span>
+                    </a>
+                    <p>Автоматический парсинг Avito и ЦИАН. Тысячи объявлений за минуты.</p>
+                    <div class="footer-social">
+                        <a href="#"><i class="fab fa-telegram"></i></a>
+                        <a href="#"><i class="fab fa-vk"></i></a>
+                        <a href="#"><i class="fab fa-youtube"></i></a>
+                    </div>
+                </div>
+                <div class="footer-links">
+                    <h4>Продукт</h4>
+                    <a href="#features">Возможности</a>
+                    <a href="#pricing">Тарифы</a>
+                    <a href="#demo">Демо</a>
+                    <a href="#">API документация</a>
+                </div>
+                <div class="footer-links">
+                    <h4>Компания</h4>
+                    <a href="#">О нас</a>
+                    <a href="#">Блог</a>
+                    <a href="#">Вакансии</a>
+                    <a href="#">Контакты</a>
+                </div>
+                <div class="footer-links">
+                    <h4>Поддержка</h4>
+                    <a href="#faq">FAQ</a>
+                    <a href="#">База знаний</a>
+                    <a href="#">Написать в чат</a>
+                    <a href="mailto:support@parsersaas.ru">support@parsersaas.ru</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2026 Avito-Cian Parser SaaS. Все права защищены.</p>
+                <div class="footer-legal">
+                    <a href="#">Политика конфиденциальности</a>
+                    <a href="#">Условия использования</a>
+                    <a href="#">Оферта</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Chat Widget Placeholder -->
+    <div class="chat-widget" id="chatWidget">
+        <button class="chat-btn" id="chatBtn">
+            <i class="fas fa-comment-dots"></i>
+        </button>
+        <div class="chat-popup" id="chatPopup">
+            <div class="chat-header">
+                <span>Поддержка</span>
+                <button class="chat-close" id="chatClose"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="chat-body">
+                <div class="chat-message bot">
+                    <p>Привет! 👋 Чем могу помочь?</p>
+                </div>
+            </div>
+            <div class="chat-input">
+                <input type="text" placeholder="Напишите сообщение...">
+                <button><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
