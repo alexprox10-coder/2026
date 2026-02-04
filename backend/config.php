@@ -17,10 +17,10 @@ define('DB_NAME', 'alexprz7_2026');
 define('DB_USER', 'alexprz7_2026');
 define('DB_PASS', 'YOUR_DB_PASSWORD'); // Замени на свой пароль
 
-// Apify
+// Apify - получить токен на https://console.apify.com/account/integrations
 define('APIFY_TOKEN', 'YOUR_APIFY_TOKEN'); // Замени на свой токен
-define('APIFY_AVITO_ACTOR', 'D81KRIfXBnQ4hg8Bz');
-define('APIFY_CIAN_ACTOR', 'CBn1BidHkyYcqYpPd');
+define('APIFY_AVITO_ACTOR', 'voyager_/avito-parser');
+define('APIFY_CIAN_ACTOR', 'igolaizola/cian-scraper');
 
 // Google OAuth (получить на https://console.cloud.google.com/apis/credentials)
 define('GOOGLE_CLIENT_ID', ''); // <-- ДОБАВЬ
