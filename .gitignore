@@ -2,8 +2,8 @@
 CREDENTIALS_FOR_DEPLOY.txt
 backend/CREDENTIALS_FOR_DEPLOY.txt
 
-# Local config with secrets
-config.local.php
+# Local config with secrets (use config.example.php as template)
+backend/config.php
 
 # IDE
 .idea/
