@@ -1,6 +1,34 @@
 <?php
+// Отключаем вывод ошибок в HTML - все ответы должны быть JSON
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+
+// Обработчик ошибок - возвращаем JSON
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(array(
+        'success' => false,
+        'error' => 'Server error: ' . $errstr,
+        'file' => basename($errfile),
+        'line' => $errline
+    ), JSON_UNESCAPED_UNICODE);
+    exit;
+});
+
+// Обработчик исключений
+set_exception_handler(function($e) {
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(array(
+        'success' => false,
+        'error' => 'Exception: ' . $e->getMessage(),
+        'file' => basename($e->getFile()),
+        'line' => $e->getLine()
+    ), JSON_UNESCAPED_UNICODE);
+    exit;
+});
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
@@ -196,6 +224,26 @@ if ($path === 'tasks' && $method === 'POST') {
     $parser = new Parser();
     $result = $parser->createTask($user['id'], $input);
     response($result, $result['success'] ? 201 : 400);
+}
+
+// Delete Task
+if (preg_match('/^tasks\/(\d+)$/', $path, $matches) && $method === 'DELETE') {
+    $user = requireAuth();
+    $taskId = (int)$matches[1];
+    $db = Database::getInstance();
+
+    // Проверяем что задача принадлежит пользователю
+    $task = $db->fetch("SELECT id FROM parsing_tasks WHERE id = ? AND user_id = ?", array($taskId, $user['id']));
+    if (!$task) {
+        response(array('success' => false, 'error' => 'Задача не найдена'), 404);
+    }
+
+    // Удаляем связанные данные
+    $db->query("DELETE FROM listings WHERE task_id = ?", array($taskId));
+    $db->query("DELETE FROM parsing_runs WHERE task_id = ?", array($taskId));
+    $db->query("DELETE FROM parsing_tasks WHERE id = ?", array($taskId));
+
+    response(array('success' => true, 'message' => 'Задача удалена'));
 }
 
 // Run Task
