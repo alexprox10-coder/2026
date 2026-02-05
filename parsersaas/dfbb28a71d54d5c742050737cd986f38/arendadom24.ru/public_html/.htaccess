@@ -1,0 +1,19 @@
+DirectoryIndex index.html index.php
+
+# Убираем слэш в конце файлов
+RewriteEngine On
+RewriteRule ^(.*)\.html/$ /$1.html [R=301,L]
+
+# Перенаправление на HTTPS
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# API запросы направляем в backend
+RewriteRule ^api/(.*)$ /backend/api/$1 [QSA,L]
+
+# Разрешаем прямой доступ к реальным файлам и папкам
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Перенаправляем все остальные запросы на index.php (для SPA/API)
+RewriteRule ^(.*)$ /index.php [QSA,L]

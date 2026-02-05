@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация — Parser SaaS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        .auth-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: var(--bg-primary);
+            position: relative;
+        }
+
+        .auth-bg {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at top left, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+                        radial-gradient(ellipse at bottom right, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
+        }
+
+        .auth-container {
+            position: relative;
+            width: 100%;
+            max-width: 480px;
+        }
+
+        .auth-card {
+            padding: 40px;
+            border-radius: var(--border-radius-lg);
+        }
+
+        .auth-logo {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .auth-logo a {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            font-size: 28px;
+            font-weight: 800;
+        }
+
+        .auth-logo .logo-icon {
+            color: var(--accent-green);
+            font-size: 32px;
+        }
+
+        .auth-logo .logo-text {
+            color: var(--text-primary);
+        }
+
+        .auth-logo .logo-highlight {
+            color: var(--accent-green);
+        }
+
+        .auth-title {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .auth-subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius-sm);
+            color: var(--text-primary);
+            font-size: 15px;
+            transition: var(--transition);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-green);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .input-with-icon {
+            position: relative;
+        }
+
+        .input-with-icon .form-input {
+            padding-left: 44px;
+        }
+
+        .input-with-icon i {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .plan-selector {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .plan-option {
+            position: relative;
+        }
+
+        .plan-option input {
+            position: absolute;
+            opacity: 0;
+        }
+
+        .plan-option label {
+            display: block;
+            padding: 16px;
+            background: var(--bg-tertiary);
+            border: 2px solid var(--glass-border);
+            border-radius: var(--border-radius-sm);
+            cursor: pointer;
+            transition: var(--transition);
+            text-align: center;
+        }
+
+        .plan-option input:checked + label {
+            border-color: var(--accent-green);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .plan-option label:hover {
+            border-color: var(--text-muted);
+        }
+
+        .plan-name {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .plan-price {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .terms {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 24px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .terms input {
+            width: 16px;
+            height: 16px;
+            margin-top: 2px;
+            accent-color: var(--accent-green);
+        }
+
+        .terms a {
+            color: var(--accent-green);
+            text-decoration: none;
+        }
+
+        .terms a:hover {
+            text-decoration: underline;
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 16px;
+            font-size: 16px;
+            margin-bottom: 24px;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--glass-border);
+        }
+
+        .divider span {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .social-login {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .social-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius-sm);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .social-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--text-muted);
+        }
+
+        .social-btn i {
+            font-size: 18px;
+        }
+
+        .social-btn.telegram i {
+            color: #0088cc;
+        }
+
+        .auth-footer {
+            text-align: center;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .auth-footer a {
+            color: var(--accent-green);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .auth-footer a:hover {
+            text-decoration: underline;
+        }
+
+        .back-link {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            transition: var(--transition);
+        }
+
+        .back-link:hover {
+            color: var(--text-primary);
+        }
+
+        .features-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: var(--bg-tertiary);
+            border-radius: var(--border-radius-sm);
+        }
+
+        .features-list span {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .features-list i {
+            color: var(--accent-green);
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-page">
+        <div class="auth-bg"></div>
+        <a href="../index.html" class="back-link">
+            <i class="fas fa-arrow-left"></i>
+            На главную
+        </a>
+        <div class="auth-container">
+            <div class="auth-card glass">
+                <div class="auth-logo">
+                    <a href="../index.html">
+                        <span class="logo-icon">◈</span>
+                        <span class="logo-text">Parser<span class="logo-highlight">SaaS</span></span>
+                    </a>
+                </div>
+                <h1 class="auth-title">Создать аккаунт</h1>
+                <p class="auth-subtitle">Начните парсить объявления бесплатно</p>
+
+                <div class="features-list">
+                    <span><i class="fas fa-check"></i> 100 объявлений/день</span>
+                    <span><i class="fas fa-check"></i> Telegram-уведомления</span>
+                    <span><i class="fas fa-check"></i> Excel экспорт</span>
+                    <span><i class="fas fa-check"></i> Без карты</span>
+                </div>
+
+                <form id="registerForm" action="index.html">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Имя</label>
+                            <input type="text" class="form-input" placeholder="Иван" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Фамилия</label>
+                            <input type="text" class="form-input" placeholder="Петров">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <div class="input-with-icon">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" class="form-input" placeholder="name@example.com" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Пароль</label>
+                        <div class="input-with-icon">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" class="form-input" id="password" placeholder="Минимум 8 символов" required minlength="8">
+                            <button type="button" class="password-toggle" onclick="togglePassword()">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Выберите тариф</label>
+                        <div class="plan-selector">
+                            <div class="plan-option">
+                                <input type="radio" name="plan" id="planFree" value="free" checked>
+                                <label for="planFree">
+                                    <span class="plan-name">Free</span>
+                                    <span class="plan-price">0 ₽/мес</span>
+                                </label>
+                            </div>
+                            <div class="plan-option">
+                                <input type="radio" name="plan" id="planBasic" value="basic">
+                                <label for="planBasic">
+                                    <span class="plan-name">Basic</span>
+                                    <span class="plan-price">990 ₽/мес</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <label class="terms">
+                        <input type="checkbox" required>
+                        <span>Я принимаю <a href="#">условия использования</a> и <a href="#">политику конфиденциальности</a></span>
+                    </label>
+
+                    <button type="submit" class="btn btn-primary auth-btn">
+                        <i class="fas fa-user-plus"></i>
+                        Создать аккаунт
+                    </button>
+                </form>
+
+                <div class="divider">
+                    <span>или через</span>
+                </div>
+
+                <div class="social-login">
+                    <a href="#" class="social-btn telegram">
+                        <i class="fab fa-telegram"></i>
+                        Telegram
+                    </a>
+                    <a href="#" class="social-btn">
+                        <i class="fab fa-google"></i>
+                        Google
+                    </a>
+                </div>
+
+                <p class="auth-footer">
+                    Уже есть аккаунт? <a href="login.html">Войти</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function togglePassword() {
+            const input = document.getElementById('password');
+            const icon = document.querySelector('.password-toggle i');
+
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        // Check URL params for plan
+        const urlParams = new URLSearchParams(window.location.search);
+        const plan = urlParams.get('plan');
+        if (plan === 'basic') {
+            document.getElementById('planBasic').checked = true;
+        } else if (plan === 'pro') {
+            // Could add pro option
+        }
+
+        // Demo: redirect to dashboard on form submit
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            window.location.href = 'index.html';
+        });
+    </script>
+</body>
+</html>
+
+
+Copy
+
+
+Search
+
+
+Translate
+
+
+Setting
+Search for similar products on 1688
+
+
+❯
+
+
+

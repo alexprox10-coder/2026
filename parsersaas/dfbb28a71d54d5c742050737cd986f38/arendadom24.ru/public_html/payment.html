@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Оплата тарифа - Parser SaaS</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', -apple-system, sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); min-height: 100vh; color: #fff; }
+        .container { max-width: 500px; margin: 0 auto; padding: 40px 20px; }
+        .card { background: rgba(255,255,255,0.1); border-radius: 20px; padding: 30px; backdrop-filter: blur(10px); }
+        h1 { text-align: center; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #aaa; margin-bottom: 30px; }
+        .plan-info { background: rgba(34,197,94,0.2); border: 1px solid #22c55e; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .plan-name { font-size: 1.5rem; font-weight: 700; color: #22c55e; }
+        .plan-price { font-size: 2rem; font-weight: 800; margin: 10px 0; }
+        .plan-features { color: #ccc; font-size: 0.9rem; }
+        .warning { background: rgba(251,191,36,0.2); border: 1px solid #fbbf24; border-radius: 12px; padding: 15px; margin-bottom: 20px; }
+        .warning-title { color: #fbbf24; font-weight: 600; margin-bottom: 5px; }
+        .warning-text { color: #ccc; font-size: 0.85rem; }
+        .pay-btn { display: block; width: 100%; background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; padding: 18px; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; text-decoration: none; text-align: center; margin-bottom: 15px; }
+        .pay-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(34,197,94,0.3); }
+        .steps { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; margin-top: 20px; }
+        .steps h3 { margin-bottom: 15px; color: #22c55e; }
+        .steps ol { padding-left: 20px; color: #ccc; line-height: 2; }
+        .back-link { display: block; text-align: center; margin-top: 20px; color: #888; text-decoration: none; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab { flex: 1; padding: 15px; background: rgba(255,255,255,0.05); border: 2px solid transparent; border-radius: 10px; cursor: pointer; text-align: center; transition: all 0.3s; }
+        .tab.active { border-color: #22c55e; background: rgba(34,197,94,0.1); }
+        .tab-name { font-weight: 600; }
+        .tab-price { color: #22c55e; font-size: 1.2rem; font-weight: 700; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>Улучшить тариф</h1>
+            <p class="subtitle">Выберите подходящий план</p>
+
+            <div class="tabs">
+                <div class="tab active" onclick="selectPlan('basic', 990)">
+                    <div class="tab-name">Basic</div>
+                    <div class="tab-price">990 ₽/мес</div>
+                </div>
+                <div class="tab" onclick="selectPlan('pro', 2990)">
+                    <div class="tab-name">Pro</div>
+                    <div class="tab-price">2 990 ₽/мес</div>
+                </div>
+            </div>
+
+            <div class="plan-info">
+                <div class="plan-name" id="planName">Basic</div>
+                <div class="plan-price" id="planPrice">990 ₽/мес</div>
+                <div class="plan-features" id="planFeatures">1000 объявлений/день • 5 городов • Telegram + Email</div>
+            </div>
+
+            <div class="warning">
+                <div class="warning-title">Важно!</div>
+                <div class="warning-text">Оплатите ТОЧНУЮ сумму указанную выше. После оплаты напишите в Telegram для активации тарифа.</div>
+            </div>
+
+            <a id="payButton" href="https://yoomoney.ru/quickpay/confirm?receiver=4100119465343648&quickpay-form=button&paymentType=AC&sum=990&label=basic" target="_blank" class="pay-btn">
+                Оплатить 990 ₽
+            </a>
+
+            <div class="steps">
+                <h3>После оплаты:</h3>
+                <ol>
+                    <li>Сделайте скриншот чека</li>
+                    <li>Напишите в Telegram: <a href="https://t.me/ParsersaasBot" style="color:#22c55e">@ParsersaasBot</a></li>
+                    <li>Укажите ваш email на сайте</li>
+                    <li>Приложите скриншот оплаты</li>
+                    <li>Тариф активируется в течение 1 часа</li>
+                </ol>
+            </div>
+
+            <a href="/dashboard/" class="back-link">← Вернуться в личный кабинет</a>
+        </div>
+    </div>
+
+    <script>
+        const plans = {
+            basic: { name: 'Basic', price: 990, features: '1000 объявлений/день • 5 городов • Telegram + Email' },
+            pro: { name: 'Pro', price: 2990, features: '10000 объявлений/день • Все города • API доступ • Приоритетная поддержка' }
+        };
+
+        function selectPlan(plan, price) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.closest('.tab').classList.add('active');
+            
+            document.getElementById('planName').textContent = plans[plan].name;
+            document.getElementById('planPrice').textContent = price.toLocaleString() + ' ₽/мес';
+            document.getElementById('planFeatures').textContent = plans[plan].features;
+            
+            document.getElementById('payButton').href = 
+                'https://yoomoney.ru/quickpay/confirm?receiver=4100119465343648&quickpay-form=button&paymentType=AC&sum=' + price + '&label=' + plan;
+            document.getElementById('payButton').textContent = 'Оплатить ' + price.toLocaleString() + ' ₽';
+        }
+    </script>
+</body>
+</html>
