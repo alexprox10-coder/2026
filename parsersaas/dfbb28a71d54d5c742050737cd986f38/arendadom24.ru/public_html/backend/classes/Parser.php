@@ -101,40 +101,25 @@ class Parser {
         $url = $task['url'];
         $maxItems = (int)$task['max_items'];
 
-        // Webhook URL для автоматического получения результатов
-        $webhookUrl = SITE_URL . '/api/webhook/apify';
-
         if ($source === 'avito') {
             $actorId = APIFY_AVITO_ACTOR;
 
             $input = array(
                 'startUrls' => array(array('url' => $url)),
                 'maxItems' => $maxItems,
-                'limit' => $maxItems, // некоторые акторы используют limit
-                'proxyConfiguration' => array(
-                    'useApifyProxy' => true
-                )
+                'limit' => $maxItems
             );
         } else {
             $actorId = APIFY_CIAN_ACTOR;
 
             $input = array(
                 'startUrls' => array(array('url' => $url)),
-                'maxItems' => $maxItems,
-                'location' => '', // будет извлечено из URL
-                'proxyConfiguration' => array(
-                    'useApifyProxy' => true
-                )
+                'maxItems' => $maxItems
             );
         }
 
-        // Добавляем webhook в параметры запроса
-        $apiUrl = "https://api.apify.com/v2/acts/{$actorId}/runs?token={$this->apifyToken}&webhooks=" . urlencode(json_encode(array(
-            array(
-                'eventTypes' => array('ACTOR.RUN.SUCCEEDED', 'ACTOR.RUN.FAILED'),
-                'requestUrl' => $webhookUrl
-            )
-        )));
+        // Запускаем актор (синхронизация результатов через кнопку в личном кабинете)
+        $apiUrl = "https://api.apify.com/v2/acts/{$actorId}/runs?token={$this->apifyToken}";
         
         $ch = curl_init($apiUrl);
         curl_setopt($ch, CURLOPT_POST, true);
