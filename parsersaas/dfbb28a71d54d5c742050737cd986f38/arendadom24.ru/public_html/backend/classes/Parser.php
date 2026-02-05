@@ -8,6 +8,25 @@ class Parser {
         $this->apifyToken = APIFY_TOKEN;
     }
 
+    /**
+     * Выполнить GET запрос через cURL (file_get_contents заблокирован на сервере)
+     */
+    private function curlGet($url) {
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+        $response = curl_exec($ch);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        if ($error) {
+            return false;
+        }
+        return $response;
+    }
+
     public function createTask($userId, $data) {
         $name = isset($data['name']) ? $data['name'] : 'Новая задача';
         $url = isset($data['url']) ? trim($data['url']) : '';
@@ -169,9 +188,9 @@ class Parser {
         }
 
         $apiUrl = "https://api.apify.com/v2/actor-runs/{$run['apify_run_id']}?token={$this->apifyToken}";
-        $response = @file_get_contents($apiUrl);
+        $response = $this->curlGet($apiUrl);
         $data = json_decode($response, true);
-        
+
         $status = isset($data['data']['status']) ? $data['data']['status'] : 'UNKNOWN';
 
         if ($status === 'SUCCEEDED') {
@@ -193,7 +212,7 @@ class Parser {
 
     private function getApifyResults($apifyRunId) {
         $apiUrl = "https://api.apify.com/v2/actor-runs/{$apifyRunId}/dataset/items?token={$this->apifyToken}";
-        $response = @file_get_contents($apiUrl);
+        $response = $this->curlGet($apiUrl);
         return json_decode($response, true) ?: array();
     }
 
@@ -302,7 +321,7 @@ class Parser {
 
         // Проверяем статус в Apify
         $apiUrl = "https://api.apify.com/v2/actor-runs/{$run['apify_run_id']}?token={$this->apifyToken}";
-        $response = @file_get_contents($apiUrl);
+        $response = $this->curlGet($apiUrl);
         $data = json_decode($response, true);
 
         $status = isset($data['data']['status']) ? $data['data']['status'] : 'UNKNOWN';
