@@ -355,13 +355,35 @@ class Parser {
      * Синхронизировать все незавершённые запуски
      */
     public function syncAllPendingRuns($userId) {
-        $pending = $this->getPendingRuns($userId);
+        // Получаем ВСЕ запуски со статусом running ИЛИ последние 10 запусков с apify_run_id
+        $runs = $this->db->fetchAll(
+            "SELECT * FROM parsing_runs
+             WHERE user_id = ? AND apify_run_id IS NOT NULL AND apify_run_id != ''
+             AND (status = 'running' OR status = 'pending')
+             ORDER BY started_at DESC
+             LIMIT 10",
+            array($userId)
+        );
+
+        // Если нет running, попробуем синхронизировать последние запуски
+        if (empty($runs)) {
+            $runs = $this->db->fetchAll(
+                "SELECT * FROM parsing_runs
+                 WHERE user_id = ? AND apify_run_id IS NOT NULL AND apify_run_id != ''
+                 ORDER BY started_at DESC
+                 LIMIT 5",
+                array($userId)
+            );
+        }
+
         $results = array();
 
-        foreach ($pending as $run) {
+        foreach ($runs as $run) {
+            $syncResult = $this->processWebhook($run['id'], $userId);
             $results[] = array(
                 'run_id' => $run['id'],
-                'result' => $this->processWebhook($run['id'], $userId)
+                'apify_run_id' => $run['apify_run_id'],
+                'result' => $syncResult
             );
         }
 
