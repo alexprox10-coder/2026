@@ -324,6 +324,10 @@
 
             <!-- Страница парсинга -->
             <div id="parsingPage" class="page" style="display:none;">
+                <!-- Баннер статуса парсинга -->
+                <div id="parsingStatusBanner" style="display:none; margin-bottom: 20px; padding: 15px 20px; border-radius: 10px; display: flex; align-items: center; gap: 12px;">
+                </div>
+
                 <div class="section">
                     <div class="section-header">
                         <h2 class="section-title">Мои задачи парсинга</h2>
@@ -339,7 +343,7 @@
             <div id="resultsPage" class="page" style="display:none;">
                 <div class="section">
                     <div class="section-header">
-                        <h2 class="section-title">Найденные объявления</h2>
+                        <h2 class="section-title">Объявления (<span id="listingsCount">0</span>)</h2>
                         <div style="display: flex; gap: 10px;">
                             <button class="btn" onclick="syncResults()" id="syncBtn">🔄 Синхронизировать</button>
                             <button class="btn btn-secondary" onclick="exportToExcel()">📥 Экспорт Excel</button>
@@ -510,18 +514,19 @@ https://www.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=flat&regi
         async function loadListings() {
             const result = await api('/listings');
             const container = document.getElementById('listingsList');
-            
+            const count = (result.listings && result.listings.length) || 0;
+
+            // Обновляем все счетчики
+            document.getElementById('totalListings').textContent = count;
+            document.getElementById('usageCount').textContent = count;
+            document.getElementById('listingsCount').textContent = count;
+
             if (!result.listings || result.listings.length === 0) {
                 container.innerHTML = '<div class="empty"><div class="empty-icon">🏠</div>Нет объявлений. Запустите парсинг!</div>';
-                document.getElementById('totalListings').textContent = '0';
-                document.getElementById('usageCount').textContent = '0';
                 return;
             }
-            
-            document.getElementById('totalListings').textContent = result.listings.length;
-            document.getElementById('usageCount').textContent = result.listings.length;
-            
-            container.innerHTML = result.listings.slice(0, 20).map(item => `
+
+            container.innerHTML = result.listings.slice(0, 50).map(item => `
                 <div class="task-item">
                     <div class="task-info">
                         <h4>${item.title || 'Без названия'} <span class="task-source ${item.source || 'avito'}">${item.source || 'avito'}</span></h4>
@@ -562,44 +567,131 @@ https://www.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=flat&regi
             }
         });
 
+        // Показать баннер статуса
+        function showStatusBanner(type, message) {
+            const banner = document.getElementById('parsingStatusBanner');
+            const colors = {
+                running: { bg: '#22c55e', icon: '⏳' },
+                completed: { bg: '#3b82f6', icon: '✅' },
+                error: { bg: '#ef4444', icon: '❌' }
+            };
+            const config = colors[type] || colors.running;
+
+            banner.style.display = 'flex';
+            banner.style.background = config.bg;
+            banner.innerHTML = `<span style="font-size: 1.2rem;">${config.icon}</span><span>${message}</span>`;
+
+            // Автоскрытие для completed и error
+            if (type === 'completed' || type === 'error') {
+                setTimeout(() => {
+                    banner.style.display = 'none';
+                }, 8000);
+            }
+        }
+
+        // Скрыть баннер
+        function hideStatusBanner() {
+            document.getElementById('parsingStatusBanner').style.display = 'none';
+        }
+
         // Запуск задачи
         async function runTask(taskId) {
             if (!confirm('Запустить парсинг? Это может занять 2-5 минут.')) return;
-            
+
             const btn = event.target;
             btn.disabled = true;
             btn.textContent = '⏳ Запуск...';
-            
+
             const result = await api(`/tasks/${taskId}/run`, 'POST');
-            
+
             if (result.success) {
                 btn.textContent = '⏳ Парсинг...';
+
+                // Сохраняем активный запуск
+                const activeRuns = JSON.parse(localStorage.getItem('activeRuns') || '{}');
+                activeRuns[result.run_id] = { taskId, startedAt: Date.now() };
+                localStorage.setItem('activeRuns', JSON.stringify(activeRuns));
+
+                // Показываем баннер
+                showStatusBanner('running', 'Парсинг запущен... Ожидайте 2-5 минут');
+
                 // Проверяем статус каждые 10 секунд
-                checkRunStatus(result.run_id, btn);
+                checkRunStatus(result.run_id, btn, taskId);
             } else {
                 btn.disabled = false;
                 btn.textContent = '▶ Запустить';
-                alert('Ошибка запуска: ' + (result.error || 'Неизвестная ошибка'));
+                showStatusBanner('error', 'Ошибка запуска: ' + (result.error || 'Неизвестная ошибка'));
             }
         }
 
         // Проверка статуса
-        async function checkRunStatus(runId, btn) {
-            const result = await api(`/runs/${runId}/status`);
-            
-            if (result.status === 'completed') {
-                btn.disabled = false;
-                btn.textContent = '▶ Запустить';
-                alert(`Готово! Найдено ${result.items_found || 0} объявлений`);
-                loadListings();
-                loadTasks();
-            } else if (result.status === 'failed') {
-                btn.disabled = false;
-                btn.textContent = '▶ Запустить';
-                alert('Ошибка парсинга. Попробуйте позже.');
-            } else {
-                // Продолжаем проверять
-                setTimeout(() => checkRunStatus(runId, btn), 10000);
+        async function checkRunStatus(runId, btn, taskId) {
+            try {
+                const result = await api(`/runs/${runId}/status`);
+
+                if (result.status === 'completed') {
+                    // Удаляем из активных
+                    const activeRuns = JSON.parse(localStorage.getItem('activeRuns') || '{}');
+                    delete activeRuns[runId];
+                    localStorage.setItem('activeRuns', JSON.stringify(activeRuns));
+
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = '▶ Запустить';
+                    }
+
+                    showStatusBanner('completed', `Парсинг завершён! Найдено ${result.items_found || 0} объявлений`);
+                    loadListings();
+                    loadTasks();
+                } else if (result.status === 'failed') {
+                    // Удаляем из активных
+                    const activeRuns = JSON.parse(localStorage.getItem('activeRuns') || '{}');
+                    delete activeRuns[runId];
+                    localStorage.setItem('activeRuns', JSON.stringify(activeRuns));
+
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = '▶ Запустить';
+                    }
+
+                    showStatusBanner('error', 'Ошибка парсинга. Попробуйте позже.');
+                } else {
+                    // Продолжаем проверять
+                    setTimeout(() => checkRunStatus(runId, btn, taskId), 10000);
+                }
+            } catch (e) {
+                console.error('Error checking status:', e);
+                setTimeout(() => checkRunStatus(runId, btn, taskId), 15000);
+            }
+        }
+
+        // Проверка активных запусков при загрузке
+        async function checkActiveRuns() {
+            const activeRuns = JSON.parse(localStorage.getItem('activeRuns') || '{}');
+            const runIds = Object.keys(activeRuns);
+
+            if (runIds.length === 0) return;
+
+            // Очищаем старые запуски (старше 1 часа)
+            const now = Date.now();
+            let hasActive = false;
+            for (const runId of runIds) {
+                if (now - activeRuns[runId].startedAt > 3600000) {
+                    delete activeRuns[runId];
+                } else {
+                    hasActive = true;
+                }
+            }
+            localStorage.setItem('activeRuns', JSON.stringify(activeRuns));
+
+            if (!hasActive) return;
+
+            // Показываем баннер если есть активные
+            showStatusBanner('running', 'Парсинг выполняется... Ожидайте результатов');
+
+            // Проверяем каждый активный запуск
+            for (const runId of Object.keys(activeRuns)) {
+                checkRunStatus(runId, null, activeRuns[runId].taskId);
             }
         }
 
@@ -704,7 +796,10 @@ https://www.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=flat&regi
             document.getElementById(page + 'Page').style.display = 'block';
             document.querySelector(`[data-page="${page}"]`).classList.add('active');
             
-            if (page === 'parsing') loadTasks();
+            if (page === 'parsing') {
+                loadTasks();
+                checkActiveRuns(); // Проверяем незавершённые запуски
+            }
             if (page === 'results') {
                 autoSync(); // Автосинхронизация при открытии результатов
                 loadListings();
@@ -730,6 +825,7 @@ https://www.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=flat&regi
         loadUser();
         loadTasks();
         loadListings();
+        checkActiveRuns(); // Проверяем незавершённые запуски
     </script>
 </body>
 </html>
