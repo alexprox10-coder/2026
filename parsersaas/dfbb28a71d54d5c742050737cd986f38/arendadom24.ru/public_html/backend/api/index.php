@@ -89,11 +89,23 @@ if ($path === '' && $method === 'GET') {
 // Register
 if ($path === 'auth/register' && $method === 'POST') {
     $user = new User();
+    // Поддержка обоих вариантов: name или first_name/last_name
+    $name = isset($input['name']) ? $input['name'] : '';
+    $firstName = isset($input['first_name']) ? $input['first_name'] : '';
+    $lastName = isset($input['last_name']) ? $input['last_name'] : '';
+
+    // Если передан name, разбиваем его на first_name и last_name
+    if ($name && !$firstName) {
+        $parts = explode(' ', $name, 2);
+        $firstName = $parts[0];
+        $lastName = isset($parts[1]) ? $parts[1] : '';
+    }
+
     $result = $user->register(
         isset($input['email']) ? $input['email'] : '',
         isset($input['password']) ? $input['password'] : '',
-        isset($input['first_name']) ? $input['first_name'] : '',
-        isset($input['last_name']) ? $input['last_name'] : ''
+        $firstName,
+        $lastName
     );
     if ($result['success']) {
         $loginResult = $user->login($input['email'], $input['password']);
@@ -134,34 +146,64 @@ if ($path === 'auth/google' && $method === 'GET') {
 if ($path === 'auth/google/callback' && $method === 'GET') {
     $code = isset($_GET['code']) ? $_GET['code'] : '';
     if (!$code) {
-        header('Location: ' . SITE_URL . '/login.html?error=1');
+        header('Location: ' . SITE_URL . '/login.html?error=no_code');
         exit;
     }
-    
-    $tokenResponse = @file_get_contents('https://oauth2.googleapis.com/token', false, stream_context_create(array(
-        'http' => array(
-            'method' => 'POST',
-            'header' => 'Content-Type: application/x-www-form-urlencoded',
-            'content' => http_build_query(array(
-                'code' => $code,
-                'client_id' => GOOGLE_CLIENT_ID,
-                'client_secret' => GOOGLE_CLIENT_SECRET,
-                'redirect_uri' => GOOGLE_REDIRECT_URI,
-                'grant_type' => 'authorization_code'
-            ))
-        )
+
+    // Проверяем что credentials не placeholder
+    if (GOOGLE_CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID' || GOOGLE_CLIENT_SECRET === 'YOUR_GOOGLE_CLIENT_SECRET') {
+        echo '<pre>GOOGLE OAUTH ERROR: Google credentials not configured in config.php</pre>';
+        exit;
+    }
+
+    // Используем cURL вместо file_get_contents (file_get_contents заблокирован для HTTPS)
+    $ch = curl_init('https://oauth2.googleapis.com/token');
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query(array(
+        'code' => $code,
+        'client_id' => GOOGLE_CLIENT_ID,
+        'client_secret' => GOOGLE_CLIENT_SECRET,
+        'redirect_uri' => GOOGLE_REDIRECT_URI,
+        'grant_type' => 'authorization_code'
     )));
-    
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/x-www-form-urlencoded'));
+
+    $tokenResponse = curl_exec($ch);
+    $curlError = curl_error($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($curlError || $httpCode !== 200) {
+        echo '<pre>GOOGLE TOKEN ERROR: httpCode=' . $httpCode . ' curlError=' . $curlError . ' response=' . $tokenResponse . '</pre>';
+        exit;
+    }
+
     $tokenData = json_decode($tokenResponse, true);
     $accessToken = isset($tokenData['access_token']) ? $tokenData['access_token'] : '';
-    
+
     if (!$accessToken) {
-        header('Location: ' . SITE_URL . '/login.html?error=2');
+        echo '<pre>GOOGLE TOKEN ERROR: No access_token in response. Response: ' . $tokenResponse . '</pre>';
         exit;
     }
-    
-    $userInfo = json_decode(@file_get_contents('https://www.googleapis.com/oauth2/v2/userinfo?access_token=' . $accessToken), true);
-    
+
+    // Получаем данные пользователя
+    $ch2 = curl_init('https://www.googleapis.com/oauth2/v2/userinfo?access_token=' . $accessToken);
+    curl_setopt($ch2, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch2, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch2, CURLOPT_SSL_VERIFYHOST, false);
+    $userInfoResponse = curl_exec($ch2);
+    curl_close($ch2);
+
+    $userInfo = json_decode($userInfoResponse, true);
+
+    if (!isset($userInfo['email'])) {
+        echo '<pre>GOOGLE USER ERROR: No email in response. Response: ' . $userInfoResponse . '</pre>';
+        exit;
+    }
+
     $user = new User();
     $result = $user->googleAuth(
         $userInfo['id'],
@@ -170,12 +212,12 @@ if ($path === 'auth/google/callback' && $method === 'GET') {
         isset($userInfo['family_name']) ? $userInfo['family_name'] : '',
         isset($userInfo['picture']) ? $userInfo['picture'] : null
     );
-    
+
     if ($result['success']) {
         setcookie('auth_token', $result['token'], time() + 86400 * 30, '/', '', false, true);
         header('Location: ' . SITE_URL . '/dashboard/index.html?token=' . $result['token']);
     } else {
-        header('Location: ' . SITE_URL . '/login.html?error=3');
+        header('Location: ' . SITE_URL . '/login.html?error=auth_failed');
     }
     exit;
 }

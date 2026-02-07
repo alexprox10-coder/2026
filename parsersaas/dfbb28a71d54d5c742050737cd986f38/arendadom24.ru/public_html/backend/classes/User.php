@@ -118,6 +118,13 @@ class User {
 
     private function sanitizeUser($user) {
         unset($user['password_hash']);
+        // Добавляем поле name из first_name и last_name
+        $firstName = isset($user['first_name']) ? $user['first_name'] : '';
+        $lastName = isset($user['last_name']) ? $user['last_name'] : '';
+        $user['name'] = trim($firstName . ' ' . $lastName);
+        if (empty($user['name'])) {
+            $user['name'] = $user['email'];
+        }
         return $user;
     }
 }
