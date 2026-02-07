@@ -374,21 +374,34 @@ class Parser {
      * Синхронизировать все незавершённые запуски
      */
     public function syncAllPendingRuns($userId) {
-        // Получаем ВСЕ запуски со статусом running ИЛИ последние 10 запусков с apify_run_id
+        // Получаем ВСЕ запуски со статусом running с apify_run_id
         $runs = $this->db->fetchAll(
             "SELECT * FROM parsing_runs
              WHERE user_id = ? AND apify_run_id IS NOT NULL AND apify_run_id != ''
-             AND (status = 'running' OR status = 'pending')
+             AND status = 'running'
              ORDER BY started_at DESC
-             LIMIT 10",
+             LIMIT 20",
             array($userId)
         );
 
-        // Если нет running, попробуем синхронизировать последние запуски
+        // Если нет running - попробуем последние 5 запусков (на случай если статус не обновился)
         if (empty($runs)) {
             $runs = $this->db->fetchAll(
                 "SELECT * FROM parsing_runs
                  WHERE user_id = ? AND apify_run_id IS NOT NULL AND apify_run_id != ''
+                 AND status != 'completed'
+                 ORDER BY started_at DESC
+                 LIMIT 5",
+                array($userId)
+            );
+        }
+
+        // Всё ещё нет? Берём последние запуски за сегодня
+        if (empty($runs)) {
+            $runs = $this->db->fetchAll(
+                "SELECT * FROM parsing_runs
+                 WHERE user_id = ? AND apify_run_id IS NOT NULL AND apify_run_id != ''
+                 AND DATE(started_at) = CURDATE()
                  ORDER BY started_at DESC
                  LIMIT 5",
                 array($userId)
@@ -398,10 +411,16 @@ class Parser {
         $results = array();
 
         foreach ($runs as $run) {
+            // Пропускаем уже завершённые с результатами
+            if ($run['status'] === 'completed' && (int)$run['items_found'] > 0) {
+                continue;
+            }
+
             $syncResult = $this->processWebhook($run['id'], $userId);
             $results[] = array(
                 'run_id' => $run['id'],
                 'apify_run_id' => $run['apify_run_id'],
+                'db_status' => $run['status'],
                 'result' => $syncResult
             );
         }

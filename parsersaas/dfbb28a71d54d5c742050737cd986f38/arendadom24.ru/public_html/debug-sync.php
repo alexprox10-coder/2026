@@ -50,45 +50,90 @@ echo "<p>Token: " . substr(APIFY_TOKEN, 0, 15) . "...</p>";
 echo "<p>Avito Actor: " . APIFY_AVITO_ACTOR . "</p>";
 echo "<p>CIAN Actor: " . APIFY_CIAN_ACTOR . "</p>";
 
+// Helper function - cURL GET (file_get_contents заблокирован на сервере)
+function curlGet($url) {
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+    $response = curl_exec($ch);
+    $error = curl_error($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    return ['response' => $response, 'error' => $error, 'httpCode' => $httpCode];
+}
+
 // 7. Попробуем синхронизировать последний run
-echo "<h2>7. Тест синхронизации</h2>";
+echo "<h2>7. Тест синхронизации (cURL)</h2>";
 if (!empty($runs)) {
-    $lastRun = $runs[0];
-    echo "<p>Последний run ID: " . $lastRun['id'] . "</p>";
-    echo "<p>Apify Run ID: " . ($lastRun['apify_run_id'] ?: 'НЕТ!') . "</p>";
-    echo "<p>Status: " . $lastRun['status'] . "</p>";
+    foreach ($runs as $idx => $lastRun) {
+        echo "<h3>Run #" . ($idx + 1) . "</h3>";
+        echo "<p>Наш Run ID: <strong>" . $lastRun['id'] . "</strong></p>";
+        echo "<p>Apify Run ID: <strong>" . ($lastRun['apify_run_id'] ?: 'НЕТ!') . "</strong></p>";
+        echo "<p>Status в БД: <strong style='color:" . ($lastRun['status'] === 'completed' ? 'green' : 'orange') . "'>" . $lastRun['status'] . "</strong></p>";
+        echo "<p>Items found: " . ($lastRun['items_found'] ?? 0) . "</p>";
 
-    if (!empty($lastRun['apify_run_id'])) {
-        // Проверим статус в Apify
-        $apifyUrl = "https://api.apify.com/v2/actor-runs/{$lastRun['apify_run_id']}?token=" . APIFY_TOKEN;
-        $response = @file_get_contents($apifyUrl);
-        $data = json_decode($response, true);
+        if (!empty($lastRun['apify_run_id'])) {
+            // Проверим статус в Apify через cURL
+            $apifyUrl = "https://api.apify.com/v2/actor-runs/{$lastRun['apify_run_id']}?token=" . APIFY_TOKEN;
+            $result = curlGet($apifyUrl);
 
-        echo "<p>Apify Status: <strong>" . ($data['data']['status'] ?? 'UNKNOWN') . "</strong></p>";
+            if ($result['error']) {
+                echo "<p style='color:red'>❌ cURL Error: " . $result['error'] . "</p>";
+            } else {
+                $data = json_decode($result['response'], true);
+                $apifyStatus = $data['data']['status'] ?? 'UNKNOWN';
+                echo "<p>Apify Status: <strong style='color:" . ($apifyStatus === 'SUCCEEDED' ? 'green' : 'blue') . "'>" . $apifyStatus . "</strong></p>";
 
-        if (isset($data['data']['status']) && $data['data']['status'] === 'SUCCEEDED') {
-            // Попробуем получить результаты
-            $datasetUrl = "https://api.apify.com/v2/actor-runs/{$lastRun['apify_run_id']}/dataset/items?token=" . APIFY_TOKEN;
-            $items = json_decode(@file_get_contents($datasetUrl), true);
+                if ($apifyStatus === 'SUCCEEDED') {
+                    // Получаем результаты
+                    $datasetUrl = "https://api.apify.com/v2/actor-runs/{$lastRun['apify_run_id']}/dataset/items?token=" . APIFY_TOKEN;
+                    $dataResult = curlGet($datasetUrl);
+                    $items = json_decode($dataResult['response'], true) ?: [];
 
-            echo "<p>Результатов в Apify: <strong>" . count($items) . "</strong></p>";
+                    echo "<p>Результатов в Apify: <strong style='color:green'>" . count($items) . "</strong></p>";
 
-            if (!empty($items)) {
-                echo "<p>Первый результат:</p>";
-                echo "<pre>" . print_r($items[0], true) . "</pre>";
+                    if (!empty($items) && $lastRun['status'] !== 'completed') {
+                        echo "<p>Первый результат:</p>";
+                        echo "<pre style='max-height:200px;overflow:auto'>" . htmlspecialchars(print_r($items[0], true)) . "</pre>";
 
-                // Попробуем сохранить
-                echo "<h3>Сохранение в БД...</h3>";
-                $parser = new Parser();
-                $result = $parser->processWebhook($lastRun['id'], $lastRun['user_id']);
-                echo "<pre>" . print_r($result, true) . "</pre>";
+                        // Синхронизируем
+                        echo "<h4>🔄 Синхронизация...</h4>";
+                        $parser = new Parser();
+                        $syncResult = $parser->processWebhook($lastRun['id'], $lastRun['user_id']);
+                        echo "<pre style='color:green'>" . htmlspecialchars(print_r($syncResult, true)) . "</pre>";
+                    } elseif ($lastRun['status'] === 'completed') {
+                        echo "<p style='color:green'>✅ Уже синхронизирован</p>";
+                    }
+                }
             }
+        } else {
+            echo "<p style='color:red'>❌ Нет apify_run_id!</p>";
         }
-    } else {
-        echo "<p style='color:red'>❌ У последнего запуска нет apify_run_id!</p>";
+        echo "<hr>";
+
+        // Показываем только первые 3
+        if ($idx >= 2) break;
     }
 } else {
     echo "<p style='color:red'>❌ Нет запусков в БД</p>";
+}
+
+// 8. Проверяем объявления после синхронизации
+echo "<h2>8. Объявления после синхронизации</h2>";
+$listingsAfter = $db->fetchAll("SELECT COUNT(*) as cnt FROM listings");
+echo "<p>Всего объявлений: <strong style='color:green'>" . $listingsAfter[0]['cnt'] . "</strong></p>";
+
+$recentListings = $db->fetchAll("SELECT id, title, price, source, created_at FROM listings ORDER BY id DESC LIMIT 5");
+if (!empty($recentListings)) {
+    echo "<p>Последние объявления:</p>";
+    echo "<table border='1' cellpadding='5'><tr><th>ID</th><th>Title</th><th>Price</th><th>Source</th><th>Created</th></tr>";
+    foreach ($recentListings as $l) {
+        echo "<tr><td>{$l['id']}</td><td>" . htmlspecialchars(substr($l['title'], 0, 50)) . "</td><td>{$l['price']}</td><td>{$l['source']}</td><td>{$l['created_at']}</td></tr>";
+    }
+    echo "</table>";
 }
 
 echo "<hr><p><strong>УДАЛИТЕ ЭТОТ ФАЙЛ ПОСЛЕ ИСПОЛЬЗОВАНИЯ!</strong></p>";

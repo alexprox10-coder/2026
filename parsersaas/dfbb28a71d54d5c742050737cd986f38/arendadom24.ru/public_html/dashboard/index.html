@@ -670,13 +670,11 @@ https://www.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=flat&regi
             const activeRuns = JSON.parse(localStorage.getItem('activeRuns') || '{}');
             const runIds = Object.keys(activeRuns);
 
-            if (runIds.length === 0) return;
-
-            // Очищаем старые запуски (старше 1 часа)
+            // Очищаем старые запуски (старше 30 минут)
             const now = Date.now();
             let hasActive = false;
             for (const runId of runIds) {
-                if (now - activeRuns[runId].startedAt > 3600000) {
+                if (now - activeRuns[runId].startedAt > 1800000) { // 30 минут
                     delete activeRuns[runId];
                 } else {
                     hasActive = true;
@@ -684,7 +682,19 @@ https://www.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=flat&regi
             }
             localStorage.setItem('activeRuns', JSON.stringify(activeRuns));
 
-            if (!hasActive) return;
+            if (!hasActive) {
+                // Нет активных - пробуем автосинхронизацию на случай если статус устарел
+                try {
+                    const result = await api('/runs/sync-all', 'POST');
+                    if (result.synced && result.synced.some(r => r.result && r.result.status === 'completed')) {
+                        loadListings();
+                        showStatusBanner('completed', 'Найдены новые результаты! Перейдите в раздел Результаты.');
+                    }
+                } catch (e) {
+                    console.log('Background sync error:', e);
+                }
+                return;
+            }
 
             // Показываем баннер если есть активные
             showStatusBanner('running', 'Парсинг выполняется... Ожидайте результатов');
@@ -749,12 +759,20 @@ https://www.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=flat&regi
 
                     if (completedCount > 0) {
                         statusDiv.innerHTML = `<span style="color: #22c55e;">✅ Синхронизировано ${completedCount} запусков. Получено ${totalItems} новых объявлений!</span>`;
+
+                        // Очищаем activeRuns после успешной синхронизации
+                        localStorage.setItem('activeRuns', '{}');
+                        hideStatusBanner();
+
                         loadListings(); // Обновляем список
                     } else {
                         statusDiv.innerHTML = '<span style="color: #94a3b8;">ℹ️ Нет завершённых запусков для синхронизации</span>';
                     }
                 } else {
                     statusDiv.innerHTML = '<span style="color: #94a3b8;">ℹ️ Нет активных запусков для синхронизации</span>';
+                    // Очищаем activeRuns если нет активных запусков
+                    localStorage.setItem('activeRuns', '{}');
+                    hideStatusBanner();
                 }
             } catch (error) {
                 statusDiv.innerHTML = `<span style="color: #ef4444;">❌ Ошибка: ${error.message}</span>`;
@@ -774,6 +792,9 @@ https://www.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=flat&regi
             try {
                 const result = await api('/runs/sync-all', 'POST');
                 if (result.synced && result.synced.some(r => r.result && r.result.status === 'completed')) {
+                    // Очищаем activeRuns и баннер после успешной синхронизации
+                    localStorage.setItem('activeRuns', '{}');
+                    hideStatusBanner();
                     loadListings();
                 }
             } catch (e) {
