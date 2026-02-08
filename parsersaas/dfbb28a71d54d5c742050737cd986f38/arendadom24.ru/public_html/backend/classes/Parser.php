@@ -129,33 +129,35 @@ class Parser {
                 'limit' => $maxItems
             );
         } else {
-            // CIAN парсер
+            // CIAN парсер - требует параметр location
             $actorId = APIFY_CIAN_ACTOR;
 
-            // Парсим URL чтобы получить параметры
-            // Пример: https://blagoveschensk.cian.ru/snyat-kvartiru/
-            $input = array(
-                'startUrls' => array(array('url' => $url)),
-                'maxItems' => $maxItems,
-                'limit' => $maxItems
-            );
+            // Извлекаем город из URL: https://blagoveschensk.cian.ru/snyat-kvartiru/
+            $location = 'moskva'; // по умолчанию
+            if (preg_match('/https?:\/\/([a-z0-9-]+)\.cian\.ru/i', $url, $matches)) {
+                $location = $matches[1];
+            }
 
-            // Дополнительно: определяем тип сделки из URL
-            // snyat = аренда, kupit = продажа
-            if (strpos($url, 'snyat') !== false) {
-                $input['dealType'] = 'rent';
-            } elseif (strpos($url, 'kupit') !== false) {
-                $input['dealType'] = 'sale';
+            // Определяем тип сделки из URL
+            $dealType = 'rent'; // по умолчанию аренда
+            if (strpos($url, 'kupit') !== false || strpos($url, 'prodazha') !== false) {
+                $dealType = 'sale';
             }
 
             // Определяем тип недвижимости
-            if (strpos($url, 'kvartiru') !== false || strpos($url, 'kvartira') !== false) {
-                $input['offerType'] = 'flat';
-            } elseif (strpos($url, 'komnatu') !== false) {
-                $input['offerType'] = 'room';
+            $offerType = 'flat'; // по умолчанию квартира
+            if (strpos($url, 'komnatu') !== false || strpos($url, 'komnata') !== false) {
+                $offerType = 'room';
             } elseif (strpos($url, 'dom') !== false) {
-                $input['offerType'] = 'house';
+                $offerType = 'house';
             }
+
+            $input = array(
+                'location' => $location,
+                'dealType' => $dealType,
+                'offerType' => $offerType,
+                'maxItems' => $maxItems
+            );
         }
 
         // Запускаем актор (синхронизация результатов через кнопку в личном кабинете)
