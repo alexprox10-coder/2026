@@ -238,7 +238,11 @@ class Parser {
     private function getApifyResults($apifyRunId) {
         $apiUrl = "https://api.apify.com/v2/actor-runs/{$apifyRunId}/dataset/items?token={$this->apifyToken}";
         $response = $this->curlGet($apiUrl);
-        return json_decode($response, true) ?: array();
+        $decoded = json_decode($response, true);
+        if (!$decoded || !is_array($decoded)) {
+            return array();
+        }
+        return $decoded;
     }
 
     private function saveResults($run, $items) {

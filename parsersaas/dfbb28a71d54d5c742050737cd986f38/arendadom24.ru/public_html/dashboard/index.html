@@ -776,6 +776,9 @@ https://www.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=flat&regi
                 }
             } catch (error) {
                 statusDiv.innerHTML = `<span style="color: #ef4444;">❌ Ошибка: ${error.message}</span>`;
+                // Очищаем activeRuns даже при ошибке чтобы сбросить застрявший статус
+                localStorage.setItem('activeRuns', '{}');
+                hideStatusBanner();
             }
 
             btn.disabled = false;
