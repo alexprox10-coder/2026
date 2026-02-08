@@ -9,12 +9,22 @@ class Database {
     private function __construct() {
         try {
             $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4";
-            $this->pdo = new PDO($dsn, DB_USER, DB_PASS, [
+            $this->pdo = new PDO($dsn, DB_USER, DB_PASS, array(
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false
-            ]);
+            ));
         } catch (PDOException $e) {
+            // Для API возвращаем JSON ошибку
+            $isApi = (strpos($_SERVER['REQUEST_URI'], '/api') !== false);
+            if ($isApi) {
+                while (ob_get_level()) ob_end_clean();
+                header('Content-Type: application/json; charset=utf-8');
+                http_response_code(500);
+                $msg = DEBUG ? $e->getMessage() : 'Database connection failed';
+                echo json_encode(array('success' => false, 'error' => 'Database error: ' . $msg), JSON_UNESCAPED_UNICODE);
+                exit;
+            }
             if (DEBUG) {
                 die("Database connection failed: " . $e->getMessage());
             }
