@@ -129,24 +129,47 @@ class Parser {
                 'limit' => $maxItems
             );
         } else {
+            // CIAN парсер
             $actorId = APIFY_CIAN_ACTOR;
 
+            // Парсим URL чтобы получить параметры
+            // Пример: https://blagoveschensk.cian.ru/snyat-kvartiru/
             $input = array(
                 'startUrls' => array(array('url' => $url)),
-                'maxItems' => $maxItems
+                'maxItems' => $maxItems,
+                'limit' => $maxItems
             );
+
+            // Дополнительно: определяем тип сделки из URL
+            // snyat = аренда, kupit = продажа
+            if (strpos($url, 'snyat') !== false) {
+                $input['dealType'] = 'rent';
+            } elseif (strpos($url, 'kupit') !== false) {
+                $input['dealType'] = 'sale';
+            }
+
+            // Определяем тип недвижимости
+            if (strpos($url, 'kvartiru') !== false || strpos($url, 'kvartira') !== false) {
+                $input['offerType'] = 'flat';
+            } elseif (strpos($url, 'komnatu') !== false) {
+                $input['offerType'] = 'room';
+            } elseif (strpos($url, 'dom') !== false) {
+                $input['offerType'] = 'house';
+            }
         }
 
         // Запускаем актор (синхронизация результатов через кнопку в личном кабинете)
         $apiUrl = "https://api.apify.com/v2/acts/{$actorId}/runs?token={$this->apifyToken}";
-        
+
         $ch = curl_init($apiUrl);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($input));
         curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-        
+
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
@@ -219,19 +242,71 @@ class Parser {
     private function saveResults($run, $items) {
         $count = 0;
         foreach ($items as $item) {
-            $externalId = isset($item['id']) ? $item['id'] : (isset($item['url']) ? md5($item['url']) : md5(json_encode($item)));
-            
+            // Определяем источник по структуре данных
+            $isCian = isset($item['siteUrl']) || isset($item['formattedFullInfo']);
+
+            if ($isCian) {
+                // CIAN формат данных
+                $source = 'cian';
+                $itemUrl = isset($item['siteUrl']) ? $item['siteUrl'] : '';
+                $externalId = isset($item['id']) ? $item['id'] : md5($itemUrl);
+                $title = isset($item['formattedFullInfo']) ? $item['formattedFullInfo'] : '';
+                $address = isset($item['formattedAddress']) ? $item['formattedAddress'] : '';
+
+                // Цена из CIAN
+                $priceStr = isset($item['formattedFullPrice']) ? $item['formattedFullPrice'] : '0';
+                $price = (int)preg_replace('/[^\d]/', '', $priceStr);
+
+                // Телефон из agent.phones
+                $phone = '';
+                if (isset($item['agent']) && isset($item['agent']['phones']) && isset($item['agent']['phones'][0])) {
+                    $phone = $item['agent']['phones'][0];
+                }
+
+                // Изображение
+                $imageUrl = '';
+                if (isset($item['photos']) && is_array($item['photos']) && isset($item['photos'][0])) {
+                    $imageUrl = $item['photos'][0];
+                }
+
+                // Комнаты, площадь, этаж
+                $rooms = isset($item['roomsCount']) ? $item['roomsCount'] : '';
+                $area = isset($item['totalArea']) ? $item['totalArea'] : '';
+                $floor = isset($item['floor']) ? $item['floor'] : '';
+                if (isset($item['floorsCount'])) {
+                    $floor = $floor . '/' . $item['floorsCount'];
+                }
+
+                $description = isset($item['description']) ? mb_substr($item['description'], 0, 1000) : '';
+            } else {
+                // AVITO формат данных
+                $source = 'avito';
+                $itemUrl = isset($item['url']) ? $item['url'] : '';
+                $externalId = isset($item['id']) ? $item['id'] : md5($itemUrl);
+                $title = isset($item['title']) ? $item['title'] : '';
+                $address = isset($item['address']) ? $item['address'] : (isset($item['location']) ? $item['location'] : '');
+                $price = $this->extractPrice($item);
+                $phone = isset($item['phone']) ? $item['phone'] : '';
+                $imageUrl = isset($item['image']) ? $item['image'] : '';
+                if (empty($imageUrl) && isset($item['images']) && is_array($item['images']) && isset($item['images'][0])) {
+                    $imageUrl = $item['images'][0];
+                }
+                $rooms = isset($item['rooms']) ? $item['rooms'] : '';
+                $area = isset($item['area']) ? $item['area'] : '';
+                $floor = isset($item['floor']) ? $item['floor'] : '';
+                $description = isset($item['description']) ? mb_substr($item['description'], 0, 1000) : '';
+            }
+
+            // Пропускаем если нет ID
+            if (empty($externalId)) {
+                $externalId = md5(json_encode($item));
+            }
+
             $existing = $this->db->fetch(
                 "SELECT id FROM listings WHERE user_id = ? AND external_id = ?",
                 array($run['user_id'], $externalId)
             );
             if ($existing) continue;
-
-            // Определяем источник
-            $source = 'avito';
-            if (isset($item['url']) && strpos($item['url'], 'cian.ru') !== false) {
-                $source = 'cian';
-            }
 
             $this->db->insert('listings', array(
                 'run_id' => $run['id'],
@@ -239,16 +314,16 @@ class Parser {
                 'user_id' => $run['user_id'],
                 'external_id' => $externalId,
                 'source' => $source,
-                'title' => isset($item['title']) ? $item['title'] : '',
-                'price' => $this->extractPrice($item),
-                'address' => isset($item['address']) ? $item['address'] : (isset($item['location']) ? $item['location'] : ''),
-                'url' => isset($item['url']) ? $item['url'] : '',
-                'image_url' => isset($item['image']) ? $item['image'] : (isset($item['images'][0]) ? $item['images'][0] : ''),
-                'rooms' => isset($item['rooms']) ? $item['rooms'] : '',
-                'area' => isset($item['area']) ? $item['area'] : '',
-                'floor' => isset($item['floor']) ? $item['floor'] : '',
-                'phone' => isset($item['phone']) ? $item['phone'] : '',
-                'description' => isset($item['description']) ? mb_substr($item['description'], 0, 1000) : ''
+                'title' => $title,
+                'price' => $price,
+                'address' => $address,
+                'url' => $itemUrl,
+                'image_url' => $imageUrl,
+                'rooms' => $rooms,
+                'area' => $area,
+                'floor' => $floor,
+                'phone' => $phone,
+                'description' => $description
             ));
             $count++;
         }
