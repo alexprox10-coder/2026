@@ -325,7 +325,7 @@
             <!-- Страница парсинга -->
             <div id="parsingPage" class="page" style="display:none;">
                 <!-- Баннер статуса парсинга -->
-                <div id="parsingStatusBanner" style="display:none; margin-bottom: 20px; padding: 15px 20px; border-radius: 10px; display: flex; align-items: center; gap: 12px;">
+                <div id="parsingStatusBanner" style="display:none; margin-bottom: 20px; padding: 15px 20px; border-radius: 10px; align-items: center; gap: 12px;">
                 </div>
 
                 <div class="section">
@@ -447,10 +447,23 @@ https://www.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=flat&regi
                 }
             };
             if (data) options.body = JSON.stringify(data);
-            
+
             const res = await fetch(API_URL + endpoint, options);
-            const result = await res.json();
-            
+
+            // Проверяем что ответ - валидный JSON
+            const text = await res.text();
+            let result;
+            try {
+                result = JSON.parse(text);
+            } catch (e) {
+                console.error('Invalid JSON response:', text.substring(0, 200));
+                // Показываем ошибку пользователю
+                const errorMsg = text.includes('Fatal') || text.includes('error')
+                    ? 'Ошибка сервера. Попробуйте обновить страницу.'
+                    : 'Ошибка ответа сервера';
+                return { success: false, error: errorMsg, _rawError: text.substring(0, 500) };
+            }
+
             if (res.status === 401) {
                 localStorage.removeItem('token');
                 window.location.href = '/login.html';
@@ -514,6 +527,16 @@ https://www.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=flat&regi
         async function loadListings() {
             const result = await api('/listings');
             const container = document.getElementById('listingsList');
+
+            // Обработка ошибок
+            if (!result.success && result.error) {
+                container.innerHTML = `<div class="empty" style="color: #ef4444;"><div class="empty-icon">❌</div>Ошибка: ${result.error}</div>`;
+                document.getElementById('totalListings').textContent = '0';
+                document.getElementById('usageCount').textContent = '0';
+                document.getElementById('listingsCount').textContent = '0';
+                return;
+            }
+
             const count = (result.listings && result.listings.length) || 0;
 
             // Обновляем все счетчики
@@ -670,11 +693,11 @@ https://www.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=flat&regi
             const activeRuns = JSON.parse(localStorage.getItem('activeRuns') || '{}');
             const runIds = Object.keys(activeRuns);
 
-            // Очищаем старые запуски (старше 30 минут)
+            // Очищаем старые запуски (старше 10 минут - парсинг обычно завершается за 2-5 мин)
             const now = Date.now();
             let hasActive = false;
             for (const runId of runIds) {
-                if (now - activeRuns[runId].startedAt > 1800000) { // 30 минут
+                if (now - activeRuns[runId].startedAt > 600000) { // 10 минут
                     delete activeRuns[runId];
                 } else {
                     hasActive = true;
@@ -682,26 +705,58 @@ https://www.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=flat&regi
             }
             localStorage.setItem('activeRuns', JSON.stringify(activeRuns));
 
-            if (!hasActive) {
-                // Нет активных - пробуем автосинхронизацию на случай если статус устарел
-                try {
-                    const result = await api('/runs/sync-all', 'POST');
-                    if (result.synced && result.synced.some(r => r.result && r.result.status === 'completed')) {
+            // Всегда пробуем синхронизацию чтобы обновить статус
+            try {
+                const result = await api('/runs/sync-all', 'POST');
+                if (result.synced && result.synced.length > 0) {
+                    // Проверяем результаты синхронизации
+                    let hasRunning = false;
+                    let hasCompleted = false;
+
+                    result.synced.forEach(r => {
+                        if (r.result) {
+                            if (r.result.status === 'running') {
+                                hasRunning = true;
+                            } else if (r.result.status === 'completed') {
+                                hasCompleted = true;
+                            }
+                        }
+                    });
+
+                    if (hasCompleted) {
+                        // Есть завершённые - очищаем localStorage и показываем успех
+                        localStorage.setItem('activeRuns', '{}');
                         loadListings();
                         showStatusBanner('completed', 'Найдены новые результаты! Перейдите в раздел Результаты.');
+                        return;
                     }
-                } catch (e) {
-                    console.log('Background sync error:', e);
+
+                    if (hasRunning) {
+                        // Есть реально запущенные - показываем баннер
+                        showStatusBanner('running', 'Парсинг выполняется... Ожидайте результатов');
+                        // Проверяем каждый активный запуск
+                        for (const runId of Object.keys(activeRuns)) {
+                            checkRunStatus(runId, null, activeRuns[runId].taskId);
+                        }
+                        return;
+                    }
                 }
-                return;
-            }
 
-            // Показываем баннер если есть активные
-            showStatusBanner('running', 'Парсинг выполняется... Ожидайте результатов');
-
-            // Проверяем каждый активный запуск
-            for (const runId of Object.keys(activeRuns)) {
-                checkRunStatus(runId, null, activeRuns[runId].taskId);
+                // Нет активных запусков на сервере - очищаем localStorage и скрываем баннер
+                if (!hasActive) {
+                    localStorage.setItem('activeRuns', '{}');
+                    hideStatusBanner();
+                } else {
+                    // Есть локально, но сервер ничего не вернул - проверяем статус
+                    for (const runId of Object.keys(activeRuns)) {
+                        checkRunStatus(runId, null, activeRuns[runId].taskId);
+                    }
+                }
+            } catch (e) {
+                console.log('Background sync error:', e);
+                // При ошибке очищаем состояние чтобы не застревать
+                localStorage.setItem('activeRuns', '{}');
+                hideStatusBanner();
             }
         }
 

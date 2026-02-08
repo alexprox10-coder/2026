@@ -1,13 +1,31 @@
 <?php
-// Отключаем вывод ошибок в HTML - все ответы должны быть JSON
+// ВАЖНО: Сначала загружаем конфиг, затем переопределяем настройки для API
+require_once __DIR__ . '/../config.php';
+
+// API всегда возвращает JSON - отключаем вывод ошибок в HTML
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/../../logs/php_errors.log');
+
+// Устанавливаем заголовки ДО любого вывода
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Content-Type: application/json; charset=utf-8');
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
 
 // Обработчик ошибок - возвращаем JSON
 set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    // Не обрабатываем подавленные ошибки
+    if (!(error_reporting() & $errno)) {
+        return false;
+    }
     http_response_code(500);
-    header('Content-Type: application/json; charset=utf-8');
     echo json_encode(array(
         'success' => false,
         'error' => 'Server error: ' . $errstr,
@@ -20,7 +38,6 @@ set_error_handler(function($errno, $errstr, $errfile, $errline) {
 // Обработчик исключений
 set_exception_handler(function($e) {
     http_response_code(500);
-    header('Content-Type: application/json; charset=utf-8');
     echo json_encode(array(
         'success' => false,
         'error' => 'Exception: ' . $e->getMessage(),
@@ -30,17 +47,22 @@ set_exception_handler(function($e) {
     exit;
 });
 
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
-header('Content-Type: application/json; charset=utf-8');
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
-
-require_once __DIR__ . '/../config.php';
+// Обработчик фатальных ошибок через shutdown function
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error !== null && in_array($error['type'], array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR))) {
+        // Очищаем буфер на случай если что-то уже выведено
+        if (ob_get_length()) ob_clean();
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(array(
+            'success' => false,
+            'error' => 'Fatal error: ' . $error['message'],
+            'file' => basename($error['file']),
+            'line' => $error['line']
+        ), JSON_UNESCAPED_UNICODE);
+    }
+});
 
 $requestUri = $_SERVER['REQUEST_URI'];
 $path = str_replace('/api', '', parse_url($requestUri, PHP_URL_PATH));
