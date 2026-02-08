@@ -1,14 +1,44 @@
 <?php
-// ВАЖНО: Сначала загружаем конфиг, затем переопределяем настройки для API
-require_once __DIR__ . '/../config.php';
-
-// API всегда возвращает JSON - отключаем вывод ошибок в HTML
+// ========================================
+// КРИТИЧЕСКИ ВАЖНО: ЭТИ СТРОКИ ДОЛЖНЫ БЫТЬ ПЕРВЫМИ!
+// Отключаем вывод ошибок ДО любого другого кода
+// ========================================
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
-ini_set('error_log', __DIR__ . '/../../logs/php_errors.log');
 
-// Устанавливаем заголовки ДО любого вывода
+// Включаем буферизацию чтобы поймать любой случайный вывод
+ob_start();
+
+// Обработчик фатальных ошибок - регистрируем СРАЗУ
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error !== null && in_array($error['type'], array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR))) {
+        // Очищаем весь буфер
+        while (ob_get_level()) ob_end_clean();
+
+        // Отправляем JSON ответ
+        if (!headers_sent()) {
+            http_response_code(500);
+            header('Content-Type: application/json; charset=utf-8');
+        }
+        echo json_encode(array(
+            'success' => false,
+            'error' => 'Fatal error: ' . $error['message'],
+            'file' => basename($error['file']),
+            'line' => $error['line']
+        ), JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+});
+
+// Теперь безопасно загружаем конфиг
+require_once __DIR__ . '/../config.php';
+
+// Очищаем буфер (на случай если что-то вывелось при загрузке)
+ob_clean();
+
+// Устанавливаем заголовки
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
@@ -21,10 +51,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 // Обработчик ошибок - возвращаем JSON
 set_error_handler(function($errno, $errstr, $errfile, $errline) {
-    // Не обрабатываем подавленные ошибки
     if (!(error_reporting() & $errno)) {
         return false;
     }
+    while (ob_get_level()) ob_end_clean();
     http_response_code(500);
     echo json_encode(array(
         'success' => false,
@@ -37,6 +67,7 @@ set_error_handler(function($errno, $errstr, $errfile, $errline) {
 
 // Обработчик исключений
 set_exception_handler(function($e) {
+    while (ob_get_level()) ob_end_clean();
     http_response_code(500);
     echo json_encode(array(
         'success' => false,
@@ -45,23 +76,6 @@ set_exception_handler(function($e) {
         'line' => $e->getLine()
     ), JSON_UNESCAPED_UNICODE);
     exit;
-});
-
-// Обработчик фатальных ошибок через shutdown function
-register_shutdown_function(function() {
-    $error = error_get_last();
-    if ($error !== null && in_array($error['type'], array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR))) {
-        // Очищаем буфер на случай если что-то уже выведено
-        if (ob_get_length()) ob_clean();
-        http_response_code(500);
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode(array(
-            'success' => false,
-            'error' => 'Fatal error: ' . $error['message'],
-            'file' => basename($error['file']),
-            'line' => $error['line']
-        ), JSON_UNESCAPED_UNICODE);
-    }
 });
 
 $requestUri = $_SERVER['REQUEST_URI'];

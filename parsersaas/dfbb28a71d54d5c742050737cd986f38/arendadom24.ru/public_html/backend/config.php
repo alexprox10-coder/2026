@@ -78,7 +78,15 @@ $PLANS = [
 date_default_timezone_set('Europe/Moscow');
 
 // Обработка ошибок
-if (DEBUG) {
+// ВАЖНО: Для API запросов НИКОГДА не показываем ошибки в HTML
+$isApiRequest = (strpos($_SERVER['REQUEST_URI'], '/api') !== false);
+
+if ($isApiRequest) {
+    // API всегда возвращает JSON - ошибки логируем, но не показываем
+    error_reporting(E_ALL);
+    ini_set('display_errors', 0);
+    ini_set('log_errors', 1);
+} elseif (DEBUG) {
     error_reporting(E_ALL);
     ini_set('display_errors', 1);
 } else {
