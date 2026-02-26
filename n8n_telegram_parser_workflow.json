@@ -1,0 +1,292 @@
+{
+  "name": "Telegram Parser PRO - Парсинг лидов",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "telegram-parse",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook - Запрос на парсинг",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "telegram-parser-webhook"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "channels",
+              "name": "channels",
+              "value": "={{ $json.body.channels || 'moscowach' }}",
+              "type": "string"
+            },
+            {
+              "id": "keywords",
+              "name": "keywords",
+              "value": "={{ $json.body.keywords || 'ищу,куплю,нужен,требуется' }}",
+              "type": "string"
+            },
+            {
+              "id": "messages_limit",
+              "name": "messages_limit",
+              "value": "={{ $json.body.messages_limit || 100 }}",
+              "type": "number"
+            },
+            {
+              "id": "days_back",
+              "name": "days_back",
+              "value": "={{ $json.body.days_back || 7 }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-params",
+      "name": "Параметры парсинга",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5000/webhook/n8n",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channels\": \"{{ $json.channels }}\",\n  \"keywords\": \"{{ $json.keywords }}\",\n  \"messages_limit\": {{ $json.messages_limit }},\n  \"days_back\": {{ $json.days_back }}\n}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "http-parser",
+      "name": "Запрос к Parser API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-success",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-success",
+      "name": "Проверка успеха",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [910, 300]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "table_data",
+        "options": {}
+      },
+      "id": "split-items",
+      "name": "Разбить на строки",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [1130, 200]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "ВАШ_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Лиды",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "google-sheets",
+      "name": "Google Sheets - Сохранить",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.2,
+      "position": [1350, 200]
+    },
+    {
+      "parameters": {
+        "chatId": "ВАШ_TELEGRAM_CHAT_ID",
+        "text": "=✅ Парсинг завершён!\n\n📊 Статистика:\n- Всего сообщений: {{ $('Запрос к Parser API').item.json.stats.total_messages }}\n- Релевантных: {{ $('Запрос к Parser API').item.json.stats.matched_messages }}\n- Телефонов: {{ $('Запрос к Parser API').item.json.stats.phones_found }}\n- Username: {{ $('Запрос к Parser API').item.json.stats.usernames_found }}\n- Email: {{ $('Запрос к Parser API').item.json.stats.emails_found }}\n\n📥 Найдено лидов: {{ $('Запрос к Parser API').item.json.total_leads }}",
+        "additionalFields": {}
+      },
+      "id": "telegram-notify",
+      "name": "Telegram - Уведомление",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [1350, 350]
+    },
+    {
+      "parameters": {
+        "chatId": "ВАШ_TELEGRAM_CHAT_ID",
+        "text": "=❌ Ошибка парсинга!\n\n{{ $json.error }}",
+        "additionalFields": {}
+      },
+      "id": "telegram-error",
+      "name": "Telegram - Ошибка",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [1130, 450]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "completed"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "response-success",
+      "name": "Ответ - Успех",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.2,
+      "position": [1570, 275]
+    }
+  ],
+  "connections": {
+    "Webhook - Запрос на парсинг": {
+      "main": [
+        [
+          {
+            "node": "Параметры парсинга",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Параметры парсинга": {
+      "main": [
+        [
+          {
+            "node": "Запрос к Parser API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Запрос к Parser API": {
+      "main": [
+        [
+          {
+            "node": "Проверка успеха",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Проверка успеха": {
+      "main": [
+        [
+          {
+            "node": "Разбить на строки",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram - Уведомление",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram - Ошибка",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Разбить на строки": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Сохранить",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Сохранить": {
+      "main": [
+        [
+          {
+            "node": "Ответ - Успех",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram - Уведомление": {
+      "main": [
+        [
+          {
+            "node": "Ответ - Успех",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "telegram",
+      "id": "1"
+    },
+    {
+      "name": "parser",
+      "id": "2"
+    }
+  ],
+  "triggerCount": 1,
+  "pinData": {}
+}
