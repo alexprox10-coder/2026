@@ -136,11 +136,11 @@
           "conditions": [
             {
               "id": "check-success",
-              "leftValue": "={{ $json.raw_data }}",
-              "rightValue": "",
+              "leftValue": "={{ $json.channels_processed }}",
+              "rightValue": "0",
               "operator": {
-                "type": "array",
-                "operation": "notEmpty"
+                "type": "number",
+                "operation": "gt"
               }
             }
           ],
