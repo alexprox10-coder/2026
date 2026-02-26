@@ -190,12 +190,16 @@ class TelegramParserAPI:
             except:
                 subscribers = 0
 
-            offset_date = datetime.now() - timedelta(days=days_back)
+            # Дата для фильтрации сообщений (сообщения новее этой даты)
+            min_date = datetime.now() - timedelta(days=days_back)
 
+            # Получаем последние сообщения БЕЗ offset_date
+            # offset_date в Telegram API возвращает сообщения СТАРШЕ указанной даты
+            # Поэтому получаем последние сообщения и фильтруем по дате
             messages = await self.client(GetHistoryRequest(
                 peer=channel,
                 limit=messages_limit,
-                offset_date=offset_date,
+                offset_date=None,
                 offset_id=0,
                 max_id=0,
                 min_id=0,
@@ -207,6 +211,10 @@ class TelegramParserAPI:
 
             for msg in messages.messages:
                 if not msg.message:
+                    continue
+
+                # Фильтруем по дате - пропускаем сообщения старше min_date
+                if msg.date.replace(tzinfo=None) < min_date:
                     continue
 
                 self.stats['total_messages'] += 1
@@ -270,11 +278,14 @@ class TelegramParserAPI:
             "usernames_found": 0,
             "emails_found": 0
         }
+        channel_errors = []
+        channels_processed = 0
 
         await self.start()
 
         try:
             for channel in channels:
+                print(f"[PARSER] Processing channel: {channel}")
                 results = await self.parse_channel(
                     channel,
                     keywords,
@@ -283,6 +294,12 @@ class TelegramParserAPI:
                 )
                 if isinstance(results, list):
                     self.results.extend(results)
+                    channels_processed += 1
+                    print(f"[PARSER] Channel {channel}: found {len(results)} leads")
+                elif isinstance(results, dict) and "error" in results:
+                    error_msg = f"{channel}: {results['error']}"
+                    channel_errors.append(error_msg)
+                    print(f"[PARSER] Channel {channel} ERROR: {results['error']}")
                 await asyncio.sleep(2)
 
             self.results.sort(key=lambda x: x.get('lead_score', 0), reverse=True)
@@ -291,7 +308,10 @@ class TelegramParserAPI:
                 "success": True,
                 "stats": self.stats,
                 "results": self.results,
-                "results_count": len(self.results)
+                "results_count": len(self.results),
+                "channels_requested": len(channels),
+                "channels_processed": channels_processed,
+                "channel_errors": channel_errors
             }
 
         finally:
@@ -508,6 +528,9 @@ def n8n_webhook():
         "success": True,
         "stats": result.get("stats", {}),
         "total_leads": len(leads),
+        "channels_requested": result.get("channels_requested", 0),
+        "channels_processed": result.get("channels_processed", 0),
+        "channel_errors": result.get("channel_errors", []),
         "table_data": table_data,
         "raw_data": leads
     })
