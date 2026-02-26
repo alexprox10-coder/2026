@@ -136,11 +136,11 @@
           "conditions": [
             {
               "id": "check-success",
-              "leftValue": "={{ $json.channels_processed }}",
-              "rightValue": "0",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": true,
               "operator": {
-                "type": "number",
-                "operation": "gt"
+                "type": "boolean",
+                "operation": "equals"
               }
             }
           ],
@@ -156,7 +156,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Преобразуем объект raw_data в массив items\nconst rawData = $input.first().json.raw_data;\nconst items = Object.values(rawData).map(lead => ({ json: lead }));\nreturn items;"
+        "jsCode": "// Преобразуем table_data в массив items с правильными названиями полей\nconst tableData = $input.first().json.table_data || [];\nconst items = tableData.map(lead => ({\n  json: {\n    channel_title: lead['Канал'] || lead.channel_title || '',\n    date: lead['Дата'] || lead.date || '',\n    text: lead['Текст'] || lead.text || '',\n    phones: lead['Телефон'] || lead.phones || '',\n    emails: lead['Email'] || lead.emails || '',\n    usernames: lead['Username'] || lead.usernames || '',\n    post_url: lead['Ссылка'] || lead.post_url || '',\n    lead_score: lead['Скоринг'] || lead.lead_score || 0,\n    views: lead['Просмотры'] || lead.views || 0,\n    niche: lead['Ниша'] || lead.niche || '',\n    keyword_matched: lead['Ключевое слово'] || lead.keyword_matched || ''\n  }\n}));\nreturn items.length > 0 ? items : [{json: {empty: true}}];"
       },
       "id": "split-leads",
       "name": "Разбить лиды",
