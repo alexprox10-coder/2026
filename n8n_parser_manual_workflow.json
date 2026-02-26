@@ -136,11 +136,11 @@
           "conditions": [
             {
               "id": "check-success",
-              "leftValue": "={{ $json.channel_id }}",
+              "leftValue": "={{ $json.raw_data }}",
               "rightValue": "",
               "operator": {
-                "type": "string",
-                "operation": "exists"
+                "type": "array",
+                "operation": "notEmpty"
               }
             }
           ],
@@ -156,13 +156,13 @@
     },
     {
       "parameters": {
-        "mode": "passThrough",
+        "fieldToSplitOut": "raw_data",
         "options": {}
       },
       "id": "split-leads",
       "name": "Разбить лиды",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 3.1,
       "position": [1130, 200]
     },
     {
