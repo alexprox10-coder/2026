@@ -50,6 +50,106 @@ CONFIG = {
     "output_dir": "/root/parser_results"
 }
 
+# ============== АВТООПРЕДЕЛЕНИЕ НИШ ПО КЛЮЧЕВЫМ СЛОВАМ ==============
+NICHE_KEYWORDS = {
+    "leads": {
+        "keywords": [
+            "ищу", "куплю", "нужен", "требуется", "закажу", "где найти", "посоветуйте",
+            "подскажите", "кто может", "кто знает", "помогите найти", "срочно нужен",
+            "ищем", "нужна помощь", "кто делает", "кто продаёт", "где купить",
+            "могу купить", "готов купить", "хочу заказать", "ищу подрядчика"
+        ],
+        "weight": 1.0,
+        "description": "Горячие лиды - люди которые ищут товар/услугу"
+    },
+    "discounts": {
+        "keywords": [
+            "скидка", "акция", "распродажа", "промокод", "халява", "бесплатно",
+            "розыгрыш", "-50%", "-70%", "sale", "черная пятница", "киберпонедельник",
+            "специальная цена", "только сегодня", "ограниченное предложение",
+            "выгодная цена", "дешево", "недорого", "по низкой цене", "со скидкой"
+        ],
+        "weight": 0.7,
+        "description": "Акции и скидки"
+    },
+    "crypto": {
+        "keywords": [
+            "сигнал", "памп", "buy", "sell", "entry", "target", "stop loss",
+            "btc", "eth", "usdt", "биткоин", "эфир", "крипта", "криптовалюта",
+            "токен", "альткоин", "defi", "nft", "binance", "bybit", "трейдинг",
+            "лонг", "шорт", "позиция", "маржа", "фьючерс", "спот", "холд"
+        ],
+        "weight": 0.8,
+        "description": "Криптовалюта и трейдинг"
+    },
+    "jobs": {
+        "keywords": [
+            "вакансия", "удаленка", "remote", "ищем", "зарплата", "оклад",
+            "фриланс", "менеджер", "работа", "требуется сотрудник", "набираем",
+            "hr", "резюме", "собеседование", "офис", "график", "полная занятость",
+            "частичная занятость", "подработка", "стажировка", "испытательный срок"
+        ],
+        "weight": 0.9,
+        "description": "Вакансии и работа"
+    },
+    "realty": {
+        "keywords": [
+            "сдам", "сниму", "продам", "куплю квартиру", "комната", "аренда",
+            "м²", "этаж", "квартира", "дом", "недвижимость", "ипотека",
+            "новостройка", "вторичка", "риэлтор", "агент", "собственник",
+            "без комиссии", "долгосрок", "посуточно", "помещение", "офис аренда"
+        ],
+        "weight": 0.9,
+        "description": "Недвижимость"
+    },
+    "services": {
+        "keywords": [
+            "услуги", "делаю", "помогу", "настрою", "создам", "разработка",
+            "ремонт", "установка", "консультация", "обучение", "курсы",
+            "мастер", "специалист", "эксперт", "под ключ", "быстро и качественно",
+            "опыт работы", "портфолио", "отзывы", "гарантия"
+        ],
+        "weight": 0.6,
+        "description": "Услуги"
+    },
+    "auto": {
+        "keywords": [
+            "авто", "машина", "автомобиль", "продам авто", "куплю авто",
+            "запчасти", "сто", "автосервис", "шиномонтаж", "мойка",
+            "детейлинг", "полировка", "тюнинг", "пробег", "двигатель"
+        ],
+        "weight": 0.8,
+        "description": "Авто"
+    },
+    "education": {
+        "keywords": [
+            "курс", "обучение", "вебинар", "тренинг", "мастер-класс",
+            "онлайн-школа", "репетитор", "подготовка", "экзамен", "егэ", "огэ",
+            "сертификат", "диплом", "профессия", "навык", "интенсив"
+        ],
+        "weight": 0.7,
+        "description": "Образование"
+    },
+    "health": {
+        "keywords": [
+            "врач", "клиника", "медицина", "здоровье", "лечение", "диагностика",
+            "анализы", "консультация врача", "стоматолог", "психолог", "массаж",
+            "фитнес", "спорт", "диета", "похудение", "wellness"
+        ],
+        "weight": 0.7,
+        "description": "Здоровье и медицина"
+    },
+    "it": {
+        "keywords": [
+            "разработка", "программист", "developer", "frontend", "backend",
+            "fullstack", "python", "javascript", "react", "node", "api",
+            "сайт", "приложение", "бот", "автоматизация", "парсинг", "скрипт"
+        ],
+        "weight": 0.8,
+        "description": "IT и разработка"
+    }
+}
+
 # Глобальные переменные для статуса
 parser_status = {
     "is_running": False,
@@ -123,15 +223,54 @@ class TelegramParserAPI:
         return contacts
 
     def detect_niche(self, text, keywords_config):
-        """Определение ниши по ключевым словам"""
+        """
+        Улучшенное определение ниши по ключевым словам.
+        Возвращает: (основная_ниша, первое_ключевое_слово, все_совпадения)
+        """
         lower_text = text.lower()
+        all_matches = {}  # {niche: [matched_keywords]}
+        niche_scores = {}  # {niche: score}
 
-        for niche, keywords in keywords_config.items():
-            for keyword in keywords:
-                if keyword.lower() in lower_text:
-                    return niche, keyword
+        # Если передан пользовательский конфиг (простой формат)
+        if keywords_config and isinstance(list(keywords_config.values())[0], list):
+            # Простой формат: {"niche": ["kw1", "kw2"]}
+            for niche, keywords in keywords_config.items():
+                matched = []
+                for keyword in keywords:
+                    if keyword.lower() in lower_text:
+                        matched.append(keyword)
+                if matched:
+                    all_matches[niche] = matched
+                    niche_scores[niche] = len(matched)
+        else:
+            # Расширенный формат: используем глобальный NICHE_KEYWORDS
+            for niche, config in NICHE_KEYWORDS.items():
+                keywords = config.get("keywords", [])
+                weight = config.get("weight", 1.0)
+                matched = []
+                for keyword in keywords:
+                    if keyword.lower() in lower_text:
+                        matched.append(keyword)
+                if matched:
+                    all_matches[niche] = matched
+                    # Скор = количество совпадений * вес ниши
+                    niche_scores[niche] = len(matched) * weight
 
-        return None, None
+        if not all_matches:
+            return None, None, {}
+
+        # Определяем основную нишу по максимальному скору
+        primary_niche = max(niche_scores, key=niche_scores.get)
+        first_keyword = all_matches[primary_niche][0]
+
+        return primary_niche, first_keyword, all_matches
+
+    def detect_niche_auto(self, text):
+        """
+        Автоматическое определение ниши без пользовательского конфига.
+        Использует глобальный NICHE_KEYWORDS.
+        """
+        return self.detect_niche(text, None)
 
     def calculate_lead_score(self, data):
         """Скоринг качества лида"""
@@ -231,7 +370,7 @@ class TelegramParserAPI:
                 self.stats['total_messages'] += 1
                 text = msg.message
 
-                niche, keyword = self.detect_niche(text, keywords_config)
+                niche, keyword, all_matches = self.detect_niche(text, keywords_config)
                 if not niche:
                     continue
 
@@ -245,6 +384,15 @@ class TelegramParserAPI:
                     self.stats['usernames_found'] += len(contacts['usernames'])
                 if contacts['emails']:
                     self.stats['emails_found'] += len(contacts['emails'])
+
+                # Подготовка данных о совпадениях
+                all_keywords_list = []
+                for niche_name, kw_list in all_matches.items():
+                    all_keywords_list.extend(kw_list)
+
+                # Количество совпадений для фильтрации
+                keywords_count = len(all_keywords_list)
+                niches_matched = list(all_matches.keys())
 
                 data = {
                     "timestamp": msg.date.strftime("%Y-%m-%d %H:%M:%S"),
@@ -265,6 +413,10 @@ class TelegramParserAPI:
                     "links": ", ".join(contacts['urls']),
                     "niche": niche,
                     "keyword_matched": keyword,
+                    "keywords_all": ", ".join(all_keywords_list),  # Все совпавшие ключевые слова
+                    "keywords_count": keywords_count,  # Количество совпадений для фильтрации
+                    "niches_matched": ", ".join(niches_matched),  # Все определённые ниши
+                    "niches_count": len(niches_matched),  # Количество ниш
                     "is_ad": self.is_advertisement(text),
                     "post_url": f"https://t.me/{channel.username}/{msg.id}" if channel.username else f"https://t.me/c/{channel.id}/{msg.id}",
                     "message_id": msg.id,
@@ -479,6 +631,99 @@ def leads_only():
     })
 
 
+@app.route('/results/filter', methods=['GET', 'POST'])
+def filter_results():
+    """
+    Фильтрация результатов по keyword_matched и нишам.
+
+    GET параметры или POST JSON:
+    - niche: фильтр по нише (leads, crypto, jobs, etc.)
+    - keyword: фильтр по конкретному ключевому слову
+    - min_keywords: минимальное количество совпавших ключевых слов
+    - min_score: минимальный lead_score
+    - has_contacts: true/false - только с контактами
+    """
+    if not parser_status["last_results"]:
+        return jsonify({"success": False, "error": "Нет результатов"}), 404
+
+    # Получаем параметры фильтрации
+    if request.method == 'POST':
+        params = request.get_json() or {}
+    else:
+        params = request.args.to_dict()
+
+    niche_filter = params.get("niche", "").lower()
+    keyword_filter = params.get("keyword", "").lower()
+    min_keywords = int(params.get("min_keywords", 0))
+    min_score = int(params.get("min_score", 0))
+    has_contacts = params.get("has_contacts", "").lower() == "true"
+
+    results = parser_status["last_results"].get("results", [])
+    filtered = []
+
+    for r in results:
+        # Фильтр по нише
+        if niche_filter:
+            niches = r.get("niches_matched", "").lower()
+            if niche_filter not in niches:
+                continue
+
+        # Фильтр по ключевому слову
+        if keyword_filter:
+            keywords = r.get("keywords_all", "").lower()
+            if keyword_filter not in keywords:
+                continue
+
+        # Фильтр по минимальному количеству ключевых слов
+        if min_keywords > 0:
+            if r.get("keywords_count", 0) < min_keywords:
+                continue
+
+        # Фильтр по минимальному скору
+        if min_score > 0:
+            if r.get("lead_score", 0) < min_score:
+                continue
+
+        # Фильтр только с контактами
+        if has_contacts:
+            if not (r.get("phones") or r.get("emails") or r.get("usernames")):
+                continue
+
+        filtered.append(r)
+
+    return jsonify({
+        "success": True,
+        "total_results": len(results),
+        "filtered_count": len(filtered),
+        "filters_applied": {
+            "niche": niche_filter or None,
+            "keyword": keyword_filter or None,
+            "min_keywords": min_keywords,
+            "min_score": min_score,
+            "has_contacts": has_contacts
+        },
+        "results": filtered
+    })
+
+
+@app.route('/niches', methods=['GET'])
+def get_niches():
+    """Получить список доступных ниш с ключевыми словами"""
+    niches_info = {}
+    for niche, config in NICHE_KEYWORDS.items():
+        niches_info[niche] = {
+            "description": config.get("description", ""),
+            "weight": config.get("weight", 1.0),
+            "keywords_count": len(config.get("keywords", [])),
+            "keywords_sample": config.get("keywords", [])[:10]  # Первые 10 для примера
+        }
+    return jsonify({
+        "success": True,
+        "niches_count": len(NICHE_KEYWORDS),
+        "niches": niches_info
+    })
+
+
 @app.route('/webhook/n8n', methods=['POST'])
 def n8n_webhook():
     """
@@ -546,6 +791,10 @@ def n8n_webhook():
             "Email": lead.get("emails", ""),
             "Ссылка": lead.get("post_url", ""),
             "Ниша": lead.get("niche", ""),
+            "Ключевое_слово": lead.get("keyword_matched", ""),
+            "Все_ключевые": lead.get("keywords_all", ""),
+            "Кол_во_ключевых": lead.get("keywords_count", 0),
+            "Все_ниши": lead.get("niches_matched", ""),
             "Скоринг": lead.get("lead_score", 0),
             "Просмотры": lead.get("views", 0)
         })
@@ -570,18 +819,20 @@ def n8n_webhook():
 
 if __name__ == "__main__":
     print("""
-╔══════════════════════════════════════════════════╗
-║     🔥 TELEGRAM PARSER PRO - API MODE 🔥         ║
-║                                                  ║
-║  API для интеграции с n8n                        ║
-║                                                  ║
-║  Endpoints:                                      ║
-║  POST /parse        - запуск парсинга            ║
-║  POST /webhook/n8n  - webhook для n8n            ║
-║  GET  /status       - статус парсера             ║
-║  GET  /results      - последние результаты       ║
-║  GET  /results/leads - только лиды с контактами  ║
-╚══════════════════════════════════════════════════╝
+╔═══════════════════════════════════════════════════════╗
+║     🔥 TELEGRAM PARSER PRO - API MODE 🔥              ║
+║                                                       ║
+║  API для интеграции с n8n                             ║
+║                                                       ║
+║  Endpoints:                                           ║
+║  POST /parse          - запуск парсинга               ║
+║  POST /webhook/n8n    - webhook для n8n               ║
+║  GET  /status         - статус парсера                ║
+║  GET  /results        - последние результаты          ║
+║  GET  /results/leads  - только лиды с контактами      ║
+║  GET  /results/filter - фильтрация по keyword_matched ║
+║  GET  /niches         - список ниш с ключевыми словами║
+╚═══════════════════════════════════════════════════════╝
     """)
 
     print(f"🚀 Запуск API на http://{CONFIG['host']}:{CONFIG['port']}")
