@@ -131,16 +131,16 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "loose"
           },
           "conditions": [
             {
               "id": "check-success",
-              "leftValue": "={{ $json.success }}",
-              "rightValue": true,
+              "leftValue": "={{ $json.channel_id }}",
+              "rightValue": "",
               "operator": {
-                "type": "boolean",
-                "operation": "equals"
+                "type": "string",
+                "operation": "exists"
               }
             }
           ],
@@ -156,12 +156,12 @@
     },
     {
       "parameters": {
-        "fieldToSplitOut": "table_data",
+        "mode": "passThrough",
         "options": {}
       },
       "id": "split-leads",
       "name": "Разбить лиды",
-      "type": "n8n-nodes-base.splitOut",
+      "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [1130, 200]
     },
@@ -195,7 +195,7 @@
     {
       "parameters": {
         "chatId": "ВАШ_TELEGRAM_CHAT_ID",
-        "text": "=🎯 Парсинг для клиента: {{ $('Подготовка параметров').item.json.client_name }}\n\n📊 Результаты:\n━━━━━━━━━━━━━━━━\n📝 Всего сообщений: {{ $('Вызов Parser API').item.json.stats.total_messages }}\n✅ Релевантных: {{ $('Вызов Parser API').item.json.stats.matched_messages }}\n\n📞 Телефонов: {{ $('Вызов Parser API').item.json.stats.phones_found }}\n👤 Username: {{ $('Вызов Parser API').item.json.stats.usernames_found }}\n📧 Email: {{ $('Вызов Parser API').item.json.stats.emails_found }}\n\n🔥 Всего лидов: {{ $('Вызов Parser API').item.json.total_leads }}\n━━━━━━━━━━━━━━━━\n\nКаналы: {{ $('Подготовка параметров').item.json.channels }}\nКлючевые слова: {{ $('Подготовка параметров').item.json.keywords }}",
+        "text": "=🎯 Новый лид найден!\n\n📺 Канал: {{ $json.channel_title }}\n🗓 Дата: {{ $json.date }}\n\n📝 Текст:\n{{ $json.text.substring(0, 500) }}{{ $json.text.length > 500 ? '...' : '' }}\n\n━━━━━━━━━━━━━━━━\n📞 Телефон: {{ $json.phones || 'Нет' }}\n📧 Email: {{ $json.emails || 'Нет' }}\n🔗 Ссылка: {{ $json.post_url }}\n⭐ Скоринг: {{ $json.lead_score }}/100\n🔑 Ключевое слово: {{ $json.keyword_matched }}",
         "additionalFields": {}
       },
       "id": "send-telegram-success",
@@ -222,16 +222,16 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "loose"
           },
           "conditions": [
             {
               "id": "has-phone",
-              "leftValue": "={{ $json['Телефон'] }}",
+              "leftValue": "={{ $json.phones }}",
               "rightValue": "",
               "operator": {
                 "type": "string",
-                "operation": "notEquals"
+                "operation": "notEmpty"
               }
             }
           ],
@@ -248,7 +248,7 @@
     {
       "parameters": {
         "chatId": "ВАШ_TELEGRAM_CHAT_ID",
-        "text": "=🔥 ГОРЯЧИЙ ЛИД!\n\n📞 {{ $json['Телефон'] || 'Нет' }}\n👤 {{ $json['Username'] || 'Нет' }}\n📧 {{ $json['Email'] || 'Нет' }}\n\n📝 {{ $json['Текст'] }}\n\n🔗 {{ $json['Ссылка'] }}\n\n⭐ Скоринг: {{ $json['Скоринг'] }}/100",
+        "text": "=🔥 ГОРЯЧИЙ ЛИД!\n\n📺 Канал: {{ $json.channel_title }}\n📞 Телефон: {{ $json.phones }}\n📧 Email: {{ $json.emails || 'Нет' }}\n\n📝 {{ $json.text.substring(0, 300) }}{{ $json.text.length > 300 ? '...' : '' }}\n\n🔗 {{ $json.post_url }}\n⭐ Скоринг: {{ $json.lead_score }}/100\n🔑 Ключевое слово: {{ $json.keyword_matched }}",
         "additionalFields": {}
       },
       "id": "send-hot-leads",
