@@ -58,10 +58,10 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:5000/webhook/n8n",
+        "url": "http://155.212.133.90:5000/webhook/n8n",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ channels: $json.channels || '', keywords: $json.keywords || '', messages_limit: Number($json.messages_limit) || 100, days_back: Number($json.days_back) || 7 }) }}",
+        "jsonBody": "={{ JSON.stringify({ channels: $json.channels || 'moscowach', keywords: $json.keywords || 'ищу,куплю,нужен,требуется', messages_limit: Number($json.messages_limit) || 100, days_back: Number($json.days_back) || 7 }) }}",
         "options": {
           "timeout": 300000
         }
