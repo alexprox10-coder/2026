@@ -156,13 +156,12 @@
     },
     {
       "parameters": {
-        "fieldToSplitOut": "raw_data",
-        "options": {}
+        "jsCode": "// Преобразуем объект raw_data в массив items\nconst rawData = $input.first().json.raw_data;\nconst items = Object.values(rawData).map(lead => ({ json: lead }));\nreturn items;"
       },
       "id": "split-leads",
       "name": "Разбить лиды",
-      "type": "n8n-nodes-base.itemLists",
-      "typeVersion": 3.1,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [1130, 200]
     },
     {
