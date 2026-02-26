@@ -1,0 +1,21 @@
+[Unit]
+Description=Telegram Parser API for n8n
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/user/2026
+ExecStart=/usr/local/bin/python3 /home/user/2026/telegram_parser_api.py
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/telegram-parser-api.log
+StandardError=append:/var/log/telegram-parser-api.log
+
+# Environment variables (uncomment and fill in your credentials)
+#Environment=TELEGRAM_API_ID=your_api_id
+#Environment=TELEGRAM_API_HASH=your_api_hash
+#Environment=TELEGRAM_PHONE=+79XXXXXXXXX
+
+[Install]
+WantedBy=multi-user.target
