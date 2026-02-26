@@ -61,7 +61,7 @@
         "url": "http://localhost:5000/webhook/n8n",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"channels\": \"{{ $json.channels }}\",\n  \"keywords\": \"{{ $json.keywords }}\",\n  \"messages_limit\": {{ $json.messages_limit }},\n  \"days_back\": {{ $json.days_back }}\n}",
+        "jsonBody": "={{ JSON.stringify({ channels: $json.channels || '', keywords: $json.keywords || '', messages_limit: Number($json.messages_limit) || 100, days_back: Number($json.days_back) || 7 }) }}",
         "options": {
           "timeout": 300000
         }
