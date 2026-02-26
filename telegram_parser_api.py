@@ -182,16 +182,20 @@ class TelegramParserAPI:
     async def parse_channel(self, channel_username, keywords_config, messages_limit=100, days_back=7):
         """Парсинг одного канала"""
         try:
+            print(f"[PARSER] Getting entity for: {channel_username}")
             channel = await self.client.get_entity(channel_username)
+            print(f"[PARSER] Found channel: {channel.title} (id={channel.id})")
 
             try:
                 full = await self.client(GetFullChannelRequest(channel))
                 subscribers = full.full_chat.participants_count
-            except:
+            except Exception as e:
+                print(f"[PARSER] Could not get subscribers: {e}")
                 subscribers = 0
 
             # Дата для фильтрации сообщений (сообщения новее этой даты)
             min_date = datetime.now() - timedelta(days=days_back)
+            print(f"[PARSER] Filtering messages newer than: {min_date}")
 
             # Получаем последние сообщения БЕЗ offset_date
             # offset_date в Telegram API возвращает сообщения СТАРШЕ указанной даты
@@ -207,16 +211,23 @@ class TelegramParserAPI:
                 hash=0
             ))
 
+            print(f"[PARSER] Received {len(messages.messages)} messages from API")
+
             channel_results = []
+            messages_with_text = 0
+            messages_in_date_range = 0
 
             for msg in messages.messages:
                 if not msg.message:
                     continue
 
+                messages_with_text += 1
+
                 # Фильтруем по дате - пропускаем сообщения старше min_date
                 if msg.date.replace(tzinfo=None) < min_date:
                     continue
 
+                messages_in_date_range += 1
                 self.stats['total_messages'] += 1
                 text = msg.message
 
@@ -263,10 +274,15 @@ class TelegramParserAPI:
                 data['lead_score'] = self.calculate_lead_score(data)
                 channel_results.append(data)
 
+            print(f"[PARSER] Channel {channel_username}: {messages_with_text} with text, {messages_in_date_range} in date range, {len(channel_results)} matched keywords")
             return channel_results
 
         except Exception as e:
-            return {"error": str(e)}
+            import traceback
+            error_details = traceback.format_exc()
+            print(f"[PARSER] ERROR for {channel_username}: {e}")
+            print(f"[PARSER] Traceback: {error_details}")
+            return {"error": str(e), "traceback": error_details}
 
     async def parse(self, channels, keywords, messages_limit=100, days_back=7):
         """Основной метод парсинга"""
@@ -480,8 +496,14 @@ def n8n_webhook():
     data = request.get_json()
 
     # Поддержка разных форматов входных данных от n8n
-    channels = data.get("channels") or data.get("channel", "").split(",")
-    channels = [c.strip() for c in channels if c.strip()]
+    channels_raw = data.get("channels") or data.get("channel", "")
+    # Если channels - строка, разбиваем по запятой
+    if isinstance(channels_raw, str):
+        channels = [c.strip() for c in channels_raw.split(",") if c.strip()]
+    else:
+        channels = [c.strip() for c in channels_raw if c.strip()]
+
+    print(f"[N8N WEBHOOK] Parsed channels: {channels}")
 
     # Ключевые слова могут быть строкой или списком
     keywords_input = data.get("keywords", "")
@@ -491,8 +513,12 @@ def n8n_webhook():
     else:
         keywords = keywords_input
 
+    print(f"[N8N WEBHOOK] Parsed keywords: {keywords}")
+
     messages_limit = int(data.get("messages_limit", 100))
     days_back = int(data.get("days_back", 7))
+
+    print(f"[N8N WEBHOOK] messages_limit={messages_limit}, days_back={days_back}")
 
     if not channels:
         return jsonify({"success": False, "error": "Укажите каналы"}), 400
@@ -531,6 +557,12 @@ def n8n_webhook():
         "channels_requested": result.get("channels_requested", 0),
         "channels_processed": result.get("channels_processed", 0),
         "channel_errors": result.get("channel_errors", []),
+        "debug": {
+            "channels_input": channels,
+            "keywords_input": keywords,
+            "messages_limit": messages_limit,
+            "days_back": days_back
+        },
         "table_data": table_data,
         "raw_data": leads
     })
