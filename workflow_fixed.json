@@ -87,8 +87,7 @@
     },
     {
       "parameters": {
-        "mode": "combine",
-        "combineBy": "combineAll",
+        "mode": "append",
         "options": {}
       },
       "type": "n8n-nodes-base.merge",
@@ -444,7 +443,7 @@
           {
             "node": "🔗 Объединение RSS",
             "type": "main",
-            "index": 1
+            "index": 0
           }
         ]
       ]
@@ -466,7 +465,7 @@
           {
             "node": "🔗 Объединение RSS",
             "type": "main",
-            "index": 1
+            "index": 0
           }
         ]
       ]
