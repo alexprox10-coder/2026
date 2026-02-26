@@ -71,31 +71,31 @@
             {
               "id": "channels",
               "name": "channels",
-              "value": "={{ $json['Каналы (через запятую)'] }}",
+              "value": "={{ $input.item.json['Каналы (через запятую)'] || '' }}",
               "type": "string"
             },
             {
               "id": "keywords",
               "name": "keywords",
-              "value": "={{ $json['Ключевые слова (через запятую)'] }}",
+              "value": "={{ $input.item.json['Ключевые слова (через запятую)'] || '' }}",
               "type": "string"
             },
             {
               "id": "messages_limit",
               "name": "messages_limit",
-              "value": "={{ $json['Количество сообщений'] || 100 }}",
+              "value": "={{ Number($input.item.json['Количество сообщений']) || 100 }}",
               "type": "number"
             },
             {
               "id": "days_back",
               "name": "days_back",
-              "value": "={{ $json['Дней назад'] || 7 }}",
+              "value": "={{ Number($input.item.json['Дней назад']) || 7 }}",
               "type": "number"
             },
             {
               "id": "client_name",
               "name": "client_name",
-              "value": "={{ $json['Имя клиента (опционально)'] || 'Неизвестный' }}",
+              "value": "={{ $input.item.json['Имя клиента (опционально)'] || 'Неизвестный' }}",
               "type": "string"
             }
           ]
@@ -105,7 +105,7 @@
       "id": "prepare-params",
       "name": "Подготовка параметров",
       "type": "n8n-nodes-base.set",
-      "typeVersion": 3.2,
+      "typeVersion": 3.4,
       "position": [470, 300]
     },
     {
