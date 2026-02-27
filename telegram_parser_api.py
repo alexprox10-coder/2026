@@ -276,6 +276,7 @@ class TelegramParserAPI:
         """Скоринг качества лида"""
         score = 0
 
+        # Контакты - главный критерий
         if data.get('phones'):
             score += 35
         if data.get('usernames'):
@@ -283,17 +284,32 @@ class TelegramParserAPI:
         if data.get('emails'):
             score += 25
 
+        # Длина текста
         text_len = len(data.get('text', ''))
         if text_len > 100:
             score += 5
         if text_len > 300:
             score += 5
 
+        # Просмотры
         if data.get('views', 0) > 1000:
             score += 5
         if data.get('views', 0) > 10000:
             score += 5
 
+        # Ниша определена (не general/custom)
+        niche = data.get('niche', '')
+        if niche and niche not in ['general', 'custom']:
+            score += 10
+
+        # Количество совпавших ключевых слов
+        keywords_count = data.get('keywords_count', 0)
+        if keywords_count >= 2:
+            score += 5
+        if keywords_count >= 3:
+            score += 5
+
+        # Штраф за рекламу
         if data.get('is_ad'):
             score -= 20
 
@@ -318,10 +334,21 @@ class TelegramParserAPI:
             return "document"
         return "other"
 
-    async def parse_channel(self, channel_username, keywords_config, messages_limit=100, days_back=7):
-        """Парсинг одного канала"""
+    async def parse_channel(self, channel_username, keywords_config, messages_limit=100, days_back=7, parse_all=False):
+        """
+        Парсинг одного канала
+
+        Args:
+            channel_username: username канала
+            keywords_config: конфиг ключевых слов для фильтрации
+            messages_limit: лимит сообщений
+            days_back: дней назад
+            parse_all: если True - парсим ВСЕ посты без фильтрации по ключевым словам,
+                      но всё равно определяем нишу автоматически
+        """
         try:
             print(f"[PARSER] Getting entity for: {channel_username}")
+            print(f"[PARSER] Mode: {'PARSE ALL' if parse_all else 'FILTER BY KEYWORDS'}")
             channel = await self.client.get_entity(channel_username)
             print(f"[PARSER] Found channel: {channel.title} (id={channel.id})")
 
@@ -370,9 +397,31 @@ class TelegramParserAPI:
                 self.stats['total_messages'] += 1
                 text = msg.message
 
-                niche, keyword, all_matches = self.detect_niche(text, keywords_config)
-                if not niche:
-                    continue
+                # Определяем нишу и ключевые слова
+                if parse_all:
+                    # Режим "все посты" - автоопределение ниши по NICHE_KEYWORDS
+                    niche, keyword, all_matches = self.detect_niche_auto(text)
+                    # Если ниша не определена - ставим "general"
+                    if not niche:
+                        niche = "general"
+                        keyword = ""
+                        all_matches = {}
+                else:
+                    # Режим фильтрации - сначала проверяем пользовательские ключевые слова
+                    niche, keyword, all_matches = self.detect_niche(text, keywords_config)
+                    if not niche:
+                        continue  # Пропускаем если нет совпадений
+
+                    # Дополнительно определяем автонишу для обогащения данных
+                    auto_niche, auto_keyword, auto_matches = self.detect_niche_auto(text)
+                    if auto_niche and auto_niche != "custom":
+                        # Добавляем автоопределённые ниши к результату
+                        for n, kws in auto_matches.items():
+                            if n not in all_matches:
+                                all_matches[n] = kws
+                        # Если основная ниша "custom", заменяем на автоопределённую
+                        if niche == "custom":
+                            niche = auto_niche
 
                 self.stats['matched_messages'] += 1
 
@@ -394,6 +443,14 @@ class TelegramParserAPI:
                 keywords_count = len(all_keywords_list)
                 niches_matched = list(all_matches.keys())
 
+                # Получаем описание ниши
+                niche_info = NICHE_KEYWORDS.get(niche, {})
+                niche_description = niche_info.get("description", "Общее")
+                if niche == "general":
+                    niche_description = "Общее"
+                elif niche == "custom":
+                    niche_description = "Пользовательский фильтр"
+
                 data = {
                     "timestamp": msg.date.strftime("%Y-%m-%d %H:%M:%S"),
                     "date": msg.date.strftime("%Y-%m-%d"),
@@ -412,6 +469,7 @@ class TelegramParserAPI:
                     "emails": ", ".join(set(contacts['emails'])),
                     "links": ", ".join(contacts['urls']),
                     "niche": niche,
+                    "niche_ru": niche_description,  # Описание ниши на русском
                     "keyword_matched": keyword,
                     "keywords_all": ", ".join(all_keywords_list),  # Все совпавшие ключевые слова
                     "keywords_count": keywords_count,  # Количество совпадений для фильтрации
@@ -436,8 +494,17 @@ class TelegramParserAPI:
             print(f"[PARSER] Traceback: {error_details}")
             return {"error": str(e), "traceback": error_details}
 
-    async def parse(self, channels, keywords, messages_limit=100, days_back=7):
-        """Основной метод парсинга"""
+    async def parse(self, channels, keywords, messages_limit=100, days_back=7, parse_all=False):
+        """
+        Основной метод парсинга
+
+        Args:
+            channels: список каналов
+            keywords: конфиг ключевых слов
+            messages_limit: лимит сообщений на канал
+            days_back: дней назад
+            parse_all: если True - парсим все посты без фильтрации
+        """
         self.results = []
         self.stats = {
             "total_messages": 0,
@@ -458,7 +525,8 @@ class TelegramParserAPI:
                     channel,
                     keywords,
                     messages_limit,
-                    days_back
+                    days_back,
+                    parse_all
                 )
                 if isinstance(results, list):
                     self.results.extend(results)
@@ -486,7 +554,7 @@ class TelegramParserAPI:
             await self.stop()
 
 
-def run_parser_async(channels, keywords, messages_limit, days_back):
+def run_parser_async(channels, keywords, messages_limit, days_back, parse_all=False):
     """Запуск парсера в отдельном потоке"""
     global parser_status
 
@@ -504,7 +572,7 @@ def run_parser_async(channels, keywords, messages_limit, days_back):
         )
 
         result = loop.run_until_complete(
-            parser.parse(channels, keywords, messages_limit, days_back)
+            parser.parse(channels, keywords, messages_limit, days_back, parse_all)
         )
 
         parser_status["last_results"] = result
@@ -554,8 +622,11 @@ def parse():
         },
         "messages_limit": 100,
         "days_back": 7,
+        "parse_all": false,
         "async": false
     }
+
+    parse_all: если true - парсит ВСЕ посты с автоопределением ниши (без фильтрации по keywords)
     """
     global parser_status
 
@@ -576,6 +647,7 @@ def parse():
     })
     messages_limit = data.get("messages_limit", 100)
     days_back = data.get("days_back", 7)
+    parse_all = data.get("parse_all", False)
     is_async = data.get("async", False)
 
     if not channels:
@@ -585,7 +657,7 @@ def parse():
         # Асинхронный режим - запускаем в фоне
         thread = Thread(
             target=run_parser_async,
-            args=(channels, keywords, messages_limit, days_back)
+            args=(channels, keywords, messages_limit, days_back, parse_all)
         )
         thread.start()
 
@@ -598,7 +670,7 @@ def parse():
 
     else:
         # Синхронный режим - ждём результат
-        run_parser_async(channels, keywords, messages_limit, days_back)
+        run_parser_async(channels, keywords, messages_limit, days_back, parse_all)
         return jsonify(parser_status["last_results"])
 
 
@@ -724,6 +796,141 @@ def get_niches():
     })
 
 
+@app.route('/export', methods=['GET'])
+def export_excel():
+    """
+    Экспорт результатов в Excel файл.
+
+    GET параметры:
+    - format: xlsx (по умолчанию) или csv
+    - dedupe: true/false - дедупликация по text_hash (по умолчанию true)
+    - min_score: минимальный lead_score (по умолчанию 0)
+    - has_contacts: true/false - только с контактами
+    """
+    from flask import send_file
+    from io import BytesIO
+
+    if not parser_status["last_results"]:
+        return jsonify({"success": False, "error": "Нет результатов для экспорта"}), 404
+
+    results = parser_status["last_results"].get("results", [])
+
+    if not results:
+        return jsonify({"success": False, "error": "Нет лидов для экспорта"}), 404
+
+    # Получаем параметры
+    export_format = request.args.get("format", "xlsx")
+    dedupe = request.args.get("dedupe", "true").lower() == "true"
+    min_score = int(request.args.get("min_score", 0))
+    has_contacts = request.args.get("has_contacts", "false").lower() == "true"
+
+    # Фильтрация
+    filtered = []
+    seen_hashes = set()
+
+    for r in results:
+        # Дедупликация
+        if dedupe:
+            text_hash = r.get("text_hash", "")
+            if text_hash in seen_hashes:
+                continue
+            seen_hashes.add(text_hash)
+
+        # Фильтр по скору
+        if r.get("lead_score", 0) < min_score:
+            continue
+
+        # Фильтр по контактам
+        if has_contacts:
+            if not (r.get("phones") or r.get("emails") or r.get("usernames")):
+                continue
+
+        filtered.append(r)
+
+    # Подготовка данных для экспорта
+    export_data = []
+    for lead in filtered:
+        export_data.append({
+            "Дата": lead.get("date", ""),
+            "Время": lead.get("timestamp", ""),
+            "Канал": lead.get("channel_title", ""),
+            "Подписчики": lead.get("subscribers", 0),
+            "Текст": lead.get("text", ""),
+            "Телефон": lead.get("phones", ""),
+            "Username": lead.get("usernames", ""),
+            "Email": lead.get("emails", ""),
+            "Ссылки": lead.get("links", ""),
+            "Post URL": lead.get("post_url", ""),
+            "Ниша": lead.get("niche_ru", "") or lead.get("niche", ""),
+            "Ключевое слово": lead.get("keyword_matched", ""),
+            "Все ключевые": lead.get("keywords_all", ""),
+            "Скоринг": lead.get("lead_score", 0),
+            "Просмотры": lead.get("views", 0),
+            "Репосты": lead.get("forwards", 0),
+            "Реклама": "Да" if lead.get("is_ad") else "Нет"
+        })
+
+    df = pd.DataFrame(export_data)
+
+    # Генерация файла
+    output = BytesIO()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    if export_format == "csv":
+        df.to_csv(output, index=False, encoding='utf-8-sig')
+        output.seek(0)
+        return send_file(
+            output,
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name=f'leads_{timestamp}.csv'
+        )
+    else:
+        # Excel
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Все лиды', index=False)
+
+            # Отдельный лист для горячих лидов (с контактами)
+            hot_leads = df[
+                (df['Телефон'].str.len() > 0) |
+                (df['Email'].str.len() > 0) |
+                (df['Username'].str.len() > 0)
+            ]
+            if not hot_leads.empty:
+                hot_leads.to_excel(writer, sheet_name='Горячие лиды', index=False)
+
+            # Лист со статистикой
+            stats_data = {
+                "Метрика": [
+                    "Всего лидов",
+                    "Уникальных лидов",
+                    "С телефоном",
+                    "С email",
+                    "С username",
+                    "Горячих лидов (с контактами)",
+                    "Средний скоринг"
+                ],
+                "Значение": [
+                    len(results),
+                    len(filtered),
+                    len(df[df['Телефон'].str.len() > 0]),
+                    len(df[df['Email'].str.len() > 0]),
+                    len(df[df['Username'].str.len() > 0]),
+                    len(hot_leads),
+                    round(df['Скоринг'].mean(), 1) if not df.empty else 0
+                ]
+            }
+            pd.DataFrame(stats_data).to_excel(writer, sheet_name='Статистика', index=False)
+
+        output.seek(0)
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=f'leads_{timestamp}.xlsx'
+        )
+
+
 @app.route('/webhook/n8n', methods=['POST'])
 def n8n_webhook():
     """
@@ -752,13 +959,27 @@ def n8n_webhook():
 
     # Ключевые слова могут быть строкой или списком
     keywords_input = data.get("keywords", "")
+    parse_all = False  # Режим парсинга всех постов
+
     if isinstance(keywords_input, str):
         keywords_list = [k.strip() for k in keywords_input.split(",") if k.strip()]
-        keywords = {"custom": keywords_list}
+        if keywords_list:
+            keywords = {"custom": keywords_list}
+        else:
+            # Если ключевые слова пустые - парсим ВСЕ посты с автоопределением ниши
+            keywords = {}
+            parse_all = True
     else:
         keywords = keywords_input
+        if not keywords:
+            parse_all = True
+
+    # Явный параметр parse_all из запроса (переопределяет автоопределение)
+    if data.get("parse_all"):
+        parse_all = True
 
     print(f"[N8N WEBHOOK] Parsed keywords: {keywords}")
+    print(f"[N8N WEBHOOK] Parse all mode: {parse_all}")
 
     messages_limit = int(data.get("messages_limit", 100))
     days_back = int(data.get("days_back", 7))
@@ -769,15 +990,35 @@ def n8n_webhook():
         return jsonify({"success": False, "error": "Укажите каналы"}), 400
 
     # Запускаем парсинг синхронно
-    run_parser_async(channels, keywords, messages_limit, days_back)
+    run_parser_async(channels, keywords, messages_limit, days_back, parse_all)
 
     result = parser_status["last_results"]
 
     if not result or not result.get("success"):
         return jsonify(result or {"success": False, "error": "Ошибка парсинга"}), 500
 
+    # Параметр дедупликации (по умолчанию включен)
+    dedupe = data.get("dedupe", True)
+    if isinstance(dedupe, str):
+        dedupe = dedupe.lower() == "true"
+
     # Форматируем для n8n (плоская структура для таблицы)
-    leads = result.get("results", [])
+    all_leads = result.get("results", [])
+
+    # Дедупликация по text_hash
+    if dedupe:
+        seen_hashes = set()
+        leads = []
+        for lead in all_leads:
+            text_hash = lead.get("text_hash", "")
+            if text_hash and text_hash in seen_hashes:
+                continue
+            seen_hashes.add(text_hash)
+            leads.append(lead)
+        duplicates_removed = len(all_leads) - len(leads)
+    else:
+        leads = all_leads
+        duplicates_removed = 0
 
     # Преобразуем для Google Sheets / таблицы
     table_data = []
@@ -790,7 +1031,8 @@ def n8n_webhook():
             "Username": lead.get("usernames", ""),
             "Email": lead.get("emails", ""),
             "Ссылка": lead.get("post_url", ""),
-            "Ниша": lead.get("niche", ""),
+            "Ниша": lead.get("niche_ru", "") or lead.get("niche", ""),  # Используем русское название
+            "Ниша_код": lead.get("niche", ""),  # Код ниши для фильтрации
             "Ключевое_слово": lead.get("keyword_matched", ""),
             "Все_ключевые": lead.get("keywords_all", ""),
             "Кол_во_ключевых": lead.get("keywords_count", 0),
@@ -803,6 +1045,8 @@ def n8n_webhook():
         "success": True,
         "stats": result.get("stats", {}),
         "total_leads": len(leads),
+        "total_before_dedupe": len(all_leads),
+        "duplicates_removed": duplicates_removed,
         "channels_requested": result.get("channels_requested", 0),
         "channels_processed": result.get("channels_processed", 0),
         "channel_errors": result.get("channel_errors", []),
@@ -810,29 +1054,38 @@ def n8n_webhook():
             "channels_input": channels,
             "keywords_input": keywords,
             "messages_limit": messages_limit,
-            "days_back": days_back
+            "days_back": days_back,
+            "parse_all": parse_all,
+            "dedupe": dedupe
         },
         "table_data": table_data,
-        "raw_data": leads
+        "raw_data": leads,
+        "export_url": f"/export?dedupe={str(dedupe).lower()}"
     })
 
 
 if __name__ == "__main__":
     print("""
-╔═══════════════════════════════════════════════════════╗
-║     🔥 TELEGRAM PARSER PRO - API MODE 🔥              ║
-║                                                       ║
-║  API для интеграции с n8n                             ║
-║                                                       ║
-║  Endpoints:                                           ║
-║  POST /parse          - запуск парсинга               ║
-║  POST /webhook/n8n    - webhook для n8n               ║
-║  GET  /status         - статус парсера                ║
-║  GET  /results        - последние результаты          ║
-║  GET  /results/leads  - только лиды с контактами      ║
-║  GET  /results/filter - фильтрация по keyword_matched ║
-║  GET  /niches         - список ниш с ключевыми словами║
-╚═══════════════════════════════════════════════════════╝
+╔═══════════════════════════════════════════════════════════╗
+║     🔥 TELEGRAM PARSER PRO - API MODE 🔥                  ║
+║                                                           ║
+║  API для интеграции с n8n + Excel экспорт                 ║
+║                                                           ║
+║  Endpoints:                                               ║
+║  POST /parse          - запуск парсинга                   ║
+║  POST /webhook/n8n    - webhook для n8n (+ дедупликация)  ║
+║  GET  /status         - статус парсера                    ║
+║  GET  /results        - последние результаты              ║
+║  GET  /results/leads  - только лиды с контактами          ║
+║  GET  /results/filter - фильтрация по keyword_matched     ║
+║  GET  /niches         - список ниш с ключевыми словами    ║
+║  GET  /export         - 📥 СКАЧАТЬ EXCEL/CSV              ║
+║                                                           ║
+║  Новые фичи:                                              ║
+║  ✅ parse_all - парсинг ВСЕХ постов с автониш ой          ║
+║  ✅ dedupe - дедупликация по text_hash                    ║
+║  ✅ Excel с 3 листами (все/горячие/статистика)            ║
+╚═══════════════════════════════════════════════════════════╝
     """)
 
     print(f"🚀 Запуск API на http://{CONFIG['host']}:{CONFIG['port']}")
