@@ -1,0 +1,472 @@
+{
+  "name": "Telegram Parser PRO v4 - Форма + Расписание",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Telegram Parser PRO",
+        "formDescription": "Введите параметры для парсинга Telegram каналов",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Каналы (через запятую)",
+              "fieldType": "text",
+              "placeholder": "moscowach, channel2, channel3",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Ключевые слова (через запятую)",
+              "fieldType": "text",
+              "placeholder": "ищу, куплю, нужен, требуется",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Количество сообщений",
+              "fieldType": "number",
+              "placeholder": "100",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Дней назад",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {"option": "1"},
+                  {"option": "3"},
+                  {"option": "7"},
+                  {"option": "14"},
+                  {"option": "30"}
+                ]
+              },
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Имя клиента (опционально)",
+              "fieldType": "text",
+              "placeholder": "Иван Иванов",
+              "requiredField": false
+            }
+          ]
+        },
+        "options": {
+          "respondWithOptions": {
+            "values": {
+              "formSubmittedText": "Парсинг запущен! Результаты будут отправлены в Telegram."
+            }
+          }
+        }
+      },
+      "id": "form-trigger",
+      "name": "Форма запроса",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2,
+      "position": [180, 200],
+      "webhookId": "parser-form"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Авто-запуск каждые 5 мин",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [180, 500]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "channels",
+              "name": "channels",
+              "value": "={{ $input.item.json['Каналы (через запятую)'] || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "keywords",
+              "name": "keywords",
+              "value": "={{ $input.item.json['Ключевые слова (через запятую)'] || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "messages_limit",
+              "name": "messages_limit",
+              "value": "={{ Number($input.item.json['Количество сообщений']) || 100 }}",
+              "type": "number"
+            },
+            {
+              "id": "days_back",
+              "name": "days_back",
+              "value": "={{ Number($input.item.json['Дней назад']) || 7 }}",
+              "type": "number"
+            },
+            {
+              "id": "client_name",
+              "name": "client_name",
+              "value": "={{ $input.item.json['Имя клиента (опционально)'] || 'Ручной запуск' }}",
+              "type": "string"
+            },
+            {
+              "id": "trigger_type",
+              "name": "trigger_type",
+              "value": "form",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prepare-form-params",
+      "name": "Параметры из формы",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [420, 200]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "channels",
+              "name": "channels",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "keywords",
+              "name": "keywords",
+              "value": "ищу, куплю, нужен, требуется, закажу, где найти, посоветуйте, подскажите",
+              "type": "string"
+            },
+            {
+              "id": "messages_limit",
+              "name": "messages_limit",
+              "value": "100",
+              "type": "number"
+            },
+            {
+              "id": "days_back",
+              "name": "days_back",
+              "value": "1",
+              "type": "number"
+            },
+            {
+              "id": "client_name",
+              "name": "client_name",
+              "value": "Авто-парсинг",
+              "type": "string"
+            },
+            {
+              "id": "trigger_type",
+              "name": "trigger_type",
+              "value": "schedule",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prepare-schedule-params",
+      "name": "Параметры по умолчанию",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [420, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://155.212.133.90:5000/webhook/n8n",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channels: $json.channels || '', keywords: $json.keywords || '', messages_limit: Number($json.messages_limit) || 100, days_back: Number($json.days_back) || 7, trigger_type: $json.trigger_type || 'unknown' }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "call-parser-form",
+      "name": "Вызов Parser API (форма)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [660, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://155.212.133.90:5000/webhook/n8n",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channels: $json.channels || '', keywords: $json.keywords || '', messages_limit: Number($json.messages_limit) || 100, days_back: Number($json.days_back) || 1, trigger_type: $json.trigger_type || 'schedule' }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "call-parser-schedule",
+      "name": "Вызов Parser API (авто)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [660, 500]
+    },
+    {
+      "parameters": {},
+      "id": "merge-results",
+      "name": "Объединить результаты",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [900, 350]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "check-success",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-result",
+      "name": "Результат успешен?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 350]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============== РАСШИРЕННАЯ КОНФИГУРАЦИЯ НИШ С ВЕСАМИ ==============\nconst NICHES = {\n  leads: {\n    keywords: ['ищу', 'куплю', 'нужен', 'требуется', 'закажу', 'где найти', 'посоветуйте',\n               'подскажите', 'кто может', 'кто знает', 'помогите найти', 'срочно нужен',\n               'ищем', 'нужна помощь', 'кто делает', 'кто продаёт', 'где купить',\n               'могу купить', 'готов купить', 'хочу заказать', 'ищу подрядчика'],\n    weight: 1.0\n  },\n  discounts: {\n    keywords: ['скидка', 'акция', 'распродажа', 'промокод', 'халява', 'бесплатно',\n               'розыгрыш', '-50%', '-70%', 'sale', 'черная пятница', 'киберпонедельник',\n               'специальная цена', 'только сегодня', 'ограниченное предложение'],\n    weight: 0.7\n  },\n  crypto: {\n    keywords: ['сигнал', 'памп', 'buy', 'sell', 'entry', 'target', 'stop loss',\n               'btc', 'eth', 'usdt', 'биткоин', 'эфир', 'крипта', 'криптовалюта',\n               'токен', 'альткоин', 'defi', 'nft', 'binance', 'bybit', 'трейдинг'],\n    weight: 0.8\n  },\n  jobs: {\n    keywords: ['вакансия', 'удаленка', 'remote', 'ищем', 'зарплата', 'оклад',\n               'фриланс', 'менеджер', 'работа', 'требуется сотрудник', 'набираем',\n               'hr', 'резюме', 'собеседование', 'офис', 'график'],\n    weight: 0.9\n  },\n  realty: {\n    keywords: ['сдам', 'сниму', 'продам', 'куплю квартиру', 'комната', 'аренда',\n               'м²', 'этаж', 'квартира', 'дом', 'недвижимость', 'ипотека',\n               'новостройка', 'вторичка', 'риэлтор', 'собственник', 'без комиссии'],\n    weight: 0.9\n  },\n  services: {\n    keywords: ['услуги', 'делаю', 'помогу', 'настрою', 'создам', 'разработка',\n               'ремонт', 'установка', 'консультация', 'обучение', 'курсы',\n               'мастер', 'специалист', 'эксперт', 'под ключ'],\n    weight: 0.6\n  },\n  auto: {\n    keywords: ['авто', 'машина', 'автомобиль', 'продам авто', 'куплю авто',\n               'запчасти', 'сто', 'автосервис', 'шиномонтаж', 'тюнинг'],\n    weight: 0.8\n  },\n  it: {\n    keywords: ['разработка', 'программист', 'developer', 'frontend', 'backend',\n               'fullstack', 'python', 'javascript', 'react', 'node', 'api',\n               'сайт', 'приложение', 'бот', 'автоматизация', 'парсинг'],\n    weight: 0.8\n  }\n};\n\n// Преобразуем table_data в массив items\nconst tableData = $input.first().json.table_data || [];\nconst results = [];\n\nfor (const lead of tableData) {\n  const text = lead['Текст'] || lead.text || '';\n  const lowerText = text.toLowerCase();\n  \n  // Автоопределение ниши\n  const allMatches = {};\n  const nicheScores = {};\n  \n  for (const [niche, config] of Object.entries(NICHES)) {\n    const matched = [];\n    for (const kw of config.keywords) {\n      if (lowerText.includes(kw.toLowerCase())) {\n        matched.push(kw);\n      }\n    }\n    if (matched.length > 0) {\n      allMatches[niche] = matched;\n      nicheScores[niche] = matched.length * config.weight;\n    }\n  }\n  \n  let primaryNiche = lead['Ниша'] || lead.niche || '';\n  let firstKeyword = lead['Ключевое слово'] || lead.keyword_matched || '';\n  let allKeywordsList = [];\n  \n  if (Object.keys(allMatches).length > 0) {\n    primaryNiche = Object.keys(nicheScores).reduce((a, b) => \n      nicheScores[a] > nicheScores[b] ? a : b\n    );\n    firstKeyword = allMatches[primaryNiche][0];\n    for (const kwList of Object.values(allMatches)) {\n      allKeywordsList.push(...kwList);\n    }\n  }\n  \n  // Извлекаем контакты\n  const phones = text.match(/(?:\\+7|8)[\\s\\-]?\\(?\\d{3}\\)?[\\s\\-]?\\d{3}[\\s\\-]?\\d{2}[\\s\\-]?\\d{2}/g) || [];\n  const usernames = text.match(/@[a-zA-Z][a-zA-Z0-9_]{4,}/g) || [];\n  const emails = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/g) || [];\n  \n  // Определяем рекламу\n  const adWords = ['реклама', 'партнер', 'sponsor', '#ad', 'промо', 'erid:', 'на правах рекламы'];\n  const isAd = adWords.some(w => lowerText.includes(w));\n  \n  // Скоринг\n  let leadScore = Number(lead['Скоринг'] || lead.lead_score) || 0;\n  if (leadScore === 0) {\n    if (phones.length > 0) leadScore += 35;\n    if (usernames.length > 0) leadScore += 20;\n    if (emails.length > 0) leadScore += 25;\n    if (!isAd) leadScore += 10;\n    if (text.length > 100) leadScore += 5;\n    if (allKeywordsList.length >= 2) leadScore += 5;\n    if (primaryNiche === 'leads') leadScore += 10;\n  }\n  \n  results.push({\n    json: {\n      timestamp: lead['Дата'] || lead.date || new Date().toISOString(),\n      channel_title: lead['Канал'] || lead.channel_title || '',\n      text: text,\n      text_preview: text.substring(0, 150) + (text.length > 150 ? '...' : ''),\n      phones: phones.join(', ') || lead['Телефон'] || lead.phones || '',\n      emails: emails.join(', ') || lead['Email'] || lead.emails || '',\n      usernames: usernames.join(', ') || lead['Username'] || lead.usernames || '',\n      post_url: lead['Ссылка'] || lead.post_url || '',\n      niche: primaryNiche,\n      keyword_matched: firstKeyword,\n      keywords_all: allKeywordsList.join(', '),\n      keywords_count: allKeywordsList.length,\n      niches_matched: Object.keys(allMatches).join(', '),\n      niches_count: Object.keys(allMatches).length,\n      is_ad: isAd,\n      lead_score: Math.min(100, leadScore),\n      views: lead['Просмотры'] || lead.views || 0\n    }\n  });\n}\n\n// Сортируем по качеству лида\nresults.sort((a, b) => b.json.lead_score - a.json.lead_score);\n\nreturn results.length > 0 ? results : [{json: {empty: true, message: 'No matching posts'}}];"
+      },
+      "id": "process-leads",
+      "name": "Обработка лидов PRO",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1360, 250]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "not-empty",
+              "leftValue": "={{ $json.empty }}",
+              "rightValue": true,
+              "operator": {"type": "boolean", "operation": "notEqual"}
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "filter-empty",
+      "name": "Фильтр пустых",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [1580, 250]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {"__rl": true, "value": "ВАШ_GOOGLE_SHEET_ID", "mode": "id"},
+        "sheetName": {"__rl": true, "value": "Лиды", "mode": "name"},
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $json.timestamp }}",
+            "channel": "={{ $json.channel_title }}",
+            "text_preview": "={{ $json.text_preview }}",
+            "phones": "={{ $json.phones }}",
+            "usernames": "={{ $json.usernames }}",
+            "emails": "={{ $json.emails }}",
+            "niche": "={{ $json.niche }}",
+            "keyword_matched": "={{ $json.keyword_matched }}",
+            "keywords_all": "={{ $json.keywords_all }}",
+            "keywords_count": "={{ $json.keywords_count }}",
+            "niches_matched": "={{ $json.niches_matched }}",
+            "lead_score": "={{ $json.lead_score }}",
+            "views": "={{ $json.views }}",
+            "post_url": "={{ $json.post_url }}",
+            "is_ad": "={{ $json.is_ad }}"
+          },
+          "matchingColumns": ["post_url"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "save-leads",
+      "name": "Сохранить лиды",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1820, 150],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {"__rl": true, "value": "ВАШ_GOOGLE_SHEET_ID", "mode": "id"},
+        "sheetName": {"__rl": true, "value": "Все посты", "mode": "name"},
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": ["post_url"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "save-all",
+      "name": "Архив всех постов",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1820, 350],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "has-contacts",
+              "leftValue": "={{ $json.phones || $json.emails || $json.usernames }}",
+              "rightValue": "",
+              "operator": {"type": "string", "operation": "notEmpty"}
+            },
+            {
+              "id": "high-score",
+              "leftValue": "={{ $json.lead_score }}",
+              "rightValue": "40",
+              "operator": {"type": "number", "operation": "gte"}
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "hot-leads-filter",
+      "name": "Горячие лиды (40+)",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [2060, 150]
+    },
+    {
+      "parameters": {
+        "chatId": "ВАШ_TELEGRAM_CHAT_ID",
+        "text": "=🔥 ГОРЯЧИЙ ЛИД!\n\n📢 Канал: {{ $json.channel_title }}\n📝 {{ $json.text_preview }}\n\n📞 Телефоны: {{ $json.phones || 'нет' }}\n👤 Username: {{ $json.usernames || 'нет' }}\n📧 Email: {{ $json.emails || 'нет' }}\n\n🏷 Ниша: {{ $json.niche }}\n🔑 Ключевые слова: {{ $json.keywords_all || $json.keyword_matched }}\n📊 Совпадений: {{ $json.keywords_count }} | Ниш: {{ $json.niches_count }}\n⭐ Скоринг: {{ $json.lead_score }}/100\n\n🔗 {{ $json.post_url }}",
+        "additionalFields": {}
+      },
+      "id": "notify-hot-lead",
+      "name": "Уведомление о лиде",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2300, 150],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "ВАШ_TELEGRAM_CHAT_ID",
+        "text": "=❌ Ошибка парсинга!\n\nОшибка: {{ $json.error || 'Неизвестная ошибка' }}\nСообщение: {{ $json.message || '' }}",
+        "additionalFields": {}
+      },
+      "id": "send-error",
+      "name": "Отправить ошибку",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1360, 450],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Telegram API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Форма запроса": {
+      "main": [[{"node": "Параметры из формы", "type": "main", "index": 0}]]
+    },
+    "Авто-запуск каждые 5 мин": {
+      "main": [[{"node": "Параметры по умолчанию", "type": "main", "index": 0}]]
+    },
+    "Параметры из формы": {
+      "main": [[{"node": "Вызов Parser API (форма)", "type": "main", "index": 0}]]
+    },
+    "Параметры по умолчанию": {
+      "main": [[{"node": "Вызов Parser API (авто)", "type": "main", "index": 0}]]
+    },
+    "Вызов Parser API (форма)": {
+      "main": [[{"node": "Объединить результаты", "type": "main", "index": 0}]]
+    },
+    "Вызов Parser API (авто)": {
+      "main": [[{"node": "Объединить результаты", "type": "main", "index": 1}]]
+    },
+    "Объединить результаты": {
+      "main": [[{"node": "Результат успешен?", "type": "main", "index": 0}]]
+    },
+    "Результат успешен?": {
+      "main": [
+        [{"node": "Обработка лидов PRO", "type": "main", "index": 0}],
+        [{"node": "Отправить ошибку", "type": "main", "index": 0}]
+      ]
+    },
+    "Обработка лидов PRO": {
+      "main": [[{"node": "Фильтр пустых", "type": "main", "index": 0}]]
+    },
+    "Фильтр пустых": {
+      "main": [
+        [
+          {"node": "Сохранить лиды", "type": "main", "index": 0},
+          {"node": "Архив всех постов", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Сохранить лиды": {
+      "main": [[{"node": "Горячие лиды (40+)", "type": "main", "index": 0}]]
+    },
+    "Горячие лиды (40+)": {
+      "main": [[{"node": "Уведомление о лиде", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {"executionOrder": "v1"},
+  "staticData": null,
+  "tags": [
+    {"name": "telegram-parser", "id": "1"},
+    {"name": "dual-trigger", "id": "2"}
+  ],
+  "triggerCount": 2,
+  "pinData": {}
+}
