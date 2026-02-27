@@ -1,0 +1,172 @@
+{
+  "name": "Telegram Parser - WORKING",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Запуск каждые 5 мин",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [180, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot{{BOT_TOKEN}}/getUpdates",
+        "authentication": "none",
+        "options": {
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"offset\": -100,\n  \"limit\": 100,\n  \"allowed_updates\": [\"channel_post\"]\n}"
+      },
+      "id": "get-channel-posts",
+      "name": "Получить посты каналов",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============== КОНФИГУРАЦИЯ НИШ ==============\nconst NICHES = {\n  leads: {\n    keywords: ['ищу', 'куплю', 'нужен', 'требуется', 'закажу', 'где найти', 'посоветуйте',\n               'подскажите', 'кто может', 'кто знает', 'помогите найти', 'срочно нужен',\n               'ищем', 'нужна помощь', 'кто делает', 'кто продаёт', 'где купить'],\n    weight: 1.0\n  },\n  discounts: {\n    keywords: ['скидка', 'акция', 'распродажа', 'промокод', 'халява', 'бесплатно',\n               'розыгрыш', '-50%', '-70%', 'sale', 'черная пятница'],\n    weight: 0.7\n  },\n  crypto: {\n    keywords: ['сигнал', 'памп', 'buy', 'sell', 'entry', 'target', 'stop loss',\n               'btc', 'eth', 'usdt', 'биткоин', 'эфир', 'крипта', 'криптовалюта'],\n    weight: 0.8\n  },\n  jobs: {\n    keywords: ['вакансия', 'удаленка', 'remote', 'ищем', 'зарплата', 'оклад',\n               'фриланс', 'менеджер', 'работа', 'требуется сотрудник'],\n    weight: 0.9\n  },\n  realty: {\n    keywords: ['сдам', 'сниму', 'продам', 'куплю квартиру', 'комната', 'аренда',\n               'м²', 'этаж', 'квартира', 'дом', 'недвижимость', 'ипотека'],\n    weight: 0.9\n  }\n};\n\nconst results = [];\nconst updates = $input.item.json.result || [];\n\nfor (const update of updates) {\n  const post = update.channel_post || update.message;\n  if (!post || !post.text) continue;\n  \n  const chat = post.chat || {};\n  const text = post.text || '';\n  const lowerText = text.toLowerCase();\n  \n  // Автоопределение ниши\n  const allMatches = {};\n  const nicheScores = {};\n  \n  for (const [niche, config] of Object.entries(NICHES)) {\n    const matched = [];\n    for (const kw of config.keywords) {\n      if (lowerText.includes(kw.toLowerCase())) {\n        matched.push(kw);\n      }\n    }\n    if (matched.length > 0) {\n      allMatches[niche] = matched;\n      nicheScores[niche] = matched.length * config.weight;\n    }\n  }\n  \n  if (Object.keys(allMatches).length === 0) continue;\n  \n  const primaryNiche = Object.keys(nicheScores).reduce((a, b) => \n    nicheScores[a] > nicheScores[b] ? a : b\n  );\n  const firstKeyword = allMatches[primaryNiche][0];\n  \n  const allKeywordsList = [];\n  for (const kwList of Object.values(allMatches)) {\n    allKeywordsList.push(...kwList);\n  }\n  \n  // Извлекаем контакты\n  const phones = text.match(/(?:\\+7|8)[\\s\\-]?\\(?\\d{3}\\)?[\\s\\-]?\\d{3}[\\s\\-]?\\d{2}[\\s\\-]?\\d{2}/g) || [];\n  const usernames = text.match(/@[a-zA-Z][a-zA-Z0-9_]{4,}/g) || [];\n  const emails = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/g) || [];\n  \n  const date = post.date ? new Date(post.date * 1000) : new Date();\n  const timestamp = date.toISOString().replace('T', ' ').substring(0, 19);\n  \n  const chatUsername = chat.username || '';\n  const chatId = String(chat.id || '').replace('-100', '');\n  const postUrl = chatUsername \n    ? `https://t.me/${chatUsername}/${post.message_id}`\n    : `https://t.me/c/${chatId}/${post.message_id}`;\n  \n  const hash = text.split('').reduce((a, b) => {\n    a = ((a << 5) - a) + b.charCodeAt(0);\n    return a & a;\n  }, 0).toString(16);\n  \n  const adWords = ['реклама', 'партнер', 'sponsor', '#ad', 'промо'];\n  const isAd = adWords.some(w => lowerText.includes(w));\n  \n  let leadScore = 0;\n  if (phones.length > 0) leadScore += 35;\n  if (usernames.length > 0) leadScore += 20;\n  if (emails.length > 0) leadScore += 25;\n  if (!isAd) leadScore += 10;\n  if (text.length > 100) leadScore += 5;\n  if (allKeywordsList.length >= 2) leadScore += 5;\n  if (primaryNiche === 'leads') leadScore += 10;\n  \n  results.push({\n    json: {\n      timestamp,\n      channel_title: chat.title || '',\n      channel_id: chat.id || '',\n      channel_username: chatUsername ? '@' + chatUsername : '',\n      text: text.substring(0, 1000),\n      text_preview: text.substring(0, 150) + (text.length > 150 ? '...' : ''),\n      views: post.views || 0,\n      phones: phones.join(', '),\n      usernames: usernames.join(', '),\n      emails: emails.join(', '),\n      niche: primaryNiche,\n      keyword_matched: firstKeyword,\n      keywords_all: allKeywordsList.join(', '),\n      keywords_count: allKeywordsList.length,\n      is_ad: isAd,\n      lead_score: Math.min(100, leadScore),\n      post_url: postUrl,\n      text_hash: hash,\n      update_id: update.update_id\n    }\n  });\n}\n\nresults.sort((a, b) => b.json.lead_score - a.json.lead_score);\n\nreturn results.length > 0 ? results : [{json: {empty: true, message: 'No matching posts'}}];"
+      },
+      "id": "process-data",
+      "name": "Обработка данных",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "not-empty",
+              "leftValue": "={{ $json.empty }}",
+              "rightValue": true,
+              "operator": {"type": "boolean", "operation": "notEqual"}
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "filter-empty",
+      "name": "Фильтр пустых",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [880, 400]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {"__rl": true, "value": "YOUR_GOOGLE_SHEET_ID", "mode": "id"},
+        "sheetName": {"__rl": true, "value": "Лиды", "mode": "name"},
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $json.timestamp }}",
+            "channel": "={{ $json.channel_title }}",
+            "text_preview": "={{ $json.text_preview }}",
+            "phones": "={{ $json.phones }}",
+            "usernames": "={{ $json.usernames }}",
+            "emails": "={{ $json.emails }}",
+            "niche": "={{ $json.niche }}",
+            "keyword_matched": "={{ $json.keyword_matched }}",
+            "keywords_all": "={{ $json.keywords_all }}",
+            "lead_score": "={{ $json.lead_score }}",
+            "views": "={{ $json.views }}",
+            "post_url": "={{ $json.post_url }}",
+            "is_ad": "={{ $json.is_ad }}"
+          },
+          "matchingColumns": ["text_hash"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "save-leads",
+      "name": "Сохранить лиды",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1120, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "high-score",
+              "leftValue": "={{ $json.lead_score }}",
+              "rightValue": "40",
+              "operator": {"type": "number", "operation": "gte"}
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "hot-leads-filter",
+      "name": "Горячие лиды",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=🔥 ЛИД!\n\n📢 {{ $json.channel_title }}\n📝 {{ $json.text_preview }}\n\n📞 {{ $json.phones || '-' }}\n👤 {{ $json.usernames || '-' }}\n📧 {{ $json.emails || '-' }}\n\n🏷 Ниша: {{ $json.niche }}\n🔑 {{ $json.keyword_matched }}\n⭐ {{ $json.lead_score }}/100\n\n🔗 {{ $json.post_url }}",
+        "additionalFields": {}
+      },
+      "id": "notify-hot-lead",
+      "name": "Уведомление",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1360, 200],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Telegram API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Запуск каждые 5 мин": {
+      "main": [[{"node": "Получить посты каналов", "type": "main", "index": 0}]]
+    },
+    "Получить посты каналов": {
+      "main": [[{"node": "Обработка данных", "type": "main", "index": 0}]]
+    },
+    "Обработка данных": {
+      "main": [[{"node": "Фильтр пустых", "type": "main", "index": 0}]]
+    },
+    "Фильтр пустых": {
+      "main": [
+        [
+          {"node": "Сохранить лиды", "type": "main", "index": 0},
+          {"node": "Горячие лиды", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Горячие лиды": {
+      "main": [[{"node": "Уведомление", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {"executionOrder": "v1"}
+}
