@@ -1,0 +1,14 @@
+# Channel Finder Bot - Dependencies
+
+# Telegram Bot API
+python-telegram-bot>=20.0
+
+# Telethon for channel validation
+telethon>=1.30.0
+
+# Web parsing
+aiohttp>=3.9.0
+beautifulsoup4>=4.12.0
+
+# Utilities
+lxml>=4.9.0
