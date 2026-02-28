@@ -42,6 +42,11 @@ CONFIG = {
     "api_hash": os.environ.get("TELEGRAM_API_HASH", "ВАШ_API_HASH"),
     "phone": os.environ.get("TELEGRAM_PHONE", "+7XXXXXXXXXX"),
 
+    # Proxy настройки
+    "proxy_host": os.environ.get("PROXY_HOST", None),
+    "proxy_port": int(os.environ.get("PROXY_PORT", 0)) if os.environ.get("PROXY_PORT") else None,
+    "proxy_type": os.environ.get("PROXY_TYPE", "socks5"),
+
     # API настройки
     "host": "0.0.0.0",
     "port": 5000,
@@ -176,10 +181,19 @@ class TelegramParserAPI:
 
     async def start(self):
         """Запуск клиента"""
+        # Настройка прокси если указан
+        proxy = None
+        if CONFIG.get("proxy_host") and CONFIG.get("proxy_port"):
+            import socks
+            proxy_type = socks.SOCKS5 if CONFIG.get("proxy_type", "socks5").lower() == "socks5" else socks.SOCKS4
+            proxy = (proxy_type, CONFIG["proxy_host"], CONFIG["proxy_port"])
+            print(f"🔌 Используется прокси: {CONFIG['proxy_host']}:{CONFIG['proxy_port']}")
+
         self.client = TelegramClient(
             'parser_session_api',
             self.api_id,
-            self.api_hash
+            self.api_hash,
+            proxy=proxy
         )
         await self.client.start(phone=self.phone)
         return True
