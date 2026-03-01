@@ -1,0 +1,356 @@
+{
+  "name": "Channel Finder - Поиск каналов по нише",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "find-channels",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook: Поиск каналов",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [180, 300],
+      "webhookId": "channel-finder"
+    },
+    {
+      "parameters": {
+        "method": "=POST",
+        "url": "https://tgstat.ru/channels/search",
+        "authentication": "none",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ $json.body.niche }} {{ $json.body.city || '' }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,application/xhtml+xml"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "tgstat-search",
+      "name": "TGStat: Поиск",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 200]
+    },
+    {
+      "parameters": {
+        "url": "=https://telega.in/search?q={{ encodeURIComponent($json.body.niche + ' ' + ($json.body.city || '')) }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "telega-search",
+      "name": "Telega.in: Поиск",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Парсинг HTML от TGStat\nconst html = $input.item.json.data || $input.item.json.body || '';\nconst channels = [];\n\n// Регулярки для извлечения данных\nconst channelPattern = /<a[^>]*href=\"[^\"]*\\/channel\\/@?([a-zA-Z][a-zA-Z0-9_]{3,})\"[^>]*>/gi;\nconst titlePattern = /<[^>]*class=\"[^\"]*channel-title[^\"]*\"[^>]*>([^<]+)</gi;\nconst subsPattern = /(\\d+(?:[.,]\\d+)?)[\\s]*(K|М|M|к|тыс|млн)?[\\s]*(?:подписчик|subscriber|sub)/gi;\n\nlet match;\nconst usernames = new Set();\n\n// Ищем все ссылки на каналы\nwhile ((match = channelPattern.exec(html)) !== null) {\n  const username = match[1].toLowerCase();\n  if (!usernames.has(username) && username.length >= 4) {\n    usernames.add(username);\n    \n    // Пытаемся найти подписчиков рядом\n    let subscribers = 0;\n    const context = html.substring(Math.max(0, match.index - 500), match.index + 500);\n    const subsMatch = subsPattern.exec(context);\n    if (subsMatch) {\n      let num = parseFloat(subsMatch[1].replace(',', '.'));\n      const mult = subsMatch[2]?.toLowerCase() || '';\n      if (mult === 'k' || mult === 'к' || mult === 'тыс') num *= 1000;\n      if (mult === 'm' || mult === 'м' || mult === 'млн') num *= 1000000;\n      subscribers = Math.round(num);\n    }\n    \n    channels.push({\n      username: username,\n      link: `https://t.me/${username}`,\n      subscribers: subscribers,\n      source: 'tgstat',\n      title: username\n    });\n  }\n}\n\n// Если не нашли через регулярки, пробуем простой поиск t.me ссылок\nif (channels.length === 0) {\n  const tmePattern = /t\\.me\\/([a-zA-Z][a-zA-Z0-9_]{3,31})/gi;\n  while ((match = tmePattern.exec(html)) !== null) {\n    const username = match[1].toLowerCase();\n    if (!usernames.has(username) && \n        !['joinchat', 'addstickers', 'share', 'proxy'].includes(username)) {\n      usernames.add(username);\n      channels.push({\n        username: username,\n        link: `https://t.me/${username}`,\n        subscribers: 0,\n        source: 'tgstat',\n        title: username\n      });\n    }\n  }\n}\n\nreturn channels.slice(0, 30).map(ch => ({json: ch}));"
+      },
+      "id": "parse-tgstat",
+      "name": "Парсинг TGStat",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Парсинг HTML от Telega.in\nconst html = $input.item.json.data || $input.item.json.body || '';\nconst channels = [];\nconst usernames = new Set();\n\n// Ищем ссылки на каналы\nconst patterns = [\n  /t\\.me\\/([a-zA-Z][a-zA-Z0-9_]{3,31})/gi,\n  /href=\"[^\"]*@([a-zA-Z][a-zA-Z0-9_]{3,31})\"/gi\n];\n\nfor (const pattern of patterns) {\n  let match;\n  while ((match = pattern.exec(html)) !== null) {\n    const username = match[1].toLowerCase();\n    if (!usernames.has(username) && \n        !['joinchat', 'addstickers', 'share', 'proxy', 'login'].includes(username)) {\n      usernames.add(username);\n      \n      // Пытаемся найти цену\n      let price = '';\n      const context = html.substring(Math.max(0, match.index - 300), match.index + 300);\n      const priceMatch = context.match(/(\\d+(?:\\s*\\d+)*)\\s*(?:₽|руб|RUB)/i);\n      if (priceMatch) {\n        price = priceMatch[0];\n      }\n      \n      channels.push({\n        username: username,\n        link: `https://t.me/${username}`,\n        subscribers: 0,\n        source: 'telega',\n        title: username,\n        price: price\n      });\n    }\n  }\n}\n\nreturn channels.slice(0, 30).map(ch => ({json: ch}));"
+      },
+      "id": "parse-telega",
+      "name": "Парсинг Telega.in",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 400]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "merge-results",
+      "name": "Объединение",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Дедупликация и скоринг каналов\nconst allItems = $input.all();\nconst channelMap = new Map();\n\nfor (const item of allItems) {\n  const ch = item.json;\n  const username = ch.username?.toLowerCase();\n  \n  if (!username || username.length < 4) continue;\n  \n  if (channelMap.has(username)) {\n    // Обновляем данные если есть больше информации\n    const existing = channelMap.get(username);\n    if (ch.subscribers > existing.subscribers) {\n      existing.subscribers = ch.subscribers;\n    }\n    if (ch.price && !existing.price) {\n      existing.price = ch.price;\n    }\n    existing.sources = (existing.sources || existing.source) + ',' + ch.source;\n  } else {\n    channelMap.set(username, {...ch});\n  }\n}\n\n// Конвертируем в массив и скорим\nconst channels = Array.from(channelMap.values()).map(ch => {\n  let score = 50; // Базовый скор\n  \n  // За подписчиков\n  if (ch.subscribers >= 100000) score += 30;\n  else if (ch.subscribers >= 50000) score += 25;\n  else if (ch.subscribers >= 10000) score += 20;\n  else if (ch.subscribers >= 5000) score += 15;\n  else if (ch.subscribers >= 1000) score += 10;\n  \n  // За нахождение на двух площадках\n  if (ch.sources && ch.sources.includes(',')) score += 10;\n  \n  // За наличие цены (значит канал активно рекламируется)\n  if (ch.price) score += 5;\n  \n  return {\n    ...ch,\n    score: Math.min(100, score)\n  };\n});\n\n// Сортируем по скору\nchannels.sort((a, b) => b.score - a.score);\n\n// Возвращаем топ-20\nreturn channels.slice(0, 20).map((ch, idx) => ({\n  json: {\n    position: idx + 1,\n    username: ch.username,\n    link: ch.link,\n    subscribers: ch.subscribers || 'N/A',\n    subscribers_formatted: ch.subscribers >= 1000000 \n      ? (ch.subscribers / 1000000).toFixed(1) + 'M'\n      : ch.subscribers >= 1000 \n        ? (ch.subscribers / 1000).toFixed(1) + 'K'\n        : ch.subscribers || 'N/A',\n    source: ch.sources || ch.source,\n    price: ch.price || '',\n    score: ch.score\n  }\n}));"
+      },
+      "id": "dedupe-score",
+      "name": "Дедупликация и скоринг",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1140, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot{{ $env.BOT_TOKEN }}/getChat",
+        "authentication": "none",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"chat_id\": \"@{{ $json.username }}\"}",
+        "options": {
+          "timeout": 5000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "validate-channel",
+      "name": "Проверка канала",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1380, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Обогащаем данными из Telegram API\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const original = item.json;\n  const apiResponse = original.result || {};\n  \n  // Канал живой если получили данные\n  const isAlive = !!apiResponse.id;\n  \n  results.push({\n    json: {\n      position: original.position || results.length + 1,\n      username: original.username || apiResponse.username,\n      title: apiResponse.title || original.username,\n      link: original.link || `https://t.me/${apiResponse.username}`,\n      subscribers: apiResponse.member_count || original.subscribers || 'N/A',\n      is_alive: isAlive,\n      status: isAlive ? '✅ Живой' : '❓ Не проверен',\n      source: original.source || 'parsed',\n      price: original.price || '',\n      score: original.score || 50,\n      description: (apiResponse.description || '').substring(0, 100)\n    }\n  });\n}\n\n// Сортируем: живые вверх, потом по скору\nresults.sort((a, b) => {\n  if (a.json.is_alive !== b.json.is_alive) {\n    return b.json.is_alive ? 1 : -1;\n  }\n  return b.json.score - a.json.score;\n});\n\n// Перенумеровываем\nresults.forEach((r, i) => r.json.position = i + 1);\n\nreturn results;"
+      },
+      "id": "enrich-data",
+      "name": "Обогащение данными",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1620, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"query\": {\n    \"niche\": \"{{ $('Webhook: Поиск каналов').item.json.body.niche }}\",\n    \"city\": \"{{ $('Webhook: Поиск каналов').item.json.body.city || '' }}\"\n  },\n  \"total_found\": {{ $input.all().length }},\n  \"channels\": {{ JSON.stringify($input.all().map(i => i.json)) }}\n}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-webhook",
+      "name": "Ответ API",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1860, 300]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {"__rl": true, "value": "YOUR_GOOGLE_SHEET_ID", "mode": "id"},
+        "sheetName": {"__rl": true, "value": "Каналы", "mode": "name"},
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "position": "={{ $json.position }}",
+            "username": "={{ $json.username }}",
+            "title": "={{ $json.title }}",
+            "link": "={{ $json.link }}",
+            "subscribers": "={{ $json.subscribers }}",
+            "status": "={{ $json.status }}",
+            "source": "={{ $json.source }}",
+            "price": "={{ $json.price }}",
+            "score": "={{ $json.score }}",
+            "description": "={{ $json.description }}",
+            "search_date": "={{ new Date().toISOString().split('T')[0] }}"
+          },
+          "matchingColumns": ["username"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "save-channels",
+      "name": "Сохранить в Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1860, 500],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.ADMIN_CHAT_ID }}",
+        "text": "=🔍 *Поиск каналов завершен*\n\n📋 Запрос: *{{ $('Webhook: Поиск каналов').item.json.body.niche }}* {{ $('Webhook: Поиск каналов').item.json.body.city || '' }}\n📊 Найдено: *{{ $input.all().length }}* каналов\n\n*ТОП-5:*\n{{ $input.all().slice(0, 5).map(i => `${i.json.position}. ${i.json.status} @${i.json.username} (${i.json.subscribers} подп.)`).join('\\n') }}\n\n_Полный список сохранен в Google Sheets_",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "notify-admin",
+      "name": "Уведомление админу",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1860, 100],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "Поиск Telegram каналов",
+        "formDescription": "Найти каналы под вашу нишу",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Ниша",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldOptions": {
+                "values": [
+                  {"option": "недвижимость"},
+                  {"option": "крипта"},
+                  {"option": "бизнес"},
+                  {"option": "работа"},
+                  {"option": "авто"},
+                  {"option": "it"},
+                  {"option": "красота"},
+                  {"option": "здоровье"},
+                  {"option": "образование"},
+                  {"option": "новости"}
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Город",
+              "placeholder": "Москва, СПб, Казань..."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "form-trigger",
+      "name": "Форма поиска",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [180, 500],
+      "webhookId": "channel-finder-form"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Преобразуем данные формы в формат API\nreturn [{\n  json: {\n    body: {\n      niche: $json['Ниша'] || $json.niche,\n      city: $json['Город'] || $json.city || ''\n    }\n  }\n}];"
+      },
+      "id": "transform-form",
+      "name": "Преобразование формы",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 500]
+    }
+  ],
+  "connections": {
+    "Webhook: Поиск каналов": {
+      "main": [
+        [
+          {"node": "TGStat: Поиск", "type": "main", "index": 0},
+          {"node": "Telega.in: Поиск", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "TGStat: Поиск": {
+      "main": [[{"node": "Парсинг TGStat", "type": "main", "index": 0}]]
+    },
+    "Telega.in: Поиск": {
+      "main": [[{"node": "Парсинг Telega.in", "type": "main", "index": 0}]]
+    },
+    "Парсинг TGStat": {
+      "main": [[{"node": "Объединение", "type": "main", "index": 0}]]
+    },
+    "Парсинг Telega.in": {
+      "main": [[{"node": "Объединение", "type": "main", "index": 1}]]
+    },
+    "Объединение": {
+      "main": [[{"node": "Дедупликация и скоринг", "type": "main", "index": 0}]]
+    },
+    "Дедупликация и скоринг": {
+      "main": [[{"node": "Проверка канала", "type": "main", "index": 0}]]
+    },
+    "Проверка канала": {
+      "main": [[{"node": "Обогащение данными", "type": "main", "index": 0}]]
+    },
+    "Обогащение данными": {
+      "main": [
+        [
+          {"node": "Ответ API", "type": "main", "index": 0},
+          {"node": "Сохранить в Google Sheets", "type": "main", "index": 0},
+          {"node": "Уведомление админу", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Форма поиска": {
+      "main": [[{"node": "Преобразование формы", "type": "main", "index": 0}]]
+    },
+    "Преобразование формы": {
+      "main": [
+        [
+          {"node": "TGStat: Поиск", "type": "main", "index": 0},
+          {"node": "Telega.in: Поиск", "type": "main", "index": 0}
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [
+    {"name": "telegram"},
+    {"name": "parser"},
+    {"name": "channels"}
+  ]
+}
