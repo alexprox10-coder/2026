@@ -1,0 +1,930 @@
+{
+  "name": "Lead Bot v2 - IMPROVED",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query",
+          "pre_checkout_query"
+        ],
+        "additionalFields": {}
+      },
+      "id": "node-tg-trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 460],
+      "webhookId": "lead-bot-main",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_YOUR_TELEGRAM_CRED_ID",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================\n// КОНФИГУРАЦИЯ ЦЕН (единственное место!)\n// =============================================\nconst PRICING_CONFIG = {\n  plan_day: {\n    name: '1 День',\n    emoji: '⚡',\n    description: 'Доступ к горячим лидам на 24 часа',\n    amount: 49000,\n    duration_days: 1,\n    label: '1 День — 490 ₽',\n    buttonText: '⚡ 1 День — 490 ₽'\n  },\n  plan_week: {\n    name: '1 Неделя',\n    emoji: '🔥',\n    description: 'Доступ к горячим лидам на 7 дней + настройка фильтров',\n    amount: 149000,\n    duration_days: 7,\n    label: '1 Неделя — 1 490 ₽',\n    buttonText: '🔥 1 Неделя — 1 490 ₽'\n  },\n  plan_month: {\n    name: '1 Месяц',\n    emoji: '💎',\n    description: 'Доступ к горячим лидам на 30 дней + персональный парсер + приоритет',\n    amount: 399000,\n    duration_days: 30,\n    label: '1 Месяц — 3 990 ₽',\n    buttonText: '💎 1 Месяц — 3 990 ₽ (выгодно!)'\n  }\n};\n\n// =============================================\n// БЛОК 1: Извлечение данных из Telegram Update\n// =============================================\nconst update = $input.first().json;\n\nlet userId = null;\nlet username = '';\nlet firstName = '';\nlet messageText = '';\nlet callbackData = '';\nlet updateType = '';\nlet chatId = null;\nlet callbackQueryId = '';\nlet preCheckoutQueryId = '';\n\ntry {\n  if (update.callback_query) {\n    updateType = 'callback_query';\n    userId = String(update.callback_query.from.id);\n    chatId = String(update.callback_query.message.chat.id);\n    username = update.callback_query.from.username || '';\n    firstName = update.callback_query.from.first_name || '';\n    callbackData = update.callback_query.data || '';\n    messageText = callbackData;\n    callbackQueryId = update.callback_query.id;\n\n  } else if (update.pre_checkout_query) {\n    updateType = 'pre_checkout';\n    userId = String(update.pre_checkout_query.from.id);\n    chatId = userId;\n    username = update.pre_checkout_query.from.username || '';\n    firstName = update.pre_checkout_query.from.first_name || '';\n    messageText = update.pre_checkout_query.invoice_payload || '';\n    preCheckoutQueryId = update.pre_checkout_query.id;\n\n  } else if (update.message) {\n    chatId = String(update.message.chat.id);\n    userId = String(update.message.from.id);\n    username = update.message.from.username || '';\n    firstName = update.message.from.first_name || '';\n\n    if (update.message.successful_payment) {\n      updateType = 'successful_payment';\n      messageText = update.message.successful_payment.invoice_payload || '';\n    } else {\n      updateType = 'message';\n      messageText = update.message.text || '';\n    }\n  }\n} catch(e) {\n  return [];\n}\n\nif (!userId) return [];\n\n// Генерируем динамические кнопки тарифов\nconst planButtons = Object.entries(PRICING_CONFIG).map(([key, plan]) => ({\n  text: plan.buttonText,\n  callback_data: key\n}));\n\nconst planKeyboard = JSON.stringify({\n  inline_keyboard: planButtons.map(btn => [btn])\n});\n\nreturn [{\n  json: {\n    userId,\n    chatId: chatId || userId,\n    username,\n    firstName,\n    displayName: username ? '@' + username : firstName,\n    messageText,\n    callbackData,\n    updateType,\n    callbackQueryId,\n    preCheckoutQueryId,\n    rawUpdate: update,\n    // Конфигурация цен для передачи дальше\n    pricingConfig: PRICING_CONFIG,\n    planKeyboard\n  }\n}];"
+      },
+      "id": "node-extract-data",
+      "name": "Извлечь данные",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 460]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.callbackQueryId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "node-check-callback",
+      "name": "Это callback_query?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/answerCallbackQuery",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"callback_query_id\": \"{{ $json.callbackQueryId }}\"}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "node-answer-callback",
+      "name": "Answer Callback Query",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "users",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "user_id",
+              "lookupValue": "={{ $json.userId }}"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "id": "node-gsheets-read",
+      "name": "Получить пользователя",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [640, 520],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_YOUR_GOOGLE_CRED_ID",
+          "name": "Google Sheets"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "multiplex",
+        "options": {}
+      },
+      "id": "node-merge",
+      "name": "Объединить данные",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1060, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================\n// КОНФИГУРАЦИЯ ЦЕН (дублируем для расчетов)\n// =============================================\nconst PRICING_CONFIG = {\n  plan_day: { duration_days: 1, amount: 49000 },\n  plan_week: { duration_days: 7, amount: 149000 },\n  plan_month: { duration_days: 30, amount: 399000 }\n};\n\n// =============================================\n// БЛОК 2: Определение состояния пользователя\n// =============================================\nconst inputData = $input.all();\n\n// Данные из Extract node\nconst tgData = inputData[0] ? inputData[0].json : {};\n\n// Данные из Google Sheets - обрабатываем случай когда пустой ответ\nlet userData = {};\nif (inputData[1] && inputData[1].json) {\n  // Проверяем что это не пустой объект от ошибки\n  const gsData = inputData[1].json;\n  if (gsData.user_id || gsData.state) {\n    userData = gsData;\n  }\n}\n\n// Определяем состояние\nlet state = userData.state || 'new';\n\n// Обработка специальных типов обновлений\nif (tgData.updateType === 'pre_checkout') {\n  state = 'pre_checkout';\n} else if (tgData.updateType === 'successful_payment') {\n  state = 'payment_success';\n} else if (tgData.messageText === '/start') {\n  state = 'new';\n} else if (tgData.messageText === '/status' || tgData.messageText === 'status') {\n  state = 'check_status';  // ДОБАВЛЕНО: обработка /status\n} else if (tgData.messageText === '/help') {\n  state = 'show_help';\n}\n\n// Если у нас callback_query с префиксом\nif (tgData.callbackData) {\n  if (tgData.callbackData.startsWith('niche_')) state = 'niche_selected';\n  if (tgData.callbackData.startsWith('region_')) state = 'region_selected';\n  if (tgData.callbackData.startsWith('plan_')) state = 'plan_selected';\n  if (tgData.callbackData.startsWith('notif_')) state = 'notif_selected';\n}\n\n// Проверяем не истекла ли подписка\nlet subscriptionActive = false;\nlet daysRemaining = 0;\nif (userData.expires_at) {\n  const expiresAt = new Date(userData.expires_at);\n  const now = new Date();\n  subscriptionActive = expiresAt > now;\n  if (subscriptionActive) {\n    daysRemaining = Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24));\n  }\n}\n\nreturn [{\n  json: {\n    ...tgData,\n    // Данные пользователя из БД\n    dbState: userData.state || '',\n    dbNiche: userData.niche || '',\n    dbRegion: userData.region || '',\n    dbPlan: userData.plan || '',\n    dbCompany: userData.company || '',\n    dbKeywords: userData.keywords || '',\n    dbNotifications: userData.notifications || '',\n    dbExpiresAt: userData.expires_at || '',\n    subscriptionActive,\n    daysRemaining,\n    // Текущее состояние для роутинга\n    currentState: state,\n    isNewUser: !userData.user_id,\n    // Конфигурация цен\n    pricingConfig: PRICING_CONFIG\n  }\n}];"
+      },
+      "id": "node-resolve-state",
+      "name": "Определить состояние",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1280, 460]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.currentState }}", "rightValue": "new", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "new"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.currentState }}", "rightValue": "niche_selected", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "niche_selected"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.currentState }}", "rightValue": "region_selected", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "region_selected"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.currentState }}", "rightValue": "plan_selected", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "plan_selected"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.currentState }}", "rightValue": "pre_checkout", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "pre_checkout"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.currentState }}", "rightValue": "payment_success", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "payment_success"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.dbState }}", "rightValue": "wait_q1", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "wait_q1"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.dbState }}", "rightValue": "wait_q2", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "wait_q2"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.dbState }}", "rightValue": "wait_q3", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "wait_q3"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.currentState }}", "rightValue": "notif_selected", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "notif_selected"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.currentState }}", "rightValue": "check_status", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "check_status"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "node-switch",
+      "name": "Роутер по состоянию",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [1500, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nreturn [{\n  json: {\n    user_id: d.userId,\n    chat_id: d.chatId,\n    username: d.username,\n    first_name: d.firstName,\n    state: 'select_niche',\n    niche: '',\n    region: '',\n    plan: '',\n    company: '',\n    keywords: '',\n    notifications: '',\n    created_at: new Date().toISOString(),\n    expires_at: '',\n    _chatId: d.chatId,\n    _displayName: d.displayName\n  }\n}];"
+      },
+      "id": "node-prepare-new-user",
+      "name": "Подготовить нового пользователя",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1720, 100]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "users", "mode": "name" },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": ["user_id"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "node-create-user",
+      "name": "Создать пользователя в БД",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1940, 100],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "REPLACE_WITH_YOUR_GOOGLE_CRED_ID", "name": "Google Sheets" }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json._chatId }}",
+        "text": "Привет, {{ $json._displayName }}!\n\nЯ бот для получения горячих лидов\n\nПокажу тебе заявки от клиентов, которые прямо сейчас ищут твои услуги.\n\n*Выбери свою нишу:*",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "reply_markup": "{\"inline_keyboard\":[[{\"text\":\"Ремонт и строительство\",\"callback_data\":\"niche_repair\"},{\"text\":\"Юридические услуги\",\"callback_data\":\"niche_legal\"}],[{\"text\":\"Автосервис\",\"callback_data\":\"niche_auto\"},{\"text\":\"Медицина / Стоматология\",\"callback_data\":\"niche_medical\"}],[{\"text\":\"Недвижимость\",\"callback_data\":\"niche_realty\"},{\"text\":\"Красота / Spa\",\"callback_data\":\"niche_beauty\"}],[{\"text\":\"B2B / Бизнес услуги\",\"callback_data\":\"niche_b2b\"},{\"text\":\"Другая ниша\",\"callback_data\":\"niche_other\"}]]}"
+        }
+      },
+      "id": "node-send-welcome",
+      "name": "Приветствие + выбор ниши",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2160, 100],
+      "credentials": {
+        "telegramApi": { "id": "REPLACE_WITH_YOUR_TELEGRAM_CRED_ID", "name": "Telegram Bot API" }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\n\nconst nicheMap = {\n  'niche_repair': 'Ремонт и строительство',\n  'niche_legal': 'Юридические услуги',\n  'niche_auto': 'Автосервис',\n  'niche_medical': 'Медицина/Стоматология',\n  'niche_realty': 'Недвижимость',\n  'niche_beauty': 'Красота/Spa',\n  'niche_b2b': 'B2B/Бизнес',\n  'niche_other': 'Другое'\n};\n\nreturn [{\n  json: {\n    ...d,\n    selectedNiche: nicheMap[d.callbackData] || d.callbackData,\n    nicheCode: d.callbackData\n  }\n}];"
+      },
+      "id": "node-process-niche",
+      "name": "Обработать нишу",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1720, 280]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "users", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $json.userId }}",
+            "niche": "={{ $json.selectedNiche }}",
+            "state": "select_region"
+          },
+          "matchingColumns": ["user_id"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "node-save-niche",
+      "name": "Сохранить нишу",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1940, 280],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "REPLACE_WITH_YOUR_GOOGLE_CRED_ID", "name": "Google Sheets" }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "Ниша: *{{ $json.selectedNiche }}*\n\n*Выбери регион* для получения лидов:",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "reply_markup": "{\"inline_keyboard\":[[{\"text\":\"Москва\",\"callback_data\":\"region_moscow\"},{\"text\":\"Санкт-Петербург\",\"callback_data\":\"region_spb\"}],[{\"text\":\"Екатеринбург\",\"callback_data\":\"region_ekb\"},{\"text\":\"Краснодар\",\"callback_data\":\"region_krd\"}],[{\"text\":\"Новосибирск\",\"callback_data\":\"region_nsk\"},{\"text\":\"Казань\",\"callback_data\":\"region_kzn\"}],[{\"text\":\"Вся Россия\",\"callback_data\":\"region_russia\"},{\"text\":\"Россия + СНГ\",\"callback_data\":\"region_cis\"}]]}"
+        }
+      },
+      "id": "node-send-region",
+      "name": "Выбор региона",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2160, 280],
+      "credentials": {
+        "telegramApi": { "id": "REPLACE_WITH_YOUR_TELEGRAM_CRED_ID", "name": "Telegram Bot API" }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\n\nconst regionMap = {\n  'region_moscow': 'Москва',\n  'region_spb': 'Санкт-Петербург',\n  'region_ekb': 'Екатеринбург',\n  'region_krd': 'Краснодар',\n  'region_nsk': 'Новосибирск',\n  'region_kzn': 'Казань',\n  'region_russia': 'Вся Россия',\n  'region_cis': 'Россия + СНГ'\n};\n\nreturn [{\n  json: {\n    ...d,\n    selectedRegion: regionMap[d.callbackData] || d.callbackData,\n    regionCode: d.callbackData\n  }\n}];"
+      },
+      "id": "node-process-region",
+      "name": "Обработать регион",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1720, 460]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "users", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $json.userId }}",
+            "region": "={{ $json.selectedRegion }}",
+            "state": "select_plan"
+          },
+          "matchingColumns": ["user_id"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "node-save-region",
+      "name": "Сохранить регион",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1940, 460],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "REPLACE_WITH_YOUR_GOOGLE_CRED_ID", "name": "Google Sheets" }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "Регион: *{{ $json.selectedRegion }}*\n\n*Выбери тариф:*\n\n*День* — тест-драйв, получи лиды за 24ч\n*Неделя* — оптимально для старта\n*Месяц* — максимальная выгода + персональный парсер",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "reply_markup": "{\"inline_keyboard\":[[{\"text\":\"1 День — 490 руб\",\"callback_data\":\"plan_day\"}],[{\"text\":\"1 Неделя — 1 490 руб\",\"callback_data\":\"plan_week\"}],[{\"text\":\"1 Месяц — 3 990 руб (выгодно!)\",\"callback_data\":\"plan_month\"}]]}"
+        }
+      },
+      "id": "node-send-plan",
+      "name": "Выбор тарифа",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2160, 460],
+      "credentials": {
+        "telegramApi": { "id": "REPLACE_WITH_YOUR_TELEGRAM_CRED_ID", "name": "Telegram Bot API" }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================\n// КОНФИГУРАЦИЯ ЦЕН (централизованная)\n// =============================================\nconst PRICING_CONFIG = {\n  plan_day: {\n    name: 'Тариф: 1 День',\n    description: 'Доступ к горячим лидам на 24 часа',\n    amount: 49000,\n    duration_days: 1,\n    label: '1 День — 490 руб'\n  },\n  plan_week: {\n    name: 'Тариф: 1 Неделя',\n    description: 'Доступ к горячим лидам на 7 дней + настройка фильтров',\n    amount: 149000,\n    duration_days: 7,\n    label: '1 Неделя — 1 490 руб'\n  },\n  plan_month: {\n    name: 'Тариф: 1 Месяц',\n    description: 'Доступ к горячим лидам на 30 дней + персональный парсер + приоритет',\n    amount: 399000,\n    duration_days: 30,\n    label: '1 Месяц — 3 990 руб'\n  }\n};\n\nconst d = $input.first().json;\nconst plan = PRICING_CONFIG[d.callbackData];\n\nif (!plan) {\n  return [{ json: { ...d, error: 'unknown_plan' } }];\n}\n\nconst payload = `PAY_${d.userId}_${d.callbackData}_${Date.now()}`;\n\nreturn [{\n  json: {\n    ...d,\n    planName: plan.name,\n    planDescription: plan.description,\n    planAmount: plan.amount,\n    planDurationDays: plan.duration_days,\n    planLabel: plan.label,\n    planCode: d.callbackData,\n    invoicePayload: payload\n  }\n}];"
+      },
+      "id": "node-process-plan",
+      "name": "Обработать тариф",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1720, 640]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "users", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $json.userId }}",
+            "plan": "={{ $json.planCode }}",
+            "state": "payment_pending",
+            "invoice_payload": "={{ $json.invoicePayload }}"
+          },
+          "matchingColumns": ["user_id"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "node-save-plan",
+      "name": "Сохранить тариф",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1940, 640],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "REPLACE_WITH_YOUR_GOOGLE_CRED_ID", "name": "Google Sheets" }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "invoice",
+        "operation": "create",
+        "chatId": "={{ $json.chatId }}",
+        "title": "={{ $json.planName }}",
+        "description": "={{ $json.planDescription }}",
+        "payload": "={{ $json.invoicePayload }}",
+        "providerToken": "REPLACE_WITH_YOUR_PAYMENT_PROVIDER_TOKEN",
+        "currency": "RUB",
+        "prices": "=[{\"label\": \"{{ $json.planLabel }}\", \"amount\": {{ $json.planAmount }}}]",
+        "additionalFields": {
+          "need_name": false,
+          "need_email": false,
+          "need_phone_number": false,
+          "is_flexible": false,
+          "protect_content": false,
+          "start_parameter": "payment"
+        }
+      },
+      "id": "node-send-invoice",
+      "name": "Отправить счёт",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2160, 640],
+      "credentials": {
+        "telegramApi": { "id": "REPLACE_WITH_YOUR_TELEGRAM_CRED_ID", "name": "Telegram Bot API" }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/answerPreCheckoutQuery",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "pre_checkout_query_id", "value": "={{ $json.preCheckoutQueryId }}" },
+            { "name": "ok", "value": "true" }
+          ]
+        },
+        "options": { "timeout": 5000 }
+      },
+      "id": "node-answer-precheckout",
+      "name": "Подтвердить оплату",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1720, 820],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================\n// КОНФИГУРАЦИЯ ЦЕН\n// =============================================\nconst PRICING_CONFIG = {\n  plan_day: { duration_days: 1 },\n  plan_week: { duration_days: 7 },\n  plan_month: { duration_days: 30 }\n};\n\nconst d = $input.first().json;\nconst planDuration = PRICING_CONFIG[d.dbPlan]?.duration_days || 1;\n\nconst expiresAt = new Date();\nexpiresAt.setDate(expiresAt.getDate() + planDuration);\n\nreturn [{\n  json: {\n    ...d,\n    expiresAt: expiresAt.toISOString(),\n    paidAt: new Date().toISOString(),\n    planDuration\n  }\n}];"
+      },
+      "id": "node-calc-expiry",
+      "name": "Рассчитать срок подписки",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1720, 1000]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "users", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $json.userId }}",
+            "state": "wait_q1",
+            "expires_at": "={{ $json.expiresAt }}",
+            "paid_at": "={{ $json.paidAt }}"
+          },
+          "matchingColumns": ["user_id"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "node-mark-paid",
+      "name": "Сохранить оплату",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1940, 1000],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "REPLACE_WITH_YOUR_GOOGLE_CRED_ID", "name": "Google Sheets" }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "*Оплата прошла успешно!*\n\nТеперь настрою твой персональный фид лидов.\n\nОтвечу на 3 коротких вопроса\n\n*Вопрос 1 из 3:*\nНапиши название или описание твоей компании/услуги\n_(Например: «Ремонт квартир под ключ в Москве» или «Семейный стоматолог»)_",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "node-send-q1",
+      "name": "Вопрос 1: Компания",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2160, 1000],
+      "credentials": {
+        "telegramApi": { "id": "REPLACE_WITH_YOUR_TELEGRAM_CRED_ID", "name": "Telegram Bot API" }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "users", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $json.userId }}",
+            "company": "={{ $json.messageText }}",
+            "state": "wait_q2"
+          },
+          "matchingColumns": ["user_id"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "node-save-q1",
+      "name": "Сохранить ответ Q1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1720, 1180],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "REPLACE_WITH_YOUR_GOOGLE_CRED_ID", "name": "Google Sheets" }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "Записал!\n\n*Вопрос 2 из 3:*\nНапиши ключевые слова для фильтрации лидов\n_(Через запятую. Например: «ремонт ванной, плитка, сантехника»)_",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "node-send-q2",
+      "name": "Вопрос 2: Ключевые слова",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1940, 1180],
+      "credentials": {
+        "telegramApi": { "id": "REPLACE_WITH_YOUR_TELEGRAM_CRED_ID", "name": "Telegram Bot API" }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "users", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $json.userId }}",
+            "keywords": "={{ $json.messageText }}",
+            "state": "wait_q3"
+          },
+          "matchingColumns": ["user_id"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "node-save-q2",
+      "name": "Сохранить ответ Q2",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1720, 1360],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "REPLACE_WITH_YOUR_GOOGLE_CRED_ID", "name": "Google Sheets" }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "Отлично!\n\n*Вопрос 3 из 3:*\nКак часто присылать уведомления о новых лидах?",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "reply_markup": "{\"inline_keyboard\":[[{\"text\":\"Мгновенно (каждый лид)\",\"callback_data\":\"notif_instant\"}],[{\"text\":\"Пачками каждые 2 часа\",\"callback_data\":\"notif_2h\"}],[{\"text\":\"Утренний дайджест (9:00)\",\"callback_data\":\"notif_morning\"}]]}"
+        }
+      },
+      "id": "node-send-q3",
+      "name": "Вопрос 3: Уведомления",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1940, 1360],
+      "credentials": {
+        "telegramApi": { "id": "REPLACE_WITH_YOUR_TELEGRAM_CRED_ID", "name": "Telegram Bot API" }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\n\nconst notifMap = {\n  'notif_instant': 'Мгновенно',\n  'notif_2h': 'Каждые 2 часа',\n  'notif_morning': 'Утренний дайджест'\n};\n\nreturn [{\n  json: {\n    ...d,\n    selectedNotification: notifMap[d.callbackData] || d.messageText || 'Мгновенно'\n  }\n}];"
+      },
+      "id": "node-process-q3",
+      "name": "Обработать уведомления",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1720, 1540]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "users", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $json.userId }}",
+            "notifications": "={{ $json.selectedNotification }}",
+            "state": "active",
+            "setup_completed_at": "={{ new Date().toISOString() }}"
+          },
+          "matchingColumns": ["user_id"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "node-complete-setup",
+      "name": "Завершить настройку",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1940, 1540],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "REPLACE_WITH_YOUR_GOOGLE_CRED_ID", "name": "Google Sheets" }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "*Всё готово! Твой персональный фид настроен!*\n\n*Сводка настроек:*\n- Ниша: {{ $json.dbNiche }}\n- Регион: {{ $json.dbRegion }}\n- Ключевые слова: {{ $json.dbKeywords }}\n- Уведомления: {{ $json.selectedNotification }}\n\nПодписка активна до: {{ $json.dbExpiresAt }}\n\nЛиды начнут поступать в ближайшее время!\n\n_Используй /status чтобы проверить статус подписки_",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "node-send-confirmation",
+      "name": "Подтверждение настройки",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2160, 1540],
+      "credentials": {
+        "telegramApi": { "id": "REPLACE_WITH_YOUR_TELEGRAM_CRED_ID", "name": "Telegram Bot API" }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/approveChatJoinRequest",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"chat_id\": \"@private_leads_channel\", \"user_id\": {{ $json.userId }}}",
+        "options": { "timeout": 10000 }
+      },
+      "id": "node-add-to-channel",
+      "name": "Добавить в приватный канал",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2380, 1540],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://YOUR_PARSER_API_HOST:5000/webhook/start-client-parser",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.userId }}\",\n  \"chat_id\": \"{{ $json.chatId }}\",\n  \"niche\": \"{{ $json.dbNiche }}\",\n  \"region\": \"{{ $json.dbRegion }}\",\n  \"keywords\": \"{{ $json.dbKeywords }}\",\n  \"notifications\": \"{{ $json.selectedNotification }}\",\n  \"expires_at\": \"{{ $json.dbExpiresAt }}\"\n}",
+        "options": { "timeout": 30000 }
+      },
+      "id": "node-start-parser",
+      "name": "Запустить парсер клиента",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2600, 1540],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "chatId": "REPLACE_WITH_ADMIN_CHAT_ID",
+        "text": "*Новый клиент оформил подписку!*\n\nПользователь: {{ $json.displayName }} (ID: {{ $json.userId }})\nНиша: {{ $json.dbNiche }}\nРегион: {{ $json.dbRegion }}\nТариф: {{ $json.dbPlan }}\nКлючевые слова: {{ $json.dbKeywords }}\nКомпания: {{ $json.dbCompany }}\nУведомления: {{ $json.selectedNotification }}\nДо: {{ $json.dbExpiresAt }}\n\n*Парсер запущен автоматически!*",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "node-notify-admin",
+      "name": "Уведомить админа",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2820, 1540],
+      "credentials": {
+        "telegramApi": { "id": "REPLACE_WITH_YOUR_TELEGRAM_CRED_ID", "name": "Telegram Bot API" }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ОБРАБОТКА /status\nconst d = $input.first().json;\n\nlet statusText = '';\n\nif (d.subscriptionActive) {\n  statusText = `*Статус подписки:* Активна\\n\\n` +\n    `- Ниша: ${d.dbNiche}\\n` +\n    `- Регион: ${d.dbRegion}\\n` +\n    `- Ключевые слова: ${d.dbKeywords}\\n` +\n    `- Уведомления: ${d.dbNotifications}\\n\\n` +\n    `Осталось дней: *${d.daysRemaining}*\\n` +\n    `Активна до: ${d.dbExpiresAt}`;\n} else if (d.dbExpiresAt) {\n  statusText = `*Статус подписки:* Истекла\\n\\n` +\n    `Подписка закончилась: ${d.dbExpiresAt}\\n\\n` +\n    `Напиши /start чтобы продлить подписку.`;\n} else {\n  statusText = `*Статус:* Подписка не оформлена\\n\\n` +\n    `Напиши /start чтобы начать.`;\n}\n\nreturn [{\n  json: {\n    ...d,\n    statusText\n  }\n}];"
+      },
+      "id": "node-prepare-status",
+      "name": "Подготовить статус",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1720, 1720]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.statusText }}",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "node-send-status",
+      "name": "Отправить статус",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1940, 1720],
+      "credentials": {
+        "telegramApi": { "id": "REPLACE_WITH_YOUR_TELEGRAM_CRED_ID", "name": "Telegram Bot API" }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "Не понял команду. Используй:\n\n/start - начать или перезапустить\n/status - проверить статус подписки\n/help - помощь",
+        "additionalFields": {}
+      },
+      "id": "node-fallback",
+      "name": "Fallback ответ",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1720, 1900],
+      "credentials": {
+        "telegramApi": { "id": "REPLACE_WITH_YOUR_TELEGRAM_CRED_ID", "name": "Telegram Bot API" }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "errorMessage": "={{ $json.error }}"
+      },
+      "id": "node-error-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [200, 800]
+    },
+    {
+      "parameters": {
+        "chatId": "REPLACE_WITH_ADMIN_CHAT_ID",
+        "text": "*ERROR in Lead Bot*\n\nWorkflow: {{ $workflow.name }}\nNode: {{ $json.execution?.lastNodeExecuted }}\nError: {{ $json.execution?.error?.message }}\n\nExecution ID: {{ $execution.id }}",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "id": "node-error-notify",
+      "name": "Уведомить об ошибке",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [420, 800],
+      "credentials": {
+        "telegramApi": { "id": "REPLACE_WITH_YOUR_TELEGRAM_CRED_ID", "name": "Telegram Bot API" }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [[{ "node": "Извлечь данные", "type": "main", "index": 0 }]]
+    },
+    "Извлечь данные": {
+      "main": [[
+        { "node": "Это callback_query?", "type": "main", "index": 0 },
+        { "node": "Получить пользователя", "type": "main", "index": 0 },
+        { "node": "Объединить данные", "type": "main", "index": 0 }
+      ]]
+    },
+    "Это callback_query?": {
+      "main": [
+        [{ "node": "Answer Callback Query", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Получить пользователя": {
+      "main": [[{ "node": "Объединить данные", "type": "main", "index": 1 }]]
+    },
+    "Объединить данные": {
+      "main": [[{ "node": "Определить состояние", "type": "main", "index": 0 }]]
+    },
+    "Определить состояние": {
+      "main": [[{ "node": "Роутер по состоянию", "type": "main", "index": 0 }]]
+    },
+    "Роутер по состоянию": {
+      "main": [
+        [{ "node": "Подготовить нового пользователя", "type": "main", "index": 0 }],
+        [{ "node": "Обработать нишу", "type": "main", "index": 0 }],
+        [{ "node": "Обработать регион", "type": "main", "index": 0 }],
+        [{ "node": "Обработать тариф", "type": "main", "index": 0 }],
+        [{ "node": "Подтвердить оплату", "type": "main", "index": 0 }],
+        [{ "node": "Рассчитать срок подписки", "type": "main", "index": 0 }],
+        [{ "node": "Сохранить ответ Q1", "type": "main", "index": 0 }],
+        [{ "node": "Сохранить ответ Q2", "type": "main", "index": 0 }],
+        [{ "node": "Вопрос 3: Уведомления", "type": "main", "index": 0 }],
+        [{ "node": "Обработать уведомления", "type": "main", "index": 0 }],
+        [{ "node": "Подготовить статус", "type": "main", "index": 0 }],
+        [{ "node": "Fallback ответ", "type": "main", "index": 0 }]
+      ]
+    },
+    "Подготовить нового пользователя": {
+      "main": [[{ "node": "Создать пользователя в БД", "type": "main", "index": 0 }]]
+    },
+    "Создать пользователя в БД": {
+      "main": [[{ "node": "Приветствие + выбор ниши", "type": "main", "index": 0 }]]
+    },
+    "Обработать нишу": {
+      "main": [[{ "node": "Сохранить нишу", "type": "main", "index": 0 }]]
+    },
+    "Сохранить нишу": {
+      "main": [[{ "node": "Выбор региона", "type": "main", "index": 0 }]]
+    },
+    "Обработать регион": {
+      "main": [[{ "node": "Сохранить регион", "type": "main", "index": 0 }]]
+    },
+    "Сохранить регион": {
+      "main": [[{ "node": "Выбор тарифа", "type": "main", "index": 0 }]]
+    },
+    "Обработать тариф": {
+      "main": [[{ "node": "Сохранить тариф", "type": "main", "index": 0 }]]
+    },
+    "Сохранить тариф": {
+      "main": [[{ "node": "Отправить счёт", "type": "main", "index": 0 }]]
+    },
+    "Рассчитать срок подписки": {
+      "main": [[{ "node": "Сохранить оплату", "type": "main", "index": 0 }]]
+    },
+    "Сохранить оплату": {
+      "main": [[{ "node": "Вопрос 1: Компания", "type": "main", "index": 0 }]]
+    },
+    "Сохранить ответ Q1": {
+      "main": [[{ "node": "Вопрос 2: Ключевые слова", "type": "main", "index": 0 }]]
+    },
+    "Сохранить ответ Q2": {
+      "main": [[{ "node": "Вопрос 3: Уведомления", "type": "main", "index": 0 }]]
+    },
+    "Обработать уведомления": {
+      "main": [[{ "node": "Завершить настройку", "type": "main", "index": 0 }]]
+    },
+    "Завершить настройку": {
+      "main": [[{ "node": "Подтверждение настройки", "type": "main", "index": 0 }]]
+    },
+    "Подтверждение настройки": {
+      "main": [[{ "node": "Добавить в приватный канал", "type": "main", "index": 0 }]]
+    },
+    "Добавить в приватный канал": {
+      "main": [[{ "node": "Запустить парсер клиента", "type": "main", "index": 0 }]]
+    },
+    "Запустить парсер клиента": {
+      "main": [[{ "node": "Уведомить админа", "type": "main", "index": 0 }]]
+    },
+    "Подготовить статус": {
+      "main": [[{ "node": "Отправить статус", "type": "main", "index": 0 }]]
+    },
+    "Error Trigger": {
+      "main": [[{ "node": "Уведомить об ошибке", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "lead-bot-workflow-v2"
+  },
+  "id": "lead-bot-workflow-v2",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
