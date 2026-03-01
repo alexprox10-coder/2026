@@ -705,17 +705,35 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/approveChatJoinRequest",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/createChatInviteLink",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\"chat_id\": \"@private_leads_channel\", \"user_id\": {{ $json.userId }}}",
+        "jsonBody": "={\"chat_id\": \"{{ $env.PRIVATE_CHANNEL_ID }}\", \"name\": \"user_{{ $json.userId }}\", \"member_limit\": 1, \"expire_date\": {{ Math.floor(Date.now()/1000) + 86400 }}}",
         "options": { "timeout": 10000 }
       },
-      "id": "node-add-to-channel",
-      "name": "Добавить в приватный канал",
+      "id": "node-create-invite-link",
+      "name": "Создать инвайт-ссылку",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [2380, 1540],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "=Ваша персональная ссылка для доступа к каналу с лидами:\n\n{{ $node['Создать инвайт-ссылку'].json.result.invite_link }}\n\nСсылка действительна 24 часа и работает только один раз.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "node-send-invite-link",
+      "name": "Отправить ссылку клиенту",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2600, 1540],
+      "credentials": {
+        "telegramApi": { "id": "REPLACE_WITH_YOUR_TELEGRAM_CRED_ID", "name": "Telegram Bot API" }
+      },
       "continueOnFail": true
     },
     {
@@ -903,9 +921,12 @@
       "main": [[{ "node": "Подтверждение настройки", "type": "main", "index": 0 }]]
     },
     "Подтверждение настройки": {
-      "main": [[{ "node": "Добавить в приватный канал", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "Создать инвайт-ссылку", "type": "main", "index": 0 }]]
     },
-    "Добавить в приватный канал": {
+    "Создать инвайт-ссылку": {
+      "main": [[{ "node": "Отправить ссылку клиенту", "type": "main", "index": 0 }]]
+    },
+    "Отправить ссылку клиенту": {
       "main": [[{ "node": "Запустить парсер клиента", "type": "main", "index": 0 }]]
     },
     "Запустить парсер клиента": {
