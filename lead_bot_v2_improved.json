@@ -823,7 +823,7 @@
     {
       "parameters": {
         "chatId": "REPLACE_WITH_ADMIN_CHAT_ID",
-        "text": "*ERROR in Lead Bot*\n\nWorkflow: {{ $workflow.name }}\nNode: {{ $json.execution?.lastNodeExecuted }}\nError: {{ $json.execution?.error?.message }}\n\nExecution ID: {{ $execution.id }}",
+        "text": "={{ '*ERROR in Lead Bot*\\n\\nWorkflow: ' + $json.workflow.name + '\\nNode: ' + $json.execution.lastNodeExecuted + '\\nError: ' + $json.execution.error.message + '\\n\\nExecution ID: ' + $json.execution.id }}",
         "additionalFields": { "parse_mode": "Markdown" }
       },
       "id": "node-error-notify",
