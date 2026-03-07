@@ -148,16 +148,37 @@ class CryptoLeadsParser:
         """Извлекает @username трейдеров из постов (с контекстом)"""
         leads = []
 
-        # ТОЛЬКО контекстные паттерны для РЕАЛЬНЫХ трейдеров
+        # РАСШИРЕННЫЕ паттерны для поиска лидов
         patterns = [
+            # === ВЫСОКИЙ ПРИОРИТЕТ (явные контакты) ===
             # "пиши @user", "пишите @user", "dm @user", "в лс @user"
-            r'(?:пиши|пишите|дм|dm|write|contact|в\s*лс)\s*[:\-]?\s*@([a-z][a-z0-9_]{4,20})',
+            r'(?:пиши|пишите|дм|dm|write|contact|в\s*лс|напиши)\s*[:\-]?\s*@([a-z][a-z0-9_]{4,31})',
             # "связь @user", "контакт @user", "менеджер @user"
-            r'(?:связь|контакт|manager|менеджер|по\s*вопросам)\s*[:\-]?\s*@([a-z][a-z0-9_]{4,20})',
+            r'(?:связь|контакт|manager|менеджер|по\s*вопросам|admin)\s*[:\-]?\s*@([a-z][a-z0-9_]{4,31})',
             # "обращайтесь @user", "вопросы @user"
-            r'(?:обращайтесь|вопросы|details|info)\s*[:\-]?\s*@([a-z][a-z0-9_]{4,20})',
+            r'(?:обращайтесь|вопросы|details|info|подробности)\s*[:\-]?\s*@([a-z][a-z0-9_]{4,31})',
             # "@user - менеджер/трейдер/куратор"
-            r'@([a-z][a-z0-9_]{4,20})\s*[\-–—:]\s*(?:менеджер|трейдер|куратор|manager|trader)',
+            r'@([a-z][a-z0-9_]{4,31})\s*[\-–—:]\s*(?:менеджер|трейдер|куратор|manager|trader|admin)',
+
+            # === СРЕДНИЙ ПРИОРИТЕТ (контекст крипто/трейдинга) ===
+            # VIP, сигналы, обучение
+            r'(?:vip|вип|сигнал|signal|обучение|курс|консультац)\w*\s*[:\-]?\s*@([a-z][a-z0-9_]{4,31})',
+            # "автор @user", "аналитик @user", "эксперт @user"
+            r'(?:автор|author|аналитик|analyst|эксперт|expert)\s*[:\-]?\s*@([a-z][a-z0-9_]{4,31})',
+            # Подписка, доступ
+            r'(?:подписка|доступ|access|premium|приват)\w*\s*[:\-]?\s*@([a-z][a-z0-9_]{4,31})',
+
+            # === БАЗОВЫЙ ПРИОРИТЕТ (любые @username после ключевых слов) ===
+            # После "👉", "➡️", "📩", эмодзи
+            r'[👉➡️📩📲💬✍️]\s*@([a-z][a-z0-9_]{4,31})',
+            # После "Наш", "Мой", "Our"
+            r'(?:наш|мой|our|my)\s+@([a-z][a-z0-9_]{4,31})',
+            # "@user для" чего-то
+            r'@([a-z][a-z0-9_]{4,31})\s+(?:для|for|по)',
+
+            # === УНИВЕРСАЛЬНЫЙ ПАТТЕРН (с фильтрацией) ===
+            # Любой @username в тексте (фильтруется позже)
+            r'(?<![/\w])@([a-z][a-z0-9_]{4,31})(?![/\w])',
         ]
 
         all_usernames = []
@@ -172,26 +193,20 @@ class CryptoLeadsParser:
         channel_names = {ch.lower() for ch in self.DEFAULT_CHANNELS}
         channel_names.add(channel.lower())
 
-        # Суффиксы каналов (НЕ людей)
-        channel_suffixes = (
-            '_ru', '_rus', '_russia', '_russian', '_eng', '_en',
-            'news', 'feed', 'channel', 'chat', 'group', 'official',
-            'crypto', 'coin', 'token', 'nft', 'defi', 'trade', 'trading',
-            'signal', 'signals', 'alert', 'alerts', 'ai', 'io',
-            'trends', 'media', 'daily', 'weekly', 'hub', 'pro',
-            'mainer', 'miner', 'mining', 'exchange', 'swap'
-        )
-
-        # Стоп-слова для каналов/ботов
-        extra_stops = {
+        # ТОЧНЫЕ стоп-слова (известные каналы/боты)
+        exact_stops = {
             'joinchat', 'share', 'durov', 'telegram', 'tgstat',
             'telemetr', 'tganalytics', 'cryptorank', 'coingecko',
             'binance', 'bybit', 'okx', 'kucoin', 'gate', 'huobi',
             'forklog', 'bits_media', 'coinpost', 'cointelegraph',
-            'bitcoin', 'ethereum', 'opensea', 'rarible'
+            'bitcoin', 'ethereum', 'opensea', 'rarible', 'coinbase',
+            'kraken', 'ftx', 'gemini', 'crypto_com', 'mexc'
         }
 
-        for username in unique_usernames[:15]:  # Макс 15 на канал
+        # Суффиксы явных каналов/ботов (отсекаем ТОЛЬКО явные)
+        bot_suffixes = ('_bot', 'bot', '_support', '_help', '_official')
+
+        for username in unique_usernames[:30]:  # Увеличили до 30
             # Пропускаем если уже видели
             if username in self.seen_usernames:
                 continue
@@ -200,27 +215,23 @@ class CryptoLeadsParser:
             if username in channel_names:
                 continue
 
-            # Пропускаем стоп-слова
-            if any(stop in username for stop in self.STOP_WORDS):
+            # Пропускаем ТОЧНЫЕ стоп-слова
+            if username in exact_stops:
                 continue
 
-            # Пропускаем доп. стоп-слова (точное совпадение или содержит)
-            if username in extra_stops or any(s in username for s in extra_stops):
+            # Пропускаем ботов (суффиксы)
+            if username.endswith(bot_suffixes):
                 continue
 
-            # Пропускаем если заканчивается на суффикс канала
-            if username.endswith(channel_suffixes):
+            # Пропускаем слишком короткие (< 4 символов)
+            if len(username) < 4:
                 continue
 
-            # Пропускаем слишком короткие (< 5 символов)
-            if len(username) < 5:
+            # Пропускаем стоп-слова только если они в НАЧАЛЕ
+            if any(username.startswith(stop) for stop in ['news', 'channel', 'chat', 'group']):
                 continue
 
-            # Пропускаем если выглядит как канал (только буквы без цифр, длинное)
-            if len(username) > 12 and username.isalpha():
-                continue
-
-            score = self._score_username(username)
+            score = self._score_username(username, html)
 
             if score >= self.min_score:
                 self.seen_usernames.add(username)
@@ -236,32 +247,57 @@ class CryptoLeadsParser:
 
         return leads
 
-    def _score_username(self, username: str) -> int:
-        """Оценка лида по username"""
-        score = 20  # База
+    def _score_username(self, username: str, html: str = "") -> int:
+        """Оценка лида по username и контексту"""
+        score = 15  # Базовый score
         username_lower = username.lower()
 
-        # Бонус за короткий username (более ценный)
-        if len(username) < 10:
-            score += 15
-        elif len(username) < 15:
-            score += 10
+        # === КОНТЕКСТНЫЙ АНАЛИЗ (самый важный) ===
+        if html:
+            context_pattern = rf'.{{0,50}}@{re.escape(username)}.{{0,50}}'
+            contexts = re.findall(context_pattern, html, re.IGNORECASE)
+            context_text = ' '.join(contexts).lower()
 
-        # Бонус за ключевые слова
-        for keyword in self.HIGH_VALUE_KEYWORDS:
-            if keyword in username_lower:
+            # ВЫСОКИЙ бонус за явный контакт
+            contact_words = ['пиши', 'напиши', 'dm', 'contact', 'связь', 'менеджер', 'manager', 'admin']
+            if any(w in context_text for w in contact_words):
+                score += 25
+
+            # Средний бонус за крипто-контекст
+            crypto_words = ['vip', 'signal', 'сигнал', 'обучение', 'курс', 'premium', 'приват', 'консультац']
+            if any(w in context_text for w in crypto_words):
+                score += 15
+
+            # Бонус за эмодзи (указывают на контакт)
+            if any(e in context_text for e in ['👉', '➡', '📩', '📲', '💬', '✍']):
                 score += 10
-                break  # Только один бонус за ключевые слова
 
-        # Штраф за цифры в конце (часто боты)
-        if re.search(r'\d{3,}$', username):
-            score -= 10
-
-        # Бонус за "человеческий" формат (имя + цифры)
-        if re.match(r'^[a-zA-Z]+\d{1,2}$', username):
+        # === АНАЛИЗ USERNAME ===
+        # Бонус за короткий username (более ценный, обычно у реальных людей)
+        if len(username) < 10:
+            score += 10
+        elif len(username) < 15:
             score += 5
 
-        return min(score, 60)  # Максимум 60
+        # Бонус за ключевые слова в нике
+        for keyword in self.HIGH_VALUE_KEYWORDS:
+            if keyword in username_lower:
+                score += 5
+                break
+
+        # Штраф за явные признаки канала/бота
+        if re.search(r'\d{4,}$', username):  # 4+ цифры в конце
+            score -= 15
+        if username.endswith(('_ru', '_en', '_news', '_channel')):
+            score -= 20
+        if 'official' in username_lower or 'support' in username_lower:
+            score -= 25
+
+        # Бонус за "человеческий" формат
+        if re.match(r'^[a-zA-Z]+[_]?[a-zA-Z]*\d{0,3}$', username):
+            score += 5
+
+        return max(0, min(score, 70))  # От 0 до 70
 
     def send_webhook(self, count: int, leads: List[Lead] = None, csv_path: str = None):
         """Webhook уведомление с таблицей лидов и CSV файлом"""
@@ -385,7 +421,7 @@ def main():
         webhook_url="https://api.telegram.org/bot8713339011:AAEVDmnggcktKmYumbXSbxS9XSNGr2dICfw/sendMessage",
         chat_id="7984101063",
         proxy="http://ufbaka:aRuDhAfBut7k@mproxy.site:16496",
-        min_score=25
+        min_score=20  # Снижено для большей чувствительности
     )
 
     # Можно указать свои каналы или использовать дефолтные
