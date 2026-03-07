@@ -289,11 +289,11 @@ class CryptoLeadsParser:
 
 def main():
     """Основная функция"""
-    # Конфигурация через переменные окружения
+    # Конфигурация
     parser = CryptoLeadsParser(
-        webhook_url=os.getenv("TELEGRAM_WEBHOOK_URL"),
-        chat_id=os.getenv("TELEGRAM_CHAT_ID"),
-        proxy=os.getenv("PROXY_URL"),  # Опционально
+        webhook_url="https://api.telegram.org/bot8713339011:AAEVDmnggcktKmYumbXSbxS9XSNGr2dICfw/sendMessage",
+        chat_id="7984101063",
+        proxy="http://ufbaka:aRuDhAfBut7k@mproxy.site:16496",
         min_score=25
     )
 
