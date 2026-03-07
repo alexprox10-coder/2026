@@ -145,38 +145,69 @@ class CryptoLeadsParser:
             return ""
 
     def extract_leads(self, html: str, channel: str) -> List[Lead]:
-        """Извлекает @username из постов"""
+        """Извлекает @username трейдеров из постов (с контекстом)"""
         leads = []
 
-        # Паттерн для поиска @username
-        usernames = re.findall(r'@([a-zA-Z0-9_]{3,32})', html)
+        # Паттерны для юзернеймов ТРЕЙДЕРОВ (с контекстом)
+        patterns = [
+            # "от @user", "пиши @user", "dm @user"
+            r'(?:от|пиши|пишите|дм|dm|contact|write)\s+@([a-z][a-z0-9_]{4,20})',
+            # "@user пишите/пиши/dm"
+            r'@([a-z][a-z0-9_]{4,20})\s+(?:пишите|пиши|dm|в\s*лс)',
+            # "@user!" или "@user," или "@user." (с пунктуацией = упоминание в тексте)
+            r'@([a-z][a-z0-9_]{4,20})\s*[.!?,;:]',
+            # "связь @user", "контакт @user"
+            r'(?:связь|контакт|manager|менеджер|admin)\s*[:\-]?\s*@([a-z][a-z0-9_]{4,20})',
+            # "@user - наш трейдер/менеджер"
+            r'@([a-z][a-z0-9_]{4,20})\s*[\-–—]\s*(?:наш|наша|трейдер|менеджер|admin)',
+            # В ссылках t.me/username (часто реальные люди)
+            r't\.me/([a-z][a-z0-9_]{4,20})(?:\s|$|["\'])',
+        ]
+
+        all_usernames = []
+        for pattern in patterns:
+            matches = re.findall(pattern, html, re.IGNORECASE)
+            all_usernames.extend(matches)
 
         # Убираем дубликаты, сохраняя порядок
-        unique_usernames = list(dict.fromkeys(usernames))
+        unique_usernames = list(dict.fromkeys([u.lower() for u in all_usernames]))
 
-        # Названия каналов для исключения (сам канал + все известные каналы)
+        # Названия каналов для исключения
         channel_names = {ch.lower() for ch in self.DEFAULT_CHANNELS}
         channel_names.add(channel.lower())
 
-        for username in unique_usernames[:10]:  # Макс 10 на канал
-            username_lower = username.lower()
+        # Дополнительные стоп-слова для каналов/ботов
+        extra_stops = {
+            'joinchat', 'share', 'durov', 'telegram', 'tgstat',
+            'telemetr', 'tganalytics', 'cryptorank', 'coingecko',
+            'binance', 'bybit', 'okx', 'kucoin', 'gate', 'huobi'
+        }
 
+        for username in unique_usernames[:15]:  # Макс 15 на канал
             # Пропускаем если уже видели
-            if username_lower in self.seen_usernames:
+            if username in self.seen_usernames:
                 continue
 
-            # Пропускаем названия каналов (сам себя)
-            if username_lower in channel_names:
+            # Пропускаем названия каналов
+            if username in channel_names:
                 continue
 
             # Пропускаем стоп-слова
-            if any(stop in username_lower for stop in self.STOP_WORDS):
+            if any(stop in username for stop in self.STOP_WORDS):
+                continue
+
+            # Пропускаем доп. стоп-слова
+            if username in extra_stops or any(s in username for s in extra_stops):
+                continue
+
+            # Пропускаем слишком короткие (< 5 символов)
+            if len(username) < 5:
                 continue
 
             score = self._score_username(username)
 
             if score >= self.min_score:
-                self.seen_usernames.add(username_lower)
+                self.seen_usernames.add(username)
                 lead = Lead(
                     username=f"@{username}",
                     channel=channel,
