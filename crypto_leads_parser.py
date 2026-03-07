@@ -148,20 +148,16 @@ class CryptoLeadsParser:
         """Извлекает @username трейдеров из постов (с контекстом)"""
         leads = []
 
-        # Паттерны для юзернеймов ТРЕЙДЕРОВ (с контекстом)
+        # ТОЛЬКО контекстные паттерны для РЕАЛЬНЫХ трейдеров
         patterns = [
-            # "от @user", "пиши @user", "dm @user"
-            r'(?:от|пиши|пишите|дм|dm|contact|write)\s+@([a-z][a-z0-9_]{4,20})',
-            # "@user пишите/пиши/dm"
-            r'@([a-z][a-z0-9_]{4,20})\s+(?:пишите|пиши|dm|в\s*лс)',
-            # "@user!" или "@user," или "@user." (с пунктуацией = упоминание в тексте)
-            r'@([a-z][a-z0-9_]{4,20})\s*[.!?,;:]',
-            # "связь @user", "контакт @user"
-            r'(?:связь|контакт|manager|менеджер|admin)\s*[:\-]?\s*@([a-z][a-z0-9_]{4,20})',
-            # "@user - наш трейдер/менеджер"
-            r'@([a-z][a-z0-9_]{4,20})\s*[\-–—]\s*(?:наш|наша|трейдер|менеджер|admin)',
-            # В ссылках t.me/username (часто реальные люди)
-            r't\.me/([a-z][a-z0-9_]{4,20})(?:\s|$|["\'])',
+            # "пиши @user", "пишите @user", "dm @user", "в лс @user"
+            r'(?:пиши|пишите|дм|dm|write|contact|в\s*лс)\s*[:\-]?\s*@([a-z][a-z0-9_]{4,20})',
+            # "связь @user", "контакт @user", "менеджер @user"
+            r'(?:связь|контакт|manager|менеджер|по\s*вопросам)\s*[:\-]?\s*@([a-z][a-z0-9_]{4,20})',
+            # "обращайтесь @user", "вопросы @user"
+            r'(?:обращайтесь|вопросы|details|info)\s*[:\-]?\s*@([a-z][a-z0-9_]{4,20})',
+            # "@user - менеджер/трейдер/куратор"
+            r'@([a-z][a-z0-9_]{4,20})\s*[\-–—:]\s*(?:менеджер|трейдер|куратор|manager|trader)',
         ]
 
         all_usernames = []
@@ -176,11 +172,23 @@ class CryptoLeadsParser:
         channel_names = {ch.lower() for ch in self.DEFAULT_CHANNELS}
         channel_names.add(channel.lower())
 
-        # Дополнительные стоп-слова для каналов/ботов
+        # Суффиксы каналов (НЕ людей)
+        channel_suffixes = (
+            '_ru', '_rus', '_russia', '_russian', '_eng', '_en',
+            'news', 'feed', 'channel', 'chat', 'group', 'official',
+            'crypto', 'coin', 'token', 'nft', 'defi', 'trade', 'trading',
+            'signal', 'signals', 'alert', 'alerts', 'ai', 'io',
+            'trends', 'media', 'daily', 'weekly', 'hub', 'pro',
+            'mainer', 'miner', 'mining', 'exchange', 'swap'
+        )
+
+        # Стоп-слова для каналов/ботов
         extra_stops = {
             'joinchat', 'share', 'durov', 'telegram', 'tgstat',
             'telemetr', 'tganalytics', 'cryptorank', 'coingecko',
-            'binance', 'bybit', 'okx', 'kucoin', 'gate', 'huobi'
+            'binance', 'bybit', 'okx', 'kucoin', 'gate', 'huobi',
+            'forklog', 'bits_media', 'coinpost', 'cointelegraph',
+            'bitcoin', 'ethereum', 'opensea', 'rarible'
         }
 
         for username in unique_usernames[:15]:  # Макс 15 на канал
@@ -196,12 +204,20 @@ class CryptoLeadsParser:
             if any(stop in username for stop in self.STOP_WORDS):
                 continue
 
-            # Пропускаем доп. стоп-слова
+            # Пропускаем доп. стоп-слова (точное совпадение или содержит)
             if username in extra_stops or any(s in username for s in extra_stops):
+                continue
+
+            # Пропускаем если заканчивается на суффикс канала
+            if username.endswith(channel_suffixes):
                 continue
 
             # Пропускаем слишком короткие (< 5 символов)
             if len(username) < 5:
+                continue
+
+            # Пропускаем если выглядит как канал (только буквы без цифр, длинное)
+            if len(username) > 12 and username.isalpha():
                 continue
 
             score = self._score_username(username)
