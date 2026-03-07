@@ -154,11 +154,19 @@ class CryptoLeadsParser:
         # Убираем дубликаты, сохраняя порядок
         unique_usernames = list(dict.fromkeys(usernames))
 
+        # Названия каналов для исключения (сам канал + все известные каналы)
+        channel_names = {ch.lower() for ch in self.DEFAULT_CHANNELS}
+        channel_names.add(channel.lower())
+
         for username in unique_usernames[:10]:  # Макс 10 на канал
             username_lower = username.lower()
 
             # Пропускаем если уже видели
             if username_lower in self.seen_usernames:
+                continue
+
+            # Пропускаем названия каналов (сам себя)
+            if username_lower in channel_names:
                 continue
 
             # Пропускаем стоп-слова
@@ -208,11 +216,14 @@ class CryptoLeadsParser:
 
         return min(score, 60)  # Максимум 60
 
-    def send_webhook(self, count: int, leads: List[Lead] = None):
-        """Webhook уведомление с таблицей лидов"""
+    def send_webhook(self, count: int, leads: List[Lead] = None, csv_path: str = None):
+        """Webhook уведомление с таблицей лидов и CSV файлом"""
         if not self.webhook_url:
             logger.warning("Webhook URL не настроен")
             return
+
+        # Базовый URL для Telegram API
+        base_url = self.webhook_url.rsplit('/sendMessage', 1)[0]
 
         # Формируем таблицу с лидами
         if leads:
@@ -232,10 +243,10 @@ class CryptoLeadsParser:
                 table_text += f"{username:<20} {channel:<18} {lead.score:>5}\n"
 
             table_text += "</pre>"
-            table_text += f"\n💾 Сохранено в crypto_leads.csv"
         else:
-            table_text = f"📊 {count} новых crypto лидов! crypto_leads.csv обновлён"
+            table_text = f"📊 {count} новых crypto лидов!"
 
+        # Отправляем текстовое сообщение
         payload = {
             "chat_id": self.chat_id,
             "text": table_text,
@@ -247,6 +258,25 @@ class CryptoLeadsParser:
             logger.info(f"✅ Webhook боту: {resp.status_code} | {count} лидов")
         except Exception as e:
             logger.warning(f"⚠️ Webhook не сработал: {e}")
+
+        # Отправляем CSV файл
+        if csv_path and os.path.exists(csv_path):
+            try:
+                with open(csv_path, 'rb') as f:
+                    files = {'document': (os.path.basename(csv_path), f, 'text/csv')}
+                    data = {
+                        'chat_id': self.chat_id,
+                        'caption': f'📁 Все лиды ({count} новых)'
+                    }
+                    resp = requests.post(
+                        f"{base_url}/sendDocument",
+                        data=data,
+                        files=files,
+                        timeout=30
+                    )
+                    logger.info(f"✅ CSV файл отправлен: {resp.status_code}")
+            except Exception as e:
+                logger.warning(f"⚠️ Не удалось отправить CSV: {e}")
 
     def parse_all(self, channels: List[str] = None) -> List[Lead]:
         """Парсит все каналы"""
@@ -282,8 +312,8 @@ class CryptoLeadsParser:
             df.to_csv(csv_path, index=False, encoding="utf-8")
             logger.info(f"✅ НАЙДЕНО: {len(all_leads)} лидов | Всего в файле: {len(df)} | Сохранено: {csv_path}")
 
-            # Отправляем webhook
-            self.send_webhook(len(all_leads), all_leads)
+            # Отправляем webhook с CSV файлом
+            self.send_webhook(len(all_leads), all_leads, csv_path)
         else:
             logger.info("❌ Новых лидов не найдено")
 
