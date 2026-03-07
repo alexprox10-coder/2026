@@ -209,24 +209,38 @@ class CryptoLeadsParser:
         return min(score, 60)  # Максимум 60
 
     def send_webhook(self, count: int, leads: List[Lead] = None):
-        """Webhook уведомление"""
+        """Webhook уведомление с таблицей лидов"""
         if not self.webhook_url:
             logger.warning("Webhook URL не настроен")
             return
 
+        # Формируем таблицу с лидами
+        if leads:
+            # Сортируем по score (лучшие вверху)
+            sorted_leads = sorted(leads, key=lambda x: x.score, reverse=True)
+
+            # Заголовок
+            table_text = f"📊 <b>{count} новых crypto лидов!</b>\n\n"
+            table_text += "<pre>"
+            table_text += f"{'Username':<20} {'Канал':<18} {'Score':>5}\n"
+            table_text += "─" * 45 + "\n"
+
+            # Строки таблицы
+            for lead in sorted_leads:
+                username = lead.username[:18] if len(lead.username) > 18 else lead.username
+                channel = lead.channel[:16] if len(lead.channel) > 16 else lead.channel
+                table_text += f"{username:<20} {channel:<18} {lead.score:>5}\n"
+
+            table_text += "</pre>"
+            table_text += f"\n💾 Сохранено в crypto_leads.csv"
+        else:
+            table_text = f"📊 {count} новых crypto лидов! crypto_leads.csv обновлён"
+
         payload = {
             "chat_id": self.chat_id,
-            "text": f"📊 {count} новых crypto лидов! crypto_leads.csv обновлён",
-            "action": "refresh_crypto_leads",
-            "count": count,
-            "file": "crypto_leads.csv",
-            "timestamp": datetime.now().isoformat()
+            "text": table_text,
+            "parse_mode": "HTML"
         }
-
-        # Добавляем топ-5 лидов в уведомление
-        if leads:
-            top_leads = sorted(leads, key=lambda x: x.score, reverse=True)[:5]
-            payload["top_leads"] = [asdict(l) for l in top_leads]
 
         try:
             resp = requests.post(self.webhook_url, json=payload, timeout=10)
