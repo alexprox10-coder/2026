@@ -1,0 +1,449 @@
+{
+  "name": "Воронка недвижимости - Прогрев лидов",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "realty-lead",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-new-lead",
+      "name": "Новый лид от парсера",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300],
+      "webhookId": "realty-funnel-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Извлекаем данные лида от парсера\nconst lead = $input.first().json;\n\n// Формируем данные для воронки\nreturn [{\n  json: {\n    // Контактные данные\n    leadId: lead.message_id || Date.now(),\n    username: lead.username || '',\n    phone: lead.phone || '',\n    userId: lead.user_id || '',\n    \n    // Исходное сообщение\n    originalMessage: lead.text || lead.message || '',\n    sourceChannel: lead.channel || lead.source || '',\n    messageDate: lead.date || new Date().toISOString(),\n    \n    // Статус воронки\n    funnelStage: 'new',\n    createdAt: new Date().toISOString(),\n    \n    // Квалификация (заполнится позже)\n    budget: '',\n    rooms: '',\n    district: '',\n    urgency: '',\n    propertyType: '',\n    \n    // Для риелтора\n    qualificationScore: 0,\n    readyForRealtor: false,\n    notes: ''\n  }\n}];"
+      },
+      "id": "extract-lead-data",
+      "name": "Извлечь данные лида",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ $json.leadId }}",
+            "username": "={{ $json.username }}",
+            "phone": "={{ $json.phone }}",
+            "user_id": "={{ $json.userId }}",
+            "original_message": "={{ $json.originalMessage }}",
+            "source_channel": "={{ $json.sourceChannel }}",
+            "funnel_stage": "={{ $json.funnelStage }}",
+            "created_at": "={{ $json.createdAt }}",
+            "budget": "",
+            "rooms": "",
+            "district": "",
+            "urgency": "",
+            "qualification_score": "0",
+            "ready_for_realtor": "false"
+          }
+        },
+        "options": {}
+      },
+      "id": "save-lead-gsheets",
+      "name": "Сохранить лид в таблицу",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [640, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_GOOGLE_CRED_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.username }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-username",
+      "name": "Есть username?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $json.userId }}\",\n  \"text\": \"Здравствуйте! 👋\\n\\nВидел ваше сообщение - вы ищете недвижимость. Могу помочь с подбором!\\n\\n✅ Работаю напрямую с застройщиками и собственниками\\n✅ Без комиссии для покупателя\\n✅ Помогу с ипотекой под низкий %\\n\\nПодскажите, что именно ищете?\",\n  \"reply_markup\": {\n    \"inline_keyboard\": [\n      [{\"text\": \"🏢 Квартира в новостройке\", \"callback_data\": \"type_new\"}],\n      [{\"text\": \"🏠 Вторичка\", \"callback_data\": \"type_secondary\"}],\n      [{\"text\": \"🏡 Дом/Таунхаус\", \"callback_data\": \"type_house\"}],\n      [{\"text\": \"❌ Не интересно\", \"callback_data\": \"not_interested\"}]\n    ]\n  }\n}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "send-first-message",
+      "name": "Первое сообщение",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $env.REALTOR_CHAT_ID }}\",\n  \"text\": \"📥 Новый лид без username\\n\\nТелефон: {{ $json.phone || 'не указан' }}\\nКанал: {{ $json.sourceChannel }}\\n\\nСообщение:\\n{{ $json.originalMessage }}\"\n}",
+        "options": {}
+      },
+      "id": "notify-no-username",
+      "name": "Уведомить риелтора (нет username)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 400],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\": \"ok\", \"lead_id\": \"{{ $('Извлечь данные лида').item.json.leadId }}\"}"
+      },
+      "id": "respond-webhook",
+      "name": "Ответ webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1300, 300]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "callback_query",
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "tg-trigger",
+      "name": "Telegram ответы",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 600],
+      "webhookId": "realty-funnel-bot",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_TELEGRAM_CRED_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Обработка ответов пользователя\nconst update = $input.first().json;\n\nlet userId = '';\nlet callbackData = '';\nlet messageText = '';\nlet callbackQueryId = '';\nlet chatId = '';\n\nif (update.callback_query) {\n  userId = String(update.callback_query.from.id);\n  chatId = String(update.callback_query.message.chat.id);\n  callbackData = update.callback_query.data || '';\n  callbackQueryId = update.callback_query.id;\n} else if (update.message) {\n  userId = String(update.message.from.id);\n  chatId = String(update.message.chat.id);\n  messageText = update.message.text || '';\n}\n\n// Определяем этап воронки по callback\nlet stage = '';\nlet value = '';\n\nif (callbackData.startsWith('type_')) {\n  stage = 'property_type';\n  value = callbackData.replace('type_', '');\n} else if (callbackData.startsWith('rooms_')) {\n  stage = 'rooms';\n  value = callbackData.replace('rooms_', '');\n} else if (callbackData.startsWith('budget_')) {\n  stage = 'budget';\n  value = callbackData.replace('budget_', '');\n} else if (callbackData.startsWith('district_')) {\n  stage = 'district';\n  value = callbackData.replace('district_', '');\n} else if (callbackData.startsWith('urgency_')) {\n  stage = 'urgency';\n  value = callbackData.replace('urgency_', '');\n} else if (callbackData === 'not_interested') {\n  stage = 'declined';\n  value = 'not_interested';\n} else if (callbackData === 'contact_realtor') {\n  stage = 'ready';\n  value = 'contact_realtor';\n}\n\nreturn [{\n  json: {\n    userId,\n    chatId,\n    callbackData,\n    callbackQueryId,\n    messageText,\n    stage,\n    value\n  }\n}];"
+      },
+      "id": "process-response",
+      "name": "Обработать ответ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/answerCallbackQuery",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"callback_query_id\": \"{{ $json.callbackQueryId }}\"}",
+        "options": {}
+      },
+      "id": "answer-callback",
+      "name": "Answer Callback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 600],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.stage }}", "rightValue": "property_type", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "outputIndex": 0
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.stage }}", "rightValue": "rooms", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "outputIndex": 1
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.stage }}", "rightValue": "budget", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "outputIndex": 2
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.stage }}", "rightValue": "urgency", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "outputIndex": 3
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.stage }}", "rightValue": "ready", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "outputIndex": 4
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "id": "route-by-stage",
+      "name": "Роутинг по этапу",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [860, 600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $json.chatId }}\",\n  \"text\": \"Отлично! Сколько комнат вам нужно?\",\n  \"reply_markup\": {\n    \"inline_keyboard\": [\n      [{\"text\": \"Студия\", \"callback_data\": \"rooms_studio\"}, {\"text\": \"1 комн\", \"callback_data\": \"rooms_1\"}],\n      [{\"text\": \"2 комн\", \"callback_data\": \"rooms_2\"}, {\"text\": \"3 комн\", \"callback_data\": \"rooms_3\"}],\n      [{\"text\": \"4+ комн\", \"callback_data\": \"rooms_4plus\"}]\n    ]\n  }\n}",
+        "options": {}
+      },
+      "id": "ask-rooms",
+      "name": "Спросить комнаты",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $json.chatId }}\",\n  \"text\": \"Хорошо! Какой у вас бюджет?\",\n  \"reply_markup\": {\n    \"inline_keyboard\": [\n      [{\"text\": \"До 3 млн\", \"callback_data\": \"budget_3m\"}],\n      [{\"text\": \"3-5 млн\", \"callback_data\": \"budget_3_5m\"}],\n      [{\"text\": \"5-8 млн\", \"callback_data\": \"budget_5_8m\"}],\n      [{\"text\": \"8-15 млн\", \"callback_data\": \"budget_8_15m\"}],\n      [{\"text\": \"15+ млн\", \"callback_data\": \"budget_15m_plus\"}]\n    ]\n  }\n}",
+        "options": {}
+      },
+      "id": "ask-budget",
+      "name": "Спросить бюджет",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 520]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $json.chatId }}\",\n  \"text\": \"Понял! Насколько срочно нужна квартира?\",\n  \"reply_markup\": {\n    \"inline_keyboard\": [\n      [{\"text\": \"🔥 Срочно (до 2 недель)\", \"callback_data\": \"urgency_urgent\"}],\n      [{\"text\": \"📅 В течение месяца\", \"callback_data\": \"urgency_month\"}],\n      [{\"text\": \"🗓 В течение 3 месяцев\", \"callback_data\": \"urgency_3months\"}],\n      [{\"text\": \"🔍 Просто смотрю варианты\", \"callback_data\": \"urgency_looking\"}]\n    ]\n  }\n}",
+        "options": {}
+      },
+      "id": "ask-urgency",
+      "name": "Спросить срочность",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 640]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $json.chatId }}\",\n  \"text\": \"Отлично! 🎯\\n\\nУ меня есть несколько подходящих вариантов для вас.\\n\\nМогу связать вас с риелтором, который:\\n✅ Покажет объекты лично\\n✅ Поможет с документами и ипотекой\\n✅ Без комиссии для вас\\n\\nСвязаться сейчас?\",\n  \"reply_markup\": {\n    \"inline_keyboard\": [\n      [{\"text\": \"✅ Да, свяжите меня\", \"callback_data\": \"contact_realtor\"}],\n      [{\"text\": \"📸 Сначала покажите варианты\", \"callback_data\": \"show_options\"}]\n    ]\n  }\n}",
+        "options": {}
+      },
+      "id": "offer-realtor",
+      "name": "Предложить риелтора",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 760]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "leads",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "user_id",
+              "lookupValue": "={{ $json.userId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-lead-data",
+      "name": "Получить данные лида",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1100, 880],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_GOOGLE_CRED_ID",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $env.REALTOR_CHAT_ID }}\",\n  \"text\": \"🔥 ГОРЯЧИЙ ЛИД!\\n\\n👤 @{{ $('Обработать ответ').item.json.userId }}\\n\\n📋 Анкета:\\n• Тип: {{ $json.property_type || 'не указан' }}\\n• Комнат: {{ $json.rooms || 'не указано' }}\\n• Бюджет: {{ $json.budget || 'не указан' }}\\n• Срочность: {{ $json.urgency || 'не указана' }}\\n\\n💬 Исходное сообщение:\\n{{ $json.original_message }}\\n\\n📌 Источник: {{ $json.source_channel }}\\n⏰ Время: {{ $json.created_at }}\",\n  \"reply_markup\": {\n    \"inline_keyboard\": [\n      [{\"text\": \"✅ Взял в работу\", \"callback_data\": \"lead_taken_{{ $json.lead_id }}\"}]\n    ]\n  }\n}",
+        "options": {}
+      },
+      "id": "send-to-realtor",
+      "name": "Отправить риелтору",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 880]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $('Обработать ответ').item.json.chatId }}\",\n  \"text\": \"Отлично! ✅\\n\\nСейчас с вами свяжется наш специалист.\\n\\nОн подберет лучшие варианты под ваш запрос и ответит на все вопросы.\\n\\n⏰ Обычно отвечаем в течение 15 минут в рабочее время.\"\n}",
+        "options": {}
+      },
+      "id": "confirm-to-user",
+      "name": "Подтверждение пользователю",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 880]
+    }
+  ],
+  "connections": {
+    "Новый лид от парсера": {
+      "main": [
+        [{ "node": "Извлечь данные лида", "type": "main", "index": 0 }]
+      ]
+    },
+    "Извлечь данные лида": {
+      "main": [
+        [{ "node": "Сохранить лид в таблицу", "type": "main", "index": 0 }]
+      ]
+    },
+    "Сохранить лид в таблицу": {
+      "main": [
+        [{ "node": "Есть username?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Есть username?": {
+      "main": [
+        [{ "node": "Первое сообщение", "type": "main", "index": 0 }],
+        [{ "node": "Уведомить риелтора (нет username)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Первое сообщение": {
+      "main": [
+        [{ "node": "Ответ webhook", "type": "main", "index": 0 }]
+      ]
+    },
+    "Уведомить риелтора (нет username)": {
+      "main": [
+        [{ "node": "Ответ webhook", "type": "main", "index": 0 }]
+      ]
+    },
+    "Telegram ответы": {
+      "main": [
+        [{ "node": "Обработать ответ", "type": "main", "index": 0 }]
+      ]
+    },
+    "Обработать ответ": {
+      "main": [
+        [{ "node": "Answer Callback", "type": "main", "index": 0 }]
+      ]
+    },
+    "Answer Callback": {
+      "main": [
+        [{ "node": "Роутинг по этапу", "type": "main", "index": 0 }]
+      ]
+    },
+    "Роутинг по этапу": {
+      "main": [
+        [{ "node": "Спросить комнаты", "type": "main", "index": 0 }],
+        [{ "node": "Спросить бюджет", "type": "main", "index": 0 }],
+        [{ "node": "Спросить срочность", "type": "main", "index": 0 }],
+        [{ "node": "Предложить риелтора", "type": "main", "index": 0 }],
+        [{ "node": "Получить данные лида", "type": "main", "index": 0 }]
+      ]
+    },
+    "Получить данные лида": {
+      "main": [
+        [{ "node": "Отправить риелтору", "type": "main", "index": 0 }]
+      ]
+    },
+    "Отправить риелтору": {
+      "main": [
+        [{ "node": "Подтверждение пользователю", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 2
+}
