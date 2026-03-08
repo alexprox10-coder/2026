@@ -63,6 +63,13 @@ Telegram парсер для сбора крипто-лидов с интегр�
 - **n8n** — автоматизация воркфлоу, триггеры, уведомления
 - **Node.js** — Telegram бот (bot.js)
 
+## Доступы (ВАЖНО - не забывать!)
+
+### n8n API
+- URL: https://n8n.arendadom24.ru
+- API Key: в .env файле (N8N_API_KEY)
+- Доступ через REST API: `curl -H "X-N8N-API-KEY: $N8N_API_KEY" https://n8n.arendadom24.ru/api/v1/workflows`
+
 ## Ключевые файлы
 
 ### Парсеры
