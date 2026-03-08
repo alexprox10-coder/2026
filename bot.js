@@ -1,12 +1,13 @@
 const TelegramBot = require('node-telegram-bot-api');
-const Anthropic = require('@anthropic-ai/sdk');
+const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
 // === НАСТРОЙКИ ===
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8678730458:AAFR9QXWQr9HrCL_tCwj4IoRuWYPNqo3Ny8';
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const ALLOWED_USERS = [7984101063];
+const CLAUDE_PATH = '/usr/bin/claude';
+const TIMEOUT_MS = 120000; // 2 минуты (Claude CLI обычно отвечает быстро)
 
 // Файл блокировки для предотвращения множественных запусков
 const LOCK_FILE = '/tmp/claude-telegram-bot.lock';
@@ -45,11 +46,6 @@ function checkSingleInstance() {
 
 checkSingleInstance();
 
-// === ИНИЦИАЛИЗАЦИЯ ANTHROPIC ===
-const anthropic = new Anthropic({
-  apiKey: ANTHROPIC_API_KEY,
-});
-
 // === ИНИЦИАЛИЗАЦИЯ TELEGRAM BOT ===
 const bot = new TelegramBot(TOKEN, {
   polling: {
@@ -62,10 +58,6 @@ const bot = new TelegramBot(TOKEN, {
 });
 
 console.log('Claude Telegram Bot запущен (PID: ' + process.pid + ')');
-
-// Хранилище истории диалогов (по userId)
-const conversationHistory = new Map();
-const MAX_HISTORY = 20; // Максимум сообщений в истории
 
 // === КОМАНДА /start ===
 bot.onText(/\/start/, (msg) => {
@@ -92,8 +84,7 @@ bot.onText(/\/clear/, (msg) => {
     return bot.sendMessage(chatId, `Доступ запрещен. Ваш ID: ${userId}`);
   }
 
-  conversationHistory.delete(userId);
-  bot.sendMessage(chatId, 'История диалога очищена.');
+  bot.sendMessage(chatId, 'Claude CLI не хранит историю. Каждый запрос независим.');
 });
 
 // === КОМАНДА /status ===
@@ -110,15 +101,13 @@ bot.onText(/\/status/, async (msg) => {
   const minutes = Math.floor((uptime % 3600) / 60);
   const seconds = Math.floor(uptime % 60);
 
-  const historySize = conversationHistory.get(userId)?.length || 0;
-
   bot.sendMessage(chatId,
     `Статус бота:\n` +
     `- PID: ${process.pid}\n` +
     `- Uptime: ${hours}ч ${minutes}м ${seconds}с\n` +
     `- Память: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB\n` +
-    `- Сообщений в истории: ${historySize}\n` +
-    `- API: Anthropic (Claude)`
+    `- Режим: Claude CLI\n` +
+    `- Таймаут: ${TIMEOUT_MS / 1000} сек`
   );
 });
 
@@ -158,39 +147,8 @@ bot.on('message', async (msg) => {
   const statusMsg = await bot.sendMessage(chatId, 'Claude думает...');
 
   try {
-    // Получаем или создаем историю диалога
-    if (!conversationHistory.has(userId)) {
-      conversationHistory.set(userId, []);
-    }
-    const history = conversationHistory.get(userId);
-
-    // Добавляем сообщение пользователя в историю
-    history.push({
-      role: 'user',
-      content: text
-    });
-
-    // Ограничиваем историю
-    while (history.length > MAX_HISTORY) {
-      history.shift();
-    }
-
-    // Вызов Anthropic API
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
-      messages: history,
-      system: 'Ты полезный ассистент. Отвечай на русском языке, если пользователь пишет на русском. Будь кратким и информативным.'
-    });
-
-    // Извлекаем ответ
-    const assistantMessage = response.content[0].text;
-
-    // Добавляем ответ в историю
-    history.push({
-      role: 'assistant',
-      content: assistantMessage
-    });
+    // Вызов Claude CLI через spawn
+    const response = await callClaudeCLI(text);
 
     // Удаляем статусное сообщение
     try {
@@ -198,7 +156,7 @@ bot.on('message', async (msg) => {
     } catch (e) {}
 
     // Telegram лимит 4096 символов - разбиваем на части
-    const chunks = splitMessage(assistantMessage, 4000);
+    const chunks = splitMessage(response, 4000);
 
     for (const chunk of chunks) {
       await bot.sendMessage(chatId, chunk, { parse_mode: 'Markdown' }).catch(() => {
@@ -209,28 +167,64 @@ bot.on('message', async (msg) => {
     }
 
   } catch (error) {
-    console.error('API Error:', error);
+    console.error('CLI Error:', error);
 
     // Удаляем статусное сообщение
     try {
       await bot.deleteMessage(chatId, statusMsg.message_id);
     } catch (e) {}
 
-    let errorMsg = 'Произошла ошибка';
-
-    if (error.status === 401) {
-      errorMsg = 'Ошибка авторизации. Проверьте ANTHROPIC_API_KEY.';
-    } else if (error.status === 429) {
-      errorMsg = 'Слишком много запросов. Подождите немного.';
-    } else if (error.status === 500) {
-      errorMsg = 'Ошибка сервера Anthropic. Попробуйте позже.';
-    } else if (error.message) {
-      errorMsg = `Ошибка: ${error.message.slice(0, 200)}`;
-    }
-
-    bot.sendMessage(chatId, `${errorMsg}`);
+    bot.sendMessage(chatId, `Ошибка: ${error.message || error}`);
   }
 });
+
+// === ВЫЗОВ CLAUDE CLI ===
+function callClaudeCLI(prompt) {
+  return new Promise((resolve, reject) => {
+    let stdout = '';
+    let stderr = '';
+
+    // Экранируем кавычки для безопасности
+    const safePrompt = prompt.replace(/"/g, '\\"').replace(/'/g, "\\'").replace(/\$/g, '\\$');
+
+    const claude = spawn(CLAUDE_PATH, ['-p', prompt, '--output-format', 'text'], {
+      env: {
+        ...process.env,
+        HOME: '/root',
+        PATH: '/root/.local/bin:/root/.cargo/bin:/usr/local/go/bin:/opt/node22/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+      },
+      timeout: TIMEOUT_MS
+    });
+
+    const timeoutId = setTimeout(() => {
+      claude.kill('SIGKILL');
+      reject(new Error('Таймаут (2 минуты). Попробуйте более короткий запрос.'));
+    }, TIMEOUT_MS);
+
+    claude.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+
+    claude.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    claude.on('close', (code) => {
+      clearTimeout(timeoutId);
+
+      if (code === 0) {
+        resolve(stdout.trim() || 'Пустой ответ');
+      } else {
+        reject(new Error(stderr || `Код ошибки: ${code}`));
+      }
+    });
+
+    claude.on('error', (err) => {
+      clearTimeout(timeoutId);
+      reject(err);
+    });
+  });
+}
 
 // === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
 
