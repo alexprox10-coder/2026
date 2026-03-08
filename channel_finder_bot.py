@@ -1002,6 +1002,51 @@ Telethon: {telethon_status}
 """
         await update.message.reply_text(stats_text, parse_mode=ParseMode.HTML)
 
+    async def text_message_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обработчик текстовых сообщений"""
+        text = update.message.text.lower().strip()
+
+        # Приветствия
+        greetings = ['привет', 'здравствуй', 'hi', 'hello', 'хай', 'прив', 'здарова', 'добрый день', 'доброе утро', 'добрый вечер']
+        if any(g in text for g in greetings):
+            await update.message.reply_text(
+                "Привет! 👋\n\n"
+                "Я помогу найти Telegram-каналы под вашу нишу.\n\n"
+                "Используйте команду:\n"
+                "<code>/найди недвижимость Москва</code>\n\n"
+                "Или введите /help для справки.",
+                parse_mode=ParseMode.HTML
+            )
+            return
+
+        # Попытка распознать запрос на поиск
+        for niche in NICHE_CATEGORIES:
+            if niche in text:
+                # Определяем город
+                city = ""
+                for c in CITIES:
+                    if c in text:
+                        city = c
+                        break
+
+                context.args = [niche]
+                if city:
+                    context.args.append(city)
+
+                await self.find_command(update, context)
+                return
+
+        # Неизвестное сообщение
+        await update.message.reply_text(
+            "Не понял запрос. 🤔\n\n"
+            "Попробуйте:\n"
+            "<code>/найди недвижимость Москва</code>\n"
+            "<code>/найди крипта</code>\n"
+            "<code>/найди работа СПб</code>\n\n"
+            "Или /help для списка команд.",
+            parse_mode=ParseMode.HTML
+        )
+
     async def run(self):
         """Запуск бота"""
         # Создаем приложение
@@ -1014,6 +1059,7 @@ Telethon: {telethon_status}
         self.app.add_handler(CommandHandler("find", self.find_command))
         self.app.add_handler(CommandHandler("stats", self.stats_command))
         self.app.add_handler(CallbackQueryHandler(self.callback_handler))
+        self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.text_message_handler))
 
         # Подключаем Telethon для валидации
         if TELETHON_AVAILABLE and CONFIG.get("api_id"):
