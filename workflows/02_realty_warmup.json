@@ -1,0 +1,249 @@
+{
+  "name": "Прогрев лидов недвижимости",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["callback_query", "message"],
+        "additionalFields": {}
+      },
+      "id": "tg-trigger",
+      "name": "🤖 Telegram",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 300],
+      "webhookId": "realty-warmup-bot",
+      "credentials": {
+        "telegramApi": { "id": "YOUR_TG_CRED_ID", "name": "Bot" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const update = $input.first().json;\n\nlet action = '';\nlet userId = '';\nlet chatId = '';\nlet callbackId = '';\nlet leadId = '';\nlet value = '';\n\nif (update.callback_query) {\n  userId = String(update.callback_query.from.id);\n  chatId = String(update.callback_query.message.chat.id);\n  callbackId = update.callback_query.id;\n  const data = update.callback_query.data || '';\n  \n  // Разбираем callback_data\n  if (data === 'start_warmup') {\n    action = 'start_warmup';\n  } else if (data.startsWith('warmup_')) {\n    action = 'warmup_lead';\n    leadId = data.replace('warmup_', '');\n  } else if (data.startsWith('type_')) {\n    action = 'got_type';\n    value = data.replace('type_', '');\n  } else if (data.startsWith('rooms_')) {\n    action = 'got_rooms';\n    value = data.replace('rooms_', '');\n  } else if (data.startsWith('budget_')) {\n    action = 'got_budget';\n    value = data.replace('budget_', '');\n  } else if (data.startsWith('urgency_')) {\n    action = 'got_urgency';\n    value = data.replace('urgency_', '');\n  } else if (data === 'contact_realtor') {\n    action = 'send_to_realtor';\n  } else if (data === 'skip_lead') {\n    action = 'skip_lead';\n  }\n} else if (update.message) {\n  userId = String(update.message.from.id);\n  chatId = String(update.message.chat.id);\n  action = 'message';\n}\n\nreturn [{ json: { action, userId, chatId, callbackId, leadId, value } }];"
+      },
+      "id": "parse-action",
+      "name": "📋 Разобрать действие",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.BOT_TOKEN }}/answerCallbackQuery",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"callback_query_id\": \"{{ $json.callbackId }}\"}",
+        "options": {}
+      },
+      "id": "answer-callback",
+      "name": "Answer CB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "start_warmup", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "outputIndex": 0
+            },
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "warmup_lead", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "outputIndex": 1
+            },
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "send_to_realtor", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "outputIndex": 2
+            }
+          ]
+        },
+        "options": { "fallbackOutput": "none" }
+      },
+      "id": "router",
+      "name": "🔀 Роутер",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": { "__rl": true, "value": "YOUR_GOOGLE_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "leads", "mode": "name" },
+        "filtersUI": {
+          "values": [{ "lookupColumn": "status", "lookupValue": "new" }]
+        },
+        "options": { "returnAllMatches": false }
+      },
+      "id": "get-new-leads",
+      "name": "📊 Получить новых лидов",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1080, 100],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_CRED_ID", "name": "Google Sheets" }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('📋 Разобрать действие').item.json.chatId }}",
+        "text": "=📋 Новые лиды для прогрева:\n\n{{ $json.text ? $json.text.substring(0, 300) : 'Нет лидов' }}\n\n👤 @{{ $json.username || 'без username' }}\n📱 {{ $json.phone || '-' }}\n📍 {{ $json.channel }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "reply_markup": {
+            "inline_keyboard": [
+              [{ "text": "🚀 Прогреть этого", "callback_data": "warmup_{{ $json.lead_id }}" }],
+              [{ "text": "⏭ Пропустить", "callback_data": "skip_lead" }]
+            ]
+          }
+        }
+      },
+      "id": "show-lead",
+      "name": "📱 Показать лида",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1300, 100],
+      "credentials": {
+        "telegramApi": { "id": "YOUR_TG_CRED_ID", "name": "Bot" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": { "__rl": true, "value": "YOUR_GOOGLE_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "leads", "mode": "name" },
+        "filtersUI": {
+          "values": [{ "lookupColumn": "lead_id", "lookupValue": "={{ $('📋 Разобрать действие').item.json.leadId }}" }]
+        },
+        "options": {}
+      },
+      "id": "get-lead-by-id",
+      "name": "📊 Получить лида по ID",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1080, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_CRED_ID", "name": "Google Sheets" }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $json.user_id }}\",\n  \"text\": \"Здравствуйте! 👋\\n\\nВидела ваше сообщение о недвижимости. Могу помочь с подбором!\\n\\n✅ Работаю напрямую с застройщиками\\n✅ Без комиссии для вас\\n✅ Помогу с ипотекой\\n\\nЧто ищете?\",\n  \"reply_markup\": {\n    \"inline_keyboard\": [\n      [{\"text\": \"🏢 Квартира\", \"callback_data\": \"type_apt\"}],\n      [{\"text\": \"🏠 Дом\", \"callback_data\": \"type_house\"}],\n      [{\"text\": \"❌ Не актуально\", \"callback_data\": \"not_interested\"}]\n    ]\n  }\n}",
+        "options": { "timeout": 10000 }
+      },
+      "id": "send-first-msg",
+      "name": "💬 Первое сообщение лиду",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1300, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "value": "YOUR_GOOGLE_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "leads", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": { "status": "warming" },
+          "matchingColumns": ["lead_id"]
+        },
+        "options": {}
+      },
+      "id": "update-status",
+      "name": "📝 Обновить статус",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1520, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_CRED_ID", "name": "Google Sheets" }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.REALTOR_CHAT_ID }}",
+        "text": "=🔥 ГОТОВЫЙ ЛИД!\\n\\n👤 @{{ $json.username }}\\n📱 {{ $json.phone }}\\n\\n💬 Исходный запрос:\\n{{ $json.text }}\\n\\n📍 Источник: {{ $json.channel }}",
+        "additionalFields": { "parse_mode": "HTML" }
+      },
+      "id": "send-to-realtor",
+      "name": "👨‍💼 Отправить риелтору",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1080, 500],
+      "credentials": {
+        "telegramApi": { "id": "YOUR_TG_CRED_ID", "name": "Bot" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "value": "YOUR_GOOGLE_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "leads", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": { "status": "sent_to_realtor", "sent_at": "={{ $now.toISO() }}" },
+          "matchingColumns": ["lead_id"]
+        },
+        "options": {}
+      },
+      "id": "mark-sent",
+      "name": "✅ Отметить отправленным",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1300, 500],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_CRED_ID", "name": "Google Sheets" }
+      }
+    }
+  ],
+  "connections": {
+    "🤖 Telegram": {
+      "main": [[{ "node": "📋 Разобрать действие", "type": "main", "index": 0 }]]
+    },
+    "📋 Разобрать действие": {
+      "main": [[{ "node": "Answer CB", "type": "main", "index": 0 }]]
+    },
+    "Answer CB": {
+      "main": [[{ "node": "🔀 Роутер", "type": "main", "index": 0 }]]
+    },
+    "🔀 Роутер": {
+      "main": [
+        [{ "node": "📊 Получить новых лидов", "type": "main", "index": 0 }],
+        [{ "node": "📊 Получить лида по ID", "type": "main", "index": 0 }],
+        [{ "node": "👨‍💼 Отправить риелтору", "type": "main", "index": 0 }]
+      ]
+    },
+    "📊 Получить новых лидов": {
+      "main": [[{ "node": "📱 Показать лида", "type": "main", "index": 0 }]]
+    },
+    "📊 Получить лида по ID": {
+      "main": [[{ "node": "💬 Первое сообщение лиду", "type": "main", "index": 0 }]]
+    },
+    "💬 Первое сообщение лиду": {
+      "main": [[{ "node": "📝 Обновить статус", "type": "main", "index": 0 }]]
+    },
+    "👨‍💼 Отправить риелтору": {
+      "main": [[{ "node": "✅ Отметить отправленным", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": [{ "name": "Недвижимость" }]
+}

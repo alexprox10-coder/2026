@@ -1,0 +1,139 @@
+{
+  "name": "Прогрев с кнопки",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["callback_query"],
+        "additionalFields": {}
+      },
+      "id": "bot",
+      "name": "🤖 Кнопка в боте",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 300],
+      "webhookId": "warmup-btn",
+      "credentials": {
+        "telegramApi": { "id": "YOUR_TG_CRED", "name": "Bot" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            { "leftValue": "={{ $json.callback_query.data }}", "rightValue": "start_warmup", "operator": { "type": "string", "operation": "equals" } }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check",
+      "name": "Кнопка прогрева?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": { "__rl": true, "value": "YOUR_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "leads", "mode": "name" },
+        "filtersUI": { "values": [{ "lookupColumn": "status", "lookupValue": "new" }] },
+        "options": { "returnAllMatches": true }
+      },
+      "id": "get-leads",
+      "name": "📊 Лиды из таблицы",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [640, 200],
+      "credentials": { "googleSheetsOAuth2Api": { "id": "YOUR_CRED", "name": "Sheets" } }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop",
+      "name": "🔄 По одному",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [860, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $json.user_id }}\",\n  \"text\": \"Здравствуйте! 👋\\n\\nВидела ваше сообщение о недвижимости.\\n\\n✅ Работаю с застройщиками напрямую\\n✅ Без комиссии для покупателя\\n✅ Помогу с ипотекой\\n\\nЧто ищете?\",\n  \"reply_markup\": {\n    \"inline_keyboard\": [\n      [{\"text\": \"🏢 Квартиру\", \"callback_data\": \"type_apt_{{ $json.lead_id }}\"}],\n      [{\"text\": \"🏠 Дом\", \"callback_data\": \"type_house_{{ $json.lead_id }}\"}],\n      [{\"text\": \"❌ Не актуально\", \"callback_data\": \"not_interested_{{ $json.lead_id }}\"}]\n    ]\n  }\n}",
+        "options": { "timeout": 10000 }
+      },
+      "id": "send-msg",
+      "name": "💬 Отправить сообщение",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "value": "YOUR_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "leads", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": { "status": "contacted", "contacted_at": "={{ $now.toISO() }}" },
+          "matchingColumns": ["lead_id"]
+        },
+        "options": {}
+      },
+      "id": "update",
+      "name": "📝 Статус: contacted",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1300, 200],
+      "credentials": { "googleSheetsOAuth2Api": { "id": "YOUR_CRED", "name": "Sheets" } }
+    },
+    {
+      "parameters": { "amount": 2 },
+      "id": "wait",
+      "name": "⏳ Пауза 2 сек",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1520, 200],
+      "webhookId": "wait-warmup"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.BOT_TOKEN }}/answerCallbackQuery",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"callback_query_id\": \"{{ $('🤖 Кнопка в боте').item.json.callback_query.id }}\", \"text\": \"Запускаю прогрев...\"}",
+        "options": {}
+      },
+      "id": "answer",
+      "name": "✓ Ответ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 400],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "🤖 Кнопка в боте": { "main": [[{ "node": "Кнопка прогрева?", "type": "main", "index": 0 }]] },
+    "Кнопка прогрева?": {
+      "main": [
+        [{ "node": "📊 Лиды из таблицы", "type": "main", "index": 0 }, { "node": "✓ Ответ", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "📊 Лиды из таблицы": { "main": [[{ "node": "🔄 По одному", "type": "main", "index": 0 }]] },
+    "🔄 По одному": { "main": [[{ "node": "💬 Отправить сообщение", "type": "main", "index": 0 }], []] },
+    "💬 Отправить сообщение": { "main": [[{ "node": "📝 Статус: contacted", "type": "main", "index": 0 }]] },
+    "📝 Статус: contacted": { "main": [[{ "node": "⏳ Пауза 2 сек", "type": "main", "index": 0 }]] },
+    "⏳ Пауза 2 сек": { "main": [[{ "node": "🔄 По одному", "type": "main", "index": 0 }]] }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": []
+}

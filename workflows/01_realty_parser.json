@@ -1,0 +1,145 @@
+{
+  "name": "Парсер недвижимости → Таблица",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 1 }]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "⏰ Каждый час",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://localhost:8000/parse",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "channels", "value": "nedvizhimost_blg,kvartiry_blagoveshchensk,realty_amur" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "call-parser",
+      "name": "🔍 Запрос к парсеру",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ключевые слова для поиска лидов недвижимости\nconst KEYWORDS = [\n  'куплю', 'купить', 'ищу', 'нужна', 'нужен',\n  'квартир', 'дом', 'комнат', 'студи',\n  'однушк', 'двушк', 'трёшк', 'трешк',\n  'новостройк', 'вторичк', 'ипотек'\n];\n\nconst items = $input.all();\nconst leads = [];\n\nfor (const item of items) {\n  const data = item.json;\n  \n  // Пропускаем если нет сообщений\n  if (!data.messages || !Array.isArray(data.messages)) continue;\n  \n  for (const msg of data.messages) {\n    const text = (msg.text || '').toLowerCase();\n    \n    // Проверяем ключевые слова\n    const hasKeyword = KEYWORDS.some(kw => text.includes(kw));\n    if (!hasKeyword) continue;\n    \n    // Это потенциальный лид\n    leads.push({\n      json: {\n        lead_id: `lead_${msg.id || Date.now()}`,\n        message_id: msg.id,\n        user_id: msg.from_id || msg.sender_id || '',\n        username: msg.username || '',\n        text: msg.text,\n        channel: data.channel || msg.channel || '',\n        date: msg.date || new Date().toISOString(),\n        phone: extractPhone(msg.text),\n        status: 'new',\n        created_at: new Date().toISOString()\n      }\n    });\n  }\n}\n\nfunction extractPhone(text) {\n  const match = text.match(/(?:\\+7|8)[\\s-]?\\(?\\d{3}\\)?[\\s-]?\\d{3}[\\s-]?\\d{2}[\\s-]?\\d{2}/);\n  return match ? match[0] : '';\n}\n\nif (leads.length === 0) {\n  return [{ json: { noLeads: true } }];\n}\n\nreturn leads;"
+      },
+      "id": "filter-leads",
+      "name": "🎯 Фильтр по ключам",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            { "leftValue": "={{ $json.noLeads }}", "rightValue": true, "operator": { "type": "boolean", "operation": "notEquals" } }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "has-leads",
+      "name": "Есть лиды?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "value": "YOUR_GOOGLE_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "leads", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ $json.lead_id }}",
+            "user_id": "={{ $json.user_id }}",
+            "username": "={{ $json.username }}",
+            "text": "={{ $json.text }}",
+            "channel": "={{ $json.channel }}",
+            "phone": "={{ $json.phone }}",
+            "status": "={{ $json.status }}",
+            "date": "={{ $json.date }}",
+            "created_at": "={{ $json.created_at }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "save-to-sheets",
+      "name": "💾 Сохранить в таблицу",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1080, 200],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_CRED_ID", "name": "Google Sheets" }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.ADMIN_CHAT_ID }}",
+        "text": "=📥 Найдено {{ $input.all().length }} новых лидов!\n\nПоследний:\n{{ $json.text.substring(0, 200) }}...\n\n👤 @{{ $json.username || 'без username' }}\n📱 {{ $json.phone || 'телефон не найден' }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "reply_markup": {
+            "inline_keyboard": [
+              [{ "text": "🚀 Начать прогрев", "callback_data": "start_warmup" }]
+            ]
+          }
+        }
+      },
+      "id": "notify-admin",
+      "name": "📱 Уведомить админа",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1300, 200],
+      "credentials": {
+        "telegramApi": { "id": "YOUR_TG_CRED_ID", "name": "Bot" }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "no-leads",
+      "name": "Нет лидов",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1080, 400]
+    }
+  ],
+  "connections": {
+    "⏰ Каждый час": {
+      "main": [[{ "node": "🔍 Запрос к парсеру", "type": "main", "index": 0 }]]
+    },
+    "🔍 Запрос к парсеру": {
+      "main": [[{ "node": "🎯 Фильтр по ключам", "type": "main", "index": 0 }]]
+    },
+    "🎯 Фильтр по ключам": {
+      "main": [[{ "node": "Есть лиды?", "type": "main", "index": 0 }]]
+    },
+    "Есть лиды?": {
+      "main": [
+        [{ "node": "💾 Сохранить в таблицу", "type": "main", "index": 0 }],
+        [{ "node": "Нет лидов", "type": "main", "index": 0 }]
+      ]
+    },
+    "💾 Сохранить в таблицу": {
+      "main": [[{ "node": "📱 Уведомить админа", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": [{ "name": "Недвижимость" }]
+}
