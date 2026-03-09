@@ -22,6 +22,13 @@ from threading import Thread
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
+# Загружаем переменные из .env файла
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    print("⚠️ python-dotenv не установлен. Установите: pip install python-dotenv")
+
 try:
     from telethon import TelegramClient
     from telethon.tl.functions.channels import GetFullChannelRequest
@@ -38,9 +45,9 @@ CORS(app)  # Разрешаем CORS для n8n
 # ============== КОНФИГУРАЦИЯ ==============
 CONFIG = {
     # Telegram API (получить на https://my.telegram.org)
-    "api_id": os.environ.get("TELEGRAM_API_ID", "ВАШ_API_ID"),
-    "api_hash": os.environ.get("TELEGRAM_API_HASH", "ВАШ_API_HASH"),
-    "phone": os.environ.get("TELEGRAM_PHONE", "+7XXXXXXXXXX"),
+    "api_id": int(os.environ.get("TELEGRAM_API_ID", "0")),
+    "api_hash": os.environ.get("TELEGRAM_API_HASH", ""),
+    "phone": os.environ.get("TELEGRAM_PHONE", ""),
 
     # Proxy настройки
     "proxy_host": os.environ.get("PROXY_HOST", None),
@@ -1104,6 +1111,16 @@ def n8n_webhook():
 
 
 if __name__ == "__main__":
+    # Проверка конфигурации
+    if CONFIG["api_id"] == 0 or not CONFIG["api_hash"]:
+        print("❌ ОШИБКА: Не настроены Telegram API credentials!")
+        print("   Создайте файл .env с переменными:")
+        print("   TELEGRAM_API_ID=ваш_api_id")
+        print("   TELEGRAM_API_HASH=ваш_api_hash")
+        print("   TELEGRAM_PHONE=+7xxxxxxxxxx")
+        print("\n   Или установите переменные окружения.")
+        exit(1)
+
     print("""
 ╔═══════════════════════════════════════════════════════════╗
 ║     🔥 TELEGRAM PARSER PRO - API MODE 🔥                  ║
