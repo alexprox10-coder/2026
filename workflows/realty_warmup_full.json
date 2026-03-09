@@ -59,24 +59,25 @@
     },
     {
       "parameters": {
+        "dataPropertyName": "action",
         "rules": {
-          "values": [
-            { "conditions": { "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "start", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "outputIndex": 0 },
-            { "conditions": { "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "send_first", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "outputIndex": 1 },
-            { "conditions": { "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "ask_rooms", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "outputIndex": 2 },
-            { "conditions": { "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "ask_budget", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "outputIndex": 3 },
-            { "conditions": { "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "ask_urgency", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "outputIndex": 4 },
-            { "conditions": { "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "offer_realtor", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "outputIndex": 5 },
-            { "conditions": { "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "send_realtor", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "outputIndex": 6 },
-            { "conditions": { "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" }, "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "next_lead", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }, "outputIndex": 0 }
+          "rules": [
+            { "value": "start", "output": 0 },
+            { "value": "send_first", "output": 1 },
+            { "value": "ask_rooms", "output": 2 },
+            { "value": "ask_budget", "output": 3 },
+            { "value": "ask_urgency", "output": 4 },
+            { "value": "offer_realtor", "output": 5 },
+            { "value": "send_realtor", "output": 6 },
+            { "value": "next_lead", "output": 0 }
           ]
         },
-        "options": { "fallbackOutput": "none" }
+        "fallbackOutput": -1
       },
       "id": "router",
       "name": "🔀 Роутер",
       "type": "n8n-nodes-base.switch",
-      "typeVersion": 3,
+      "typeVersion": 2,
       "position": [900, 400]
     },
     {
