@@ -1,0 +1,4 @@
+lead_id,status,user_id,username,phone,text,channel,created_at,contacted_at,sent_at
+lead_001,new,123456789,ivan_petrov,+79001234567,"Ищу квартиру в новостройке, 2 комнаты, до 5 млн",@realty_chat,2026-03-09T10:00:00Z,,
+lead_002,new,987654321,maria_sidorova,+79009876543,"Нужен дом или таунхаус в Подмосковье",@nedvizhimost_msk,2026-03-09T11:30:00Z,,
+lead_003,contacted,555666777,alex_kozlov,,"Студия или однушка, срочно нужна",@kvartiry_spb,2026-03-08T15:00:00Z,2026-03-08T16:00:00Z,
