@@ -72,7 +72,7 @@
             { "value": "next_lead", "output": 0 }
           ]
         },
-        "fallbackOutput": -1
+        "fallbackOutput": 0
       },
       "id": "router",
       "name": "🔀 Роутер",
