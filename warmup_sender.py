@@ -33,10 +33,10 @@ try:
         UsernameInvalidError
     )
     import gspread
-    from oauth2client.service_account import ServiceAccountCredentials
+    from google.oauth2.credentials import Credentials
 except ImportError:
     print("Установите зависимости:")
-    print("pip install telethon gspread oauth2client python-dotenv")
+    print("pip install telethon gspread google-auth python-dotenv")
     exit(1)
 
 load_dotenv()
@@ -133,23 +133,27 @@ class WarmupSender:
             await self.client.disconnect()
 
     def connect_sheets(self):
-        """Подключение к Google Sheets"""
-        scope = [
-            "https://spreadsheets.google.com/feeds",
-            "https://www.googleapis.com/auth/drive"
-        ]
+        """Подключение к Google Sheets через OAuth"""
+        import json
 
-        creds_file = Path(self.config["service_account_file"])
-        if not creds_file.exists():
-            print(f"❌ Файл {creds_file} не найден!")
-            print("Создайте service account в Google Cloud Console")
+        token_file = Path("token.json")
+        if not token_file.exists():
+            print("❌ Файл token.json не найден!")
+            print("Запусти: python auth_sheets.py")
             return False
 
-        creds = ServiceAccountCredentials.from_json_keyfile_name(
-            str(creds_file), scope
-        )
-        gc = gspread.authorize(creds)
+        with open(token_file) as f:
+            token_data = json.load(f)
 
+        creds = Credentials(
+            token=token_data['token'],
+            refresh_token=token_data['refresh_token'],
+            token_uri=token_data['token_uri'],
+            client_id=token_data['client_id'],
+            client_secret=token_data['client_secret']
+        )
+
+        gc = gspread.authorize(creds)
         spreadsheet = gc.open_by_key(self.config["sheets_id"])
         self.sheet = spreadsheet.worksheet(self.config["sheet_name"])
 
