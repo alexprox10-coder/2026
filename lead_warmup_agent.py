@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 
 class GoogleSheetsManager:
-    """Работа с Google Sheets"""
+    """Работа с Google Sheets через OAuth или Service Account"""
 
     def __init__(self):
         self.sheet_id = os.getenv('GOOGLE_SHEETS_ID')
@@ -59,18 +59,56 @@ class GoogleSheetsManager:
 
     def connect(self):
         """Подключение к Google Sheets"""
-        creds_file = os.getenv('GOOGLE_SERVICE_ACCOUNT_FILE', 'service_account.json')
-
-        if not Path(creds_file).exists():
-            logger.error(f"Файл {creds_file} не найден! Создай Service Account в Google Cloud Console")
-            return False
-
         scopes = [
             'https://www.googleapis.com/auth/spreadsheets',
             'https://www.googleapis.com/auth/drive'
         ]
 
-        creds = Credentials.from_service_account_file(creds_file, scopes=scopes)
+        creds = None
+        creds_file = os.getenv('GOOGLE_SERVICE_ACCOUNT_FILE', 'service_account.json')
+
+        # Вариант 1: Service Account (если есть файл)
+        if Path(creds_file).exists():
+            logger.info("Используем Service Account")
+            creds = Credentials.from_service_account_file(creds_file, scopes=scopes)
+
+        # Вариант 2: OAuth через браузер
+        else:
+            logger.info("Используем OAuth авторизацию")
+            token_file = 'token.json'
+
+            # Загружаем сохранённый токен
+            if Path(token_file).exists():
+                from google.oauth2.credentials import Credentials as OAuthCredentials
+                creds = OAuthCredentials.from_authorized_user_file(token_file, scopes)
+
+            # Если токен невалидный или нет - авторизуемся
+            if not creds or not creds.valid:
+                if creds and creds.expired and creds.refresh_token:
+                    from google.auth.transport.requests import Request
+                    creds.refresh(Request())
+                else:
+                    # Нужен credentials.json из Google Cloud Console
+                    oauth_file = 'credentials.json'
+                    if not Path(oauth_file).exists():
+                        logger.error(
+                            "Нужен файл credentials.json!\n"
+                            "1. Открой https://console.cloud.google.com\n"
+                            "2. APIs & Services → Credentials\n"
+                            "3. Create Credentials → OAuth client ID\n"
+                            "4. Application type: Desktop app\n"
+                            "5. Скачай JSON и переименуй в credentials.json"
+                        )
+                        return False
+
+                    from google_auth_oauthlib.flow import InstalledAppFlow
+                    flow = InstalledAppFlow.from_client_secrets_file(oauth_file, scopes)
+                    creds = flow.run_local_server(port=0)
+
+                # Сохраняем токен
+                with open(token_file, 'w') as f:
+                    f.write(creds.to_json())
+
         self.client = gspread.authorize(creds)
 
         try:
