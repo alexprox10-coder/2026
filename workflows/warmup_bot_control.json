@@ -1,0 +1,206 @@
+{
+  "name": "Бот управления прогревом",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message", "callback_query"],
+        "additionalFields": {}
+      },
+      "id": "trigger",
+      "name": "Telegram",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 300],
+      "webhookId": "warmup-control",
+      "credentials": {
+        "telegramApi": { "id": "kkySYqFIPRx85OPe", "name": "Telegram ПАРСЕР" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst cb = input.callback_query;\nconst msg = input.message;\n\nlet action = 'unknown';\nlet chatId = '';\nlet cbId = '';\n\nif (cb) {\n  chatId = String(cb.message.chat.id);\n  cbId = cb.id;\n  action = cb.data || 'unknown';\n} else if (msg) {\n  chatId = String(msg.chat.id);\n  const text = msg.text || '';\n  if (text === '/start') action = 'menu';\n  else if (text === '/warmup') action = 'start_warmup';\n  else if (text === '/status') action = 'status';\n}\n\nreturn [{ json: { action, chatId, cbId } }];"
+      },
+      "id": "parse",
+      "name": "Разбор",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [{ "leftValue": "={{ $json.cbId }}", "rightValue": "", "operator": { "type": "string", "operation": "notEmpty" } }]
+        }
+      },
+      "id": "is-callback",
+      "name": "Callback?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [580, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $credentials.telegramApi.token }}/answerCallbackQuery",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"callback_query_id\": \"{{ $json.cbId }}\"}",
+        "options": {}
+      },
+      "id": "answer",
+      "name": "Answer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [760, 250],
+      "credentials": { "telegramApi": { "id": "kkySYqFIPRx85OPe", "name": "Telegram ПАРСЕР" } },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            { "conditions": { "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "menu", "operator": { "type": "string", "operation": "equals" } }] }, "renameOutput": true, "outputLabel": "menu" },
+            { "conditions": { "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "start_warmup", "operator": { "type": "string", "operation": "equals" } }] }, "renameOutput": true, "outputLabel": "warmup" },
+            { "conditions": { "conditions": [{ "leftValue": "={{ $json.action }}", "rightValue": "status", "operator": { "type": "string", "operation": "equals" } }] }, "renameOutput": true, "outputLabel": "status" }
+          ]
+        },
+        "options": { "fallbackOutput": "none" }
+      },
+      "id": "router",
+      "name": "Роутер",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [940, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Разбор').item.json.chatId }}",
+        "text": "🏠 <b>Бот прогрева лидов</b>\n\nПарсер собирает лидов из Telegram каналов.\nНажми кнопку чтобы начать прогрев.",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "reply_markup": {
+            "inline_keyboard": [
+              [{ "text": "🔥 Прогреть лиды", "callback_data": "start_warmup" }],
+              [{ "text": "📊 Статус", "callback_data": "status" }]
+            ]
+          }
+        }
+      },
+      "id": "menu",
+      "name": "Меню",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1160, 150],
+      "credentials": { "telegramApi": { "id": "kkySYqFIPRx85OPe", "name": "Telegram ПАРСЕР" } }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Разбор').item.json.chatId }}",
+        "text": "⏳ Запускаю прогрев лидов...",
+        "additionalFields": {}
+      },
+      "id": "warmup-start-msg",
+      "name": "Сообщение",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1160, 300],
+      "credentials": { "telegramApi": { "id": "kkySYqFIPRx85OPe", "name": "Telegram ПАРСЕР" } }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://91.79.245.107:8001/warmup/sync",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"limit\": 10}",
+        "options": { "timeout": 600000 }
+      },
+      "id": "call-warmup",
+      "name": "Вызов API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1380, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Разбор').item.json.chatId }}",
+        "text": "=✅ <b>Прогрев завершён!</b>\n\n📤 Отправлено: {{ $json.stats?.sent || 0 }}\n❌ Ошибок: {{ $json.stats?.failed || 0 }}\n\n{{ $json.error ? '⚠️ Ошибка: ' + $json.error : '' }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "reply_markup": {
+            "inline_keyboard": [
+              [{ "text": "🔄 Ещё раз", "callback_data": "start_warmup" }],
+              [{ "text": "🔙 Меню", "callback_data": "menu" }]
+            ]
+          }
+        }
+      },
+      "id": "warmup-result",
+      "name": "Результат",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1600, 300],
+      "credentials": { "telegramApi": { "id": "kkySYqFIPRx85OPe", "name": "Telegram ПАРСЕР" } }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://91.79.245.107:8001/status",
+        "options": { "timeout": 10000 }
+      },
+      "id": "get-status",
+      "name": "Получить статус",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1160, 450],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Разбор').item.json.chatId }}",
+        "text": "=📊 <b>Статус прогрева</b>\n\n{{ $json.is_running ? '🔄 Сейчас работает...' : '⏸ Не запущен' }}\n\n{{ $json.last_run ? '🕐 Последний запуск: ' + $json.last_run : '' }}\n{{ $json.last_stats ? '📤 Отправлено: ' + $json.last_stats.sent + '\\n❌ Ошибок: ' + $json.last_stats.failed : '' }}\n\n{{ $json.error ? '⚠️ ' + $json.error : '' }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "reply_markup": {
+            "inline_keyboard": [
+              [{ "text": "🔥 Прогреть лиды", "callback_data": "start_warmup" }],
+              [{ "text": "🔙 Меню", "callback_data": "menu" }]
+            ]
+          }
+        }
+      },
+      "id": "show-status",
+      "name": "Показать статус",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1380, 450],
+      "credentials": { "telegramApi": { "id": "kkySYqFIPRx85OPe", "name": "Telegram ПАРСЕР" } }
+    }
+  ],
+  "connections": {
+    "Telegram": { "main": [[{ "node": "Разбор", "type": "main", "index": 0 }]] },
+    "Разбор": { "main": [[{ "node": "Callback?", "type": "main", "index": 0 }]] },
+    "Callback?": {
+      "main": [
+        [{ "node": "Answer", "type": "main", "index": 0 }],
+        [{ "node": "Роутер", "type": "main", "index": 0 }]
+      ]
+    },
+    "Answer": { "main": [[{ "node": "Роутер", "type": "main", "index": 0 }]] },
+    "Роутер": {
+      "main": [
+        [{ "node": "Меню", "type": "main", "index": 0 }],
+        [{ "node": "Сообщение", "type": "main", "index": 0 }],
+        [{ "node": "Получить статус", "type": "main", "index": 0 }]
+      ]
+    },
+    "Сообщение": { "main": [[{ "node": "Вызов API", "type": "main", "index": 0 }]] },
+    "Вызов API": { "main": [[{ "node": "Результат", "type": "main", "index": 0 }]] },
+    "Получить статус": { "main": [[{ "node": "Показать статус", "type": "main", "index": 0 }]] }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": [{ "name": "warmup" }]
+}
