@@ -1,0 +1,251 @@
+{
+  "name": "AI Бот-прогрев недвижимости",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "id": "trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 300],
+      "webhookId": "realty-ai-bot",
+      "credentials": {
+        "telegramApi": { "id": "YOUR_TG_CRED_ID", "name": "Telegram Bot" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Извлекаем данные из входящего сообщения\nconst msg = $input.first().json.message;\n\nconst chatId = String(msg.chat.id);\nconst userId = String(msg.from.id);\nconst username = msg.from.username || '';\nconst firstName = msg.from.first_name || '';\nconst text = msg.text || '';\n\n// Команда /start - новый диалог\nconst isStart = text === '/start';\n\nreturn [{\n  json: {\n    chatId,\n    userId,\n    username,\n    firstName,\n    text,\n    isStart,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "parse-message",
+      "name": "Разбор сообщения",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": { "__rl": true, "value": "YOUR_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "conversations", "mode": "name" },
+        "filtersUI": {
+          "values": [
+            { "lookupColumn": "chat_id", "lookupValue": "={{ $json.chatId }}" }
+          ]
+        },
+        "options": { "returnAllMatches": false }
+      },
+      "id": "get-context",
+      "name": "Получить контекст",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [600, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_SHEETS_CRED_ID", "name": "Google Sheets" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('Разбор сообщения').first().json;\nconst contextRow = $input.first().json;\n\n// Парсим существующий контекст или создаем новый\nlet context = {\n  messages: [],\n  collectedData: {\n    city: null,\n    propertyType: null,\n    rooms: null,\n    budget: null,\n    paymentMethod: null,\n    timeline: null,\n    contact: null\n  },\n  stage: 'greeting',\n  isComplete: false\n};\n\n// Если контекст существует и не /start\nif (contextRow.chat_id && !input.isStart) {\n  try {\n    context = JSON.parse(contextRow.context_json || '{}');\n    if (!context.messages) context.messages = [];\n    if (!context.collectedData) context.collectedData = {};\n  } catch (e) {\n    // Если JSON битый - начинаем заново\n  }\n}\n\n// Добавляем новое сообщение пользователя\nif (input.text && input.text !== '/start') {\n  context.messages.push({\n    role: 'user',\n    content: input.text\n  });\n}\n\n// Ограничиваем историю последними 10 сообщениями\nif (context.messages.length > 10) {\n  context.messages = context.messages.slice(-10);\n}\n\n// Формируем историю для AI\nlet conversationHistory = context.messages.map(m => \n  `${m.role === 'user' ? 'Клиент' : 'Ассистент'}: ${m.content}`\n).join('\\n');\n\n// Собранные данные для промпта\nconst collected = context.collectedData;\nlet collectedInfo = '';\nif (collected.city) collectedInfo += `Город/район: ${collected.city}\\n`;\nif (collected.propertyType) collectedInfo += `Тип: ${collected.propertyType}\\n`;\nif (collected.rooms) collectedInfo += `Комнат: ${collected.rooms}\\n`;\nif (collected.budget) collectedInfo += `Бюджет: ${collected.budget}\\n`;\nif (collected.paymentMethod) collectedInfo += `Оплата: ${collected.paymentMethod}\\n`;\nif (collected.timeline) collectedInfo += `Срок: ${collected.timeline}\\n`;\nif (collected.contact) collectedInfo += `Контакт: ${collected.contact}\\n`;\n\nreturn [{\n  json: {\n    ...input,\n    context,\n    conversationHistory,\n    collectedInfo: collectedInfo || 'Пока ничего не собрано',\n    isNewConversation: input.isStart || !contextRow.chat_id\n  }\n}];"
+      },
+      "id": "prepare-context",
+      "name": "Подготовка контекста",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "HTTP-Referer", "value": "https://n8n.arendadom24.ru" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"openai/gpt-4o-mini\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Ты — ассистент по подбору недвижимости в Москве и Московской области.\\n\\nЦель: вежливо квалифицировать покупателя и собрать данные для передачи риелтору.\\n\\nПРАВИЛА:\\n1. Веди диалог короткими сообщениями, по одному вопросу за раз\\n2. Будь дружелюбным, но профессиональным\\n3. Не обсуждай юридические детали, цены и налоги — скажи, что этим занимается риелтор\\n\\nТебя интересуют (собирай по порядку):\\n1. Город/район (Москва, Мытищи, Балашиха, Химки, Реутов, Королёв, Люберцы и др.)\\n2. Тип объекта (квартира, комната, студия, дом, таунхаус, участок)\\n3. Количество комнат (для квартир)\\n4. Бюджет (общая сумма или диапазон)\\n5. Способ покупки (ипотека, наличные, смешанный)\\n6. Срок покупки (срочно до месяца, 1-3 месяца, позже)\\n\\nКогда ВСЕ данные собраны — сделай резюме и предложи связаться с риелтором.\\n\\nЕсли человек отказывается — поблагодари, мягко предложи бесплатную подборку 2-3 вариантов. При повторном отказе — вежливо завершай.\\n\\nУЖЕ СОБРАННЫЕ ДАННЫЕ:\\n{{ $json.collectedInfo }}\\n\\nОТВЕЧАЙ В ФОРМАТЕ JSON:\\n{\\n  \\\"response\\\": \\\"твой ответ клиенту\\\",\\n  \\\"extracted\\\": {\\n    \\\"city\\\": \\\"город если упомянут или null\\\",\\n    \\\"propertyType\\\": \\\"тип объекта или null\\\",\\n    \\\"rooms\\\": \\\"кол-во комнат или null\\\",\\n    \\\"budget\\\": \\\"бюджет или null\\\",\\n    \\\"paymentMethod\\\": \\\"способ оплаты или null\\\",\\n    \\\"timeline\\\": \\\"срок или null\\\",\\n    \\\"contact\\\": \\\"контакт если дал или null\\\"\\n  },\\n  \\\"isComplete\\\": true/false,\\n  \\\"isRefused\\\": true/false\\n}\"\n    },\n    {{ $json.isNewConversation ? '{\"role\": \"user\", \"content\": \"/start\"}' : '' }}\n    {{ $json.conversationHistory ? ', {\"role\": \"user\", \"content\": \"История диалога:\\\\n' + $json.conversationHistory.replace(/\"/g, '\\\\\"').replace(/\\n/g, '\\\\n') + '\"}' : '' }}\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 500\n}",
+        "options": { "timeout": 30000 }
+      },
+      "id": "ai-agent",
+      "name": "AI Агент",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 300],
+      "credentials": {
+        "httpHeaderAuth": { "id": "YOUR_OPENROUTER_CRED_ID", "name": "OpenRouter API" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('Подготовка контекста').first().json;\nconst aiResponse = $input.first().json;\n\n// Парсим ответ AI\nlet parsed = {\n  response: 'Извините, произошла ошибка. Попробуйте позже.',\n  extracted: {},\n  isComplete: false,\n  isRefused: false\n};\n\ntry {\n  const content = aiResponse.choices[0].message.content;\n  // Ищем JSON в ответе\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    parsed = JSON.parse(jsonMatch[0]);\n  } else {\n    // Если AI не вернул JSON, используем текст как ответ\n    parsed.response = content;\n  }\n} catch (e) {\n  // Если парсинг не удался, пробуем использовать как текст\n  try {\n    parsed.response = aiResponse.choices[0].message.content;\n  } catch (e2) {\n    // Оставляем дефолтное сообщение об ошибке\n  }\n}\n\n// Обновляем контекст\nlet context = input.context;\n\n// Мержим extracted данные\nif (parsed.extracted) {\n  for (const [key, value] of Object.entries(parsed.extracted)) {\n    if (value && value !== 'null' && value !== null) {\n      context.collectedData[key] = value;\n    }\n  }\n}\n\n// Добавляем ответ AI в историю\ncontext.messages.push({\n  role: 'assistant',\n  content: parsed.response\n});\n\n// Проверяем полноту данных\nconst data = context.collectedData;\nconst isComplete = parsed.isComplete || (\n  data.city && \n  data.propertyType && \n  data.budget && \n  data.timeline\n);\n\ncontext.isComplete = isComplete;\ncontext.stage = isComplete ? 'complete' : 'collecting';\n\nreturn [{\n  json: {\n    chatId: input.chatId,\n    userId: input.userId,\n    username: input.username,\n    firstName: input.firstName,\n    responseText: parsed.response,\n    context,\n    contextJson: JSON.stringify(context),\n    isComplete,\n    isRefused: parsed.isRefused || false,\n    collectedData: context.collectedData\n  }\n}];"
+      },
+      "id": "process-ai",
+      "name": "Обработка ответа AI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.responseText }}",
+        "additionalFields": {}
+      },
+      "id": "send-response",
+      "name": "Отправить ответ",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1400, 300],
+      "credentials": {
+        "telegramApi": { "id": "YOUR_TG_CRED_ID", "name": "Telegram Bot" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "value": "YOUR_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "conversations", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "chat_id": "={{ $json.chatId }}",
+            "user_id": "={{ $json.userId }}",
+            "username": "={{ $json.username }}",
+            "first_name": "={{ $json.firstName }}",
+            "context_json": "={{ $json.contextJson }}",
+            "updated_at": "={{ $now.toISO() }}",
+            "is_complete": "={{ $json.isComplete }}",
+            "is_refused": "={{ $json.isRefused }}"
+          },
+          "matchingColumns": ["chat_id"]
+        },
+        "options": {}
+      },
+      "id": "save-context",
+      "name": "Сохранить контекст",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [1600, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_SHEETS_CRED_ID", "name": "Google Sheets" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Обработка ответа AI').item.json.isComplete }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-complete",
+      "name": "Лид готов?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1800, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "value": "YOUR_SHEET_ID", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "qualified_leads", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "=lead_{{ $('Обработка ответа AI').item.json.chatId }}_{{ Date.now() }}",
+            "chat_id": "={{ $('Обработка ответа AI').item.json.chatId }}",
+            "user_id": "={{ $('Обработка ответа AI').item.json.userId }}",
+            "username": "={{ $('Обработка ответа AI').item.json.username }}",
+            "first_name": "={{ $('Обработка ответа AI').item.json.firstName }}",
+            "city": "={{ $('Обработка ответа AI').item.json.collectedData.city }}",
+            "property_type": "={{ $('Обработка ответа AI').item.json.collectedData.propertyType }}",
+            "rooms": "={{ $('Обработка ответа AI').item.json.collectedData.rooms }}",
+            "budget": "={{ $('Обработка ответа AI').item.json.collectedData.budget }}",
+            "payment_method": "={{ $('Обработка ответа AI').item.json.collectedData.paymentMethod }}",
+            "timeline": "={{ $('Обработка ответа AI').item.json.collectedData.timeline }}",
+            "contact": "={{ $('Обработка ответа AI').item.json.collectedData.contact }}",
+            "created_at": "={{ $now.toISO() }}",
+            "status": "new"
+          }
+        },
+        "options": {}
+      },
+      "id": "save-lead",
+      "name": "Записать лида",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [2000, 200],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "id": "YOUR_SHEETS_CRED_ID", "name": "Google Sheets" }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.REALTOR_CHAT_ID }}",
+        "text": "=🔥 <b>НОВЫЙ КВАЛИФИЦИРОВАННЫЙ ЛИД!</b>\n\n👤 {{ $('Обработка ответа AI').item.json.firstName }} @{{ $('Обработка ответа AI').item.json.username || 'нет username' }}\n\n📋 <b>Запрос:</b>\n📍 Город/район: {{ $('Обработка ответа AI').item.json.collectedData.city || 'не указан' }}\n🏠 Тип: {{ $('Обработка ответа AI').item.json.collectedData.propertyType || 'не указан' }}\n🚪 Комнат: {{ $('Обработка ответа AI').item.json.collectedData.rooms || 'не указано' }}\n💰 Бюджет: {{ $('Обработка ответа AI').item.json.collectedData.budget || 'не указан' }}\n💳 Оплата: {{ $('Обработка ответа AI').item.json.collectedData.paymentMethod || 'не указан' }}\n⏰ Срок: {{ $('Обработка ответа AI').item.json.collectedData.timeline || 'не указан' }}\n📞 Контакт: {{ $('Обработка ответа AI').item.json.collectedData.contact || 'в Telegram' }}\n\n✅ Прошёл воронку AI-бота, готов к связи!",
+        "additionalFields": { "parse_mode": "HTML" }
+      },
+      "id": "notify-realtor",
+      "name": "Уведомить риелтора",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [2200, 200],
+      "credentials": {
+        "telegramApi": { "id": "YOUR_TG_CRED_ID", "name": "Telegram Bot" }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [[{ "node": "Разбор сообщения", "type": "main", "index": 0 }]]
+    },
+    "Разбор сообщения": {
+      "main": [[{ "node": "Получить контекст", "type": "main", "index": 0 }]]
+    },
+    "Получить контекст": {
+      "main": [[{ "node": "Подготовка контекста", "type": "main", "index": 0 }]]
+    },
+    "Подготовка контекста": {
+      "main": [[{ "node": "AI Агент", "type": "main", "index": 0 }]]
+    },
+    "AI Агент": {
+      "main": [[{ "node": "Обработка ответа AI", "type": "main", "index": 0 }]]
+    },
+    "Обработка ответа AI": {
+      "main": [[{ "node": "Отправить ответ", "type": "main", "index": 0 }]]
+    },
+    "Отправить ответ": {
+      "main": [[{ "node": "Сохранить контекст", "type": "main", "index": 0 }]]
+    },
+    "Сохранить контекст": {
+      "main": [[{ "node": "Лид готов?", "type": "main", "index": 0 }]]
+    },
+    "Лид готов?": {
+      "main": [
+        [{ "node": "Записать лида", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Записать лида": {
+      "main": [[{ "node": "Уведомить риелтора", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": [{ "name": "AI Bot" }, { "name": "Недвижимость" }]
+}
