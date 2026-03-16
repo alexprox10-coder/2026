@@ -1,10 +1,5 @@
 {
-  "updatedAt": "2026-03-16T06:37:57.811Z",
-  "createdAt": "2026-03-15T11:24:52.261Z",
-  "id": "87eNXDE1LReN1ZHs",
-  "name": "🤖 AI Agent — Bot Поиск Каналов",
-  "active": true,
-  "isArchived": false,
+  "name": "Workflow 1 — Главный бот",
   "nodes": [
     {
       "parameters": {
@@ -14,13 +9,13 @@
         ],
         "additionalFields": {}
       },
-      "id": "7362542e-e715-47ba-b7f4-890fe25ac0f2",
+      "id": "node-tg-trigger",
       "name": "TG Trigger",
       "type": "n8n-nodes-base.telegramTrigger",
       "typeVersion": 1.1,
       "position": [
-        -880,
-        240
+        0,
+        300
       ],
       "webhookId": "tg-main-bot-webhook",
       "credentials": {
@@ -36,18 +31,16 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict",
-            "version": 1
+            "typeValidation": "strict"
           },
           "conditions": [
             {
               "id": "cond-is-callback",
-              "leftValue": "={{ $json.callback_query ? $json.callback_query.data : '' }}",
+              "leftValue": "={{ $json.callback_query }}",
               "rightValue": "",
               "operator": {
-                "type": "string",
-                "operation": "notEmpty",
-                "singleValue": true
+                "type": "object",
+                "operation": "exists"
               }
             }
           ],
@@ -55,30 +48,31 @@
         },
         "options": {}
       },
-      "id": "9205c612-3f51-4724-9310-bed8c8be458f",
+      "id": "node-is-callback",
       "name": "Это callback?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -656,
-        240
+        220,
+        300
       ]
     },
     {
       "parameters": {
-        "jsCode": "// Разбираем callback_query\nconst item = $input.first().json;\nconst callbackQuery = item.callback_query;\n\n// Защита от обычных сообщений (без callback)\nif (!callbackQuery) {\n  return [{\n    json: {\n      action: 'none',\n      channelId: '',\n      chatId: String(item.message?.chat?.id || ''),\n      callbackQueryId: '',\n      messageId: '',\n      callbackData: '',\n      extraData: {}\n    }\n  }];\n}\n\nconst callbackData = callbackQuery.data || '';\nconst chatId = String(callbackQuery.message.chat.id);\nconst callbackQueryId = callbackQuery.id;\nconst messageId = callbackQuery.message.message_id;\n\nlet action = '';\nlet channelId = '';\nlet extraData = {};\n\nif (callbackData.startsWith('approve_')) {\n  action = 'approve';\n  channelId = callbackData.replace('approve_', '');\n} else if (callbackData.startsWith('reject_')) {\n  action = 'reject';\n  channelId = callbackData.replace('reject_', '');\n} else if (callbackData === 'start_parse') {\n  action = 'start_parse';\n} else if (callbackData === 'confirm_send') {\n  action = 'confirm_send';\n} else if (callbackData === 'execute_send') {\n  action = 'execute_send';\n} else if (callbackData === 'cancel_send') {\n  action = 'cancel_send';\n} else if (callbackData === 'cancel_search') {\n  action = 'cancel_search';\n} else if (callbackData.startsWith('days_')) {\n  action = 'days_selected';\n  extraData.days = callbackData.replace('days_', '');\n} else {\n  action = 'unknown';\n}\n\nreturn [{\n  json: {\n    action,\n    channelId,\n    chatId,\n    callbackQueryId,\n    messageId,\n    callbackData,\n    extraData\n  }\n}];\n"
+        "jsCode": "// Разбираем callback_query\nconst item = $input.first().json;\nconst callbackQuery = item.callback_query;\nconst callbackData = callbackQuery.data || '';\nconst chatId = String(callbackQuery.message.chat.id);\nconst callbackQueryId = callbackQuery.id;\nconst messageId = callbackQuery.message.message_id;\n\n// Парсим callback data\nlet action = '';\nlet channelId = '';\nlet extraData = {};\n\nif (callbackData.startsWith('approve_')) {\n  action = 'approve';\n  channelId = callbackData.replace('approve_', '');\n} else if (callbackData.startsWith('reject_')) {\n  action = 'reject';\n  channelId = callbackData.replace('reject_', '');\n} else if (callbackData === 'start_parse') {\n  action = 'start_parse';\n} else if (callbackData === 'confirm_send') {\n  action = 'confirm_send';\n} else if (callbackData === 'cancel_send') {\n  action = 'cancel_send';\n} else if (callbackData === 'cancel_search') {\n  action = 'cancel_search';\n} else if (callbackData.startsWith('days_')) {\n  action = 'days_selected';\n  extraData.days = callbackData.replace('days_', '');\n} else {\n  action = 'unknown';\n}\n\nreturn [{\n  json: {\n    action,\n    channelId,\n    chatId,\n    callbackQueryId,\n    messageId,\n    callbackData,\n    extraData\n  }\n}];"
       },
-      "id": "afa6dfa5-9019-48b7-84c5-de8c1cc9fd4c",
+      "id": "node-parse-callback",
       "name": "Разобрать callback",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -448,
-        128
+        440,
+        180
       ]
     },
     {
       "parameters": {
+        "mode": "rules",
         "rules": {
           "values": [
             {
@@ -86,8 +80,7 @@
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 1
+                  "typeValidation": "strict"
                 },
                 "conditions": [
                   {
@@ -110,8 +103,7 @@
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 1
+                  "typeValidation": "strict"
                 },
                 "conditions": [
                   {
@@ -134,8 +126,7 @@
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 1
+                  "typeValidation": "strict"
                 },
                 "conditions": [
                   {
@@ -158,8 +149,7 @@
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 1
+                  "typeValidation": "strict"
                 },
                 "conditions": [
                   {
@@ -182,8 +172,7 @@
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 1
+                  "typeValidation": "strict"
                 },
                 "conditions": [
                   {
@@ -206,8 +195,7 @@
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 1
+                  "typeValidation": "strict"
                 },
                 "conditions": [
                   {
@@ -230,8 +218,7 @@
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 1
+                  "typeValidation": "strict"
                 },
                 "conditions": [
                   {
@@ -253,13 +240,13 @@
         },
         "options": {}
       },
-      "id": "b78c20d9-2318-48f5-9543-6773867172b1",
+      "id": "node-callback-router",
       "name": "Роутер callback",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
-        -224,
-        128
+        660,
+        180
       ]
     },
     {
@@ -310,13 +297,13 @@
         },
         "options": {}
       },
-      "id": "326e8016-b708-4d3b-affc-841d237d07e3",
+      "id": "node-approve-channel",
       "name": "Одобрить канал",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        0,
-        -320
+        880,
+        60
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -373,13 +360,13 @@
         },
         "options": {}
       },
-      "id": "2f439138-41bf-4119-b223-330ab33adcdd",
+      "id": "node-reject-channel",
       "name": "Отклонить канал",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        0,
-        -80
+        880,
+        200
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -391,20 +378,21 @@
     {
       "parameters": {
         "resource": "callback",
+        "operation": "answerQuery",
         "queryId": "={{ $json.callbackQueryId }}",
+        "text": "={{ $json.action === 'approve' ? '✅ Канал одобрен!' : ($json.action === 'reject' ? '❌ Канал отклонён' : '✅ Принято') }}",
         "additionalFields": {
           "show_alert": false
         }
       },
-      "id": "801ea737-5cfa-4f55-9e45-5aa2273e598b",
+      "id": "node-answer-callback",
       "name": "Ответить на кнопку",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        384,
-        -176
+        1100,
+        140
       ],
-      "webhookId": "d7c7703c-916b-46bc-bd29-ba64f9f37ac4",
       "credentials": {
         "telegramApi": {
           "id": "kkySYqFIPRx85OPe",
@@ -414,32 +402,56 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json;\nconst chatId = String(item.chatId);   // уже приходит из \"Разобрать callback\"\n\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.users) staticData.users = {};\nif (!staticData.users[chatId]) staticData.users[chatId] = {};\n\n// ставим ожидание дней\nstaticData.users[chatId].state = 'await_days';\nstaticData.users[chatId].days_back = null;\n\nreturn [{ json: { chatId } }];\n"
+        "jsCode": "// Обработка callback start_parse — устанавливаем state=waiting_days\nconst item = $input.first().json;\nconst chatId = item.chatId;\n\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.users) staticData.users = {};\nif (!staticData.users[chatId]) staticData.users[chatId] = {};\n\nstaticData.users[chatId].state = 'waiting_days';\n\nreturn [{ json: { chatId, callbackQueryId: item.callbackQueryId, action: 'start_parse' } }];"
       },
-      "id": "de1f843c-f16c-4ced-a4a7-5cdb4ff004df",
+      "id": "node-handle-start-parse",
       "name": "Обработать start_parse callback",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        0,
-        128
+        880,
+        340
       ]
     },
     {
       "parameters": {
         "chatId": "={{ $json.chatId }}",
-        "text": "📅 Сколько дней назад искать посты? Введи число от 1 до 30",
-        "additionalFields": {}
+        "text": "📅 Сколько дней назад искать посты?",
+        "additionalFields": {
+          "reply_markup": {
+            "inline_keyboard": [
+              [
+                {
+                  "text": "3 дня",
+                  "callback_data": "days_3"
+                },
+                {
+                  "text": "7 дней",
+                  "callback_data": "days_7"
+                }
+              ],
+              [
+                {
+                  "text": "14 дней",
+                  "callback_data": "days_14"
+                },
+                {
+                  "text": "30 дней",
+                  "callback_data": "days_30"
+                }
+              ]
+            ]
+          }
+        }
       },
-      "id": "8763b142-a315-4a5f-a3d6-3eeead264892",
+      "id": "node-ask-days",
       "name": "Спросить дни",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        352,
-        160
+        1100,
+        340
       ],
-      "webhookId": "63f7173e-8ccf-4517-bfa7-ad6ad0b719ef",
       "credentials": {
         "telegramApi": {
           "id": "kkySYqFIPRx85OPe",
@@ -449,32 +461,83 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json;\nconst chatId = item.chatId;\nconst days = item.extraData.days;\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.users) staticData.users = {};\nif (!staticData.users[chatId]) staticData.users[chatId] = {};\nstaticData.users[chatId].state = 'waiting_keywords';\nstaticData.users[chatId].days_back = days;\nreturn [{ json: { chatId, days, callbackQueryId: item.callbackQueryId } }];"
+        "jsCode": "// Обработка выбора дней — устанавливаем state=waiting_keywords, сохраняем days\nconst item = $input.first().json;\nconst chatId = item.chatId;\nconst days = item.extraData.days;\n\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.users) staticData.users = {};\nif (!staticData.users[chatId]) staticData.users[chatId] = {};\n\nstaticData.users[chatId].state = 'waiting_keywords';\nstaticData.users[chatId].days_back = days;\n\nreturn [{ json: { chatId, days, callbackQueryId: item.callbackQueryId } }];"
       },
-      "id": "909ee90d-7d4e-49fc-a82d-7d56d9ece1c7",
+      "id": "node-handle-days-selected",
       "name": "Сохранить дни",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        0,
-        320
+        880,
+        460
       ]
     },
     {
       "parameters": {
         "chatId": "={{ $json.chatId }}",
-        "text": "✏️ Введи ключевые слова (через запятую), по которым искать лидов. Или отправь \"-\" чтобы использовать ключевые слова ниши",
+        "text": "🔑 Введи ключевые слова через запятую (или /skip для автоматических):",
         "additionalFields": {}
       },
-      "id": "402f5362-4b98-4111-bdb4-fee78bf7699a",
+      "id": "node-ask-keywords",
       "name": "Спросить ключевые слова",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        368,
-        352
+        1100,
+        460
       ],
-      "webhookId": "d2a7dfc3-36eb-497d-9a2a-3310615b0911",
+      "credentials": {
+        "telegramApi": {
+          "id": "kkySYqFIPRx85OPe",
+          "name": "Telegram ПАРСЕР"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Запуск парсинга: формируем запрос к Workflow 2\nconst item = $input.first().json;\nconst chatId = item.chatId;\n\nconst staticData = $getWorkflowStaticData('global');\nconst userState = staticData.users && staticData.users[chatId] ? staticData.users[chatId] : {};\n\nconst daysBack = parseInt(userState.days_back || '7');\nconst keywords = userState.keywords || [];\n\n// Сбрасываем состояние\nif (staticData.users && staticData.users[chatId]) {\n  staticData.users[chatId].state = 'idle';\n  staticData.users[chatId].days_back = null;\n  staticData.users[chatId].keywords = null;\n}\n\nreturn [{ json: { chatId, days_back: daysBack, keywords } }];"
+      },
+      "id": "node-trigger-parse-code",
+      "name": "Подготовить параметры парсинга",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.arendadom24.ru/webhook/ai-parse-trigger-v2",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ days_back: $json.days_back, keywords: $json.keywords, chat_id: $json.chatId }) }}",
+        "options": {}
+      },
+      "id": "node-trigger-wf2",
+      "name": "Триггер парсинга (WF2)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Подготовить параметры парсинга').first().json.chatId }}",
+        "text": "⚙️ Парсинг запущен! Результаты придут сюда когда завершится.",
+        "additionalFields": {}
+      },
+      "id": "node-confirm-parse-start",
+      "name": "Подтвердить запуск парсинга",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1760,
+        340
+      ],
       "credentials": {
         "telegramApi": {
           "id": "kkySYqFIPRx85OPe",
@@ -488,33 +551,34 @@
         "url": "https://n8n.arendadom24.ru/webhook/smart-lead-trigger",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n    \"chat_id\": \"{{ $json.chatId }}\",\n    \"niche\": \"{{ $json.payload.replace('niche : ', '') }}\"\n}\n",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $json.chatId }) }}",
         "options": {}
       },
-      "id": "32e0befe-2955-4cfc-82b1-483efc1b7b38",
+      "id": "node-trigger-wf3",
       "name": "Триггер отправки лидам (WF3)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        0,
-        512
+        880,
+        580
       ]
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json;\nconst message = item.message || {};\nconst text = (message.text || '').trim();\nconst chatId = String(message.chat?.id || '');\n\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.users) staticData.users = {};\nif (!staticData.users[chatId]) staticData.users[chatId] = {};\n\nconst currentState = staticData.users[chatId].state || null;\n\nlet action = 'default_reply';\n\n// FIX: Check states FIRST before generic niche_input routing\nif (currentState === 'await_days') {\n  // Will be routed by currentState check (rule await_days) in Роутер состояний\n  action = 'default_reply';\n} else if (currentState === 'waiting_keywords') {\n  action = 'keywords_input';\n} else if (text === '/start') {\n  action = 'start';\n} else if (text && !text.startsWith('/')) {\n  action = 'niche_input';\n}\n\nreturn [{\n  json: {\n    action,\n    chatId,\n    text,\n    payload: {},\n    currentState\n  }\n}];\n"
+        "jsCode": "// State machine: разбираем входящее сообщение\nconst item = $input.first().json;\nconst message = item.message;\n\nif (!message) {\n  return [{ json: { action: 'ignore', chatId: null } }];\n}\n\nconst chatId = String(message.chat.id);\nconst text = (message.text || '').trim();\n\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.users) staticData.users = {};\nif (!staticData.users[chatId]) {\n  staticData.users[chatId] = { state: 'idle' };\n}\n\nconst userState = staticData.users[chatId];\nconst currentState = userState.state || 'idle';\n\nlet action = 'unknown';\nlet payload = {};\n\nif (text === '/start') {\n  action = 'start';\n  staticData.users[chatId].state = 'waiting_niche';\n} else if (text === '/leads') {\n  action = 'leads_status';\n} else if (text === '/status') {\n  action = 'bot_status';\n} else if (text === '/niches') {\n  action = 'list_niches';\n} else if (currentState === 'waiting_niche') {\n  action = 'niche_input';\n  payload.niche = text;\n  staticData.users[chatId].state = 'idle';\n  staticData.users[chatId].current_niche = text;\n} else if (currentState === 'waiting_keywords') {\n  if (text === '/skip') {\n    action = 'keywords_skip';\n    payload.keywords = [];\n  } else {\n    action = 'keywords_input';\n    payload.keywords = text.split(',').map(k => k.trim()).filter(k => k.length > 0);\n  }\n  staticData.users[chatId].keywords = payload.keywords;\n  staticData.users[chatId].state = 'idle';\n  // Сразу запускаем парсинг\n  action = 'trigger_parse';\n  payload.days_back = parseInt(staticData.users[chatId].days_back || '7');\n  staticData.users[chatId].days_back = null;\n} else {\n  action = 'default_reply';\n}\n\nreturn [{ json: { action, chatId, text, payload, currentState } }];"
       },
-      "id": "c37bfcff-3598-49c1-83ed-1df1b85e019b",
+      "id": "node-extract-command",
       "name": "Извлечь команду",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -448,
-        368
+        440,
+        420
       ]
     },
     {
       "parameters": {
+        "mode": "rules",
         "rules": {
           "values": [
             {
@@ -522,8 +586,7 @@
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 1
+                  "typeValidation": "strict"
                 },
                 "conditions": [
                   {
@@ -546,8 +609,7 @@
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 1
+                  "typeValidation": "strict"
                 },
                 "conditions": [
                   {
@@ -570,8 +632,7 @@
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 1
+                  "typeValidation": "strict"
                 },
                 "conditions": [
                   {
@@ -594,8 +655,7 @@
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 1
+                  "typeValidation": "strict"
                 },
                 "conditions": [
                   {
@@ -618,8 +678,7 @@
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 1
+                  "typeValidation": "strict"
                 },
                 "conditions": [
                   {
@@ -636,142 +695,18 @@
               },
               "renameOutput": true,
               "outputKey": "bot_status"
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 1
-                },
-                "conditions": [
-                  {
-                    "id": "817f7dcd-2a38-4d2e-9d3f-e41d798953e7",
-                    "leftValue": "={{ $json.action }}",
-                    "rightValue": "confirm_save",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals",
-                      "name": "filter.operator.equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "confirm_save"
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 1
-                },
-                "conditions": [
-                  {
-                    "id": "c140bd2a-2dfd-43a9-8266-33d79f85df95",
-                    "leftValue": "={{ $json.currentState }}",
-                    "rightValue": "await_days",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals",
-                      "name": "filter.operator.equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "await_days"
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 1
-                },
-                "conditions": [
-                  {
-                    "id": "fc3122fd-7625-42d1-89dd-5db1236fcc9d",
-                    "leftValue": "={{ $json.action }}",
-                    "rightValue": "days_ok",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals",
-                      "name": "filter.operator.equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "days_ok"
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 1
-                },
-                "conditions": [
-                  {
-                    "id": "626e96b2-4446-4518-b942-8a530b5029ee",
-                    "leftValue": "={{ $json.action }}",
-                    "rightValue": "days_invalid",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals",
-                      "name": "filter.operator.equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "days_invalid"
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 1
-                },
-                "conditions": [
-                  {
-                    "id": "rule-keywords-input",
-                    "leftValue": "={{ $json.action }}",
-                    "rightValue": "keywords_input",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "keywords_input"
             }
           ]
         },
         "options": {}
       },
-      "id": "5a531dec-d842-4b88-ba19-defc8cee5348",
+      "id": "node-state-router",
       "name": "Роутер состояний",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
-        -432,
-        624
+        660,
+        420
       ]
     },
     {
@@ -782,15 +717,14 @@
           "parse_mode": "Markdown"
         }
       },
-      "id": "4d840aed-154e-4d91-8f7e-48e004b4e387",
+      "id": "node-reply-start",
       "name": "Ответ start",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        0,
-        704
+        880,
+        700
       ],
-      "webhookId": "08667831-5e65-46c0-a9fd-1b992e9b5f92",
       "credentials": {
         "telegramApi": {
           "id": "kkySYqFIPRx85OPe",
@@ -800,15 +734,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json;\nconst chatId = item.chatId;\nconst niche = item.text; // FIX: was item.payload.niche which is always undefined\nreturn [{ json: { chatId, niche, action: 'search_channels' } }];\n"
+        "jsCode": "// Сохраняем нишу и ищем каналы через Python сервер\nconst item = $input.first().json;\nconst chatId = item.chatId;\nconst niche = item.payload.niche;\n\nreturn [{ json: { chatId, niche, action: 'search_channels' } }];"
       },
-      "id": "dfce3174-c1f4-4046-a41b-c4633cc3820e",
+      "id": "node-prepare-niche",
       "name": "Подготовить нишу",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        0,
-        848
+        880,
+        820
       ]
     },
     {
@@ -817,31 +751,31 @@
         "url": "http://172.17.0.1:5000/search_channels",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ keywords: $('Подготовить нишу').first().json.niche, chat_id: $('Подготовить нишу').first().json.chatId, limit: 50, min_subscribers: 500 }) }}",
+        "jsonBody": "={{ JSON.stringify({ niche: $json.niche, chat_id: $json.chatId }) }}",
         "options": {
           "timeout": 60000
         }
       },
-      "id": "8fde190f-64b0-48d9-80ef-449128ccc21e",
+      "id": "node-search-channels",
       "name": "Поиск каналов (Python)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        224,
-        768
+        1100,
+        820
       ]
     },
     {
       "parameters": {
-        "jsCode": "const searchResult = $input.first().json;\nconst channels = searchResult.channels || [];\nconst chatId = $('Подготовить нишу').first().json.chatId;\nconst niche = $('Подготовить нишу').first().json.niche;\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.users) staticData.users = {};\nif (!staticData.users[chatId]) staticData.users[chatId] = {};\nstaticData.users[chatId].found_channels = channels;\nstaticData.users[chatId].current_niche = niche;\nreturn [{ json: { chatId, niche, channels, count: channels.length } }];"
+        "jsCode": "// Обрабатываем результаты поиска каналов\nconst searchResult = $input.first().json;\nconst channels = searchResult.channels || [];\nconst chatId = $('Подготовить нишу').first().json.chatId;\nconst niche = $('Подготовить нишу').first().json.niche;\n\n// Сохраняем каналы в staticData для дальнейшего использования\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.users) staticData.users = {};\nif (!staticData.users[chatId]) staticData.users[chatId] = {};\nstaticData.users[chatId].found_channels = channels;\nstaticData.users[chatId].current_niche = niche;\n\nconst count = channels.length;\n\nreturn [{ json: { chatId, niche, channels, count } }];"
       },
-      "id": "5d293f09-fc47-4886-8e01-511f1ff3f5e7",
+      "id": "node-process-search-result",
       "name": "Обработать результат поиска",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        448,
-        768
+        1320,
+        820
       ]
     },
     {
@@ -849,18 +783,31 @@
         "chatId": "={{ $json.chatId }}",
         "text": "={{ '🔍 Найдено ' + $json.count + ' каналов по нише: *' + $json.niche + '*\\n\\nОтправить их на одобрение?' }}",
         "additionalFields": {
-          "parse_mode": "Markdown"
+          "parse_mode": "Markdown",
+          "reply_markup": {
+            "inline_keyboard": [
+              [
+                {
+                  "text": "✅ Да, показать каналы",
+                  "callback_data": "start_parse"
+                },
+                {
+                  "text": "❌ Отмена",
+                  "callback_data": "cancel_search"
+                }
+              ]
+            ]
+          }
         }
       },
-      "id": "417a4ac4-da4b-4915-ba55-b71bdd3ad0db",
+      "id": "node-ask-approve-channels",
       "name": "Спросить про одобрение каналов",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        672,
-        768
+        1540,
+        820
       ],
-      "webhookId": "ec4d01da-35ea-497e-9fda-a00a3818ca0b",
       "credentials": {
         "telegramApi": {
           "id": "kkySYqFIPRx85OPe",
@@ -870,15 +817,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $('Обработать результат поиска').first().json;\nconst channels = item.channels || [];\nconst niche = item.niche;\nconst rows = channels.map(ch => ({\n  channel_id: ch.id || ch.channel_id || '',\n  username: ch.username || '',\n  title: ch.title || '',\n  description: ch.description || '',\n  members_count: ch.members_count || 0,\n  niche: niche,\n  status: 'pending',\n  added_date: new Date().toISOString().split('T')[0]\n}));\nreturn rows.map(r => ({ json: r }));"
+        "jsCode": "// Сохраняем найденные каналы в Google Sheets\nconst item = $input.first().json;\nconst channels = item.channels || [];\nconst niche = item.niche;\n\n// Преобразуем каналы в массив строк для Google Sheets\nconst rows = channels.map(ch => ({\n  channel_id: ch.id || ch.channel_id || '',\n  username: ch.username || '',\n  title: ch.title || '',\n  description: ch.description || '',\n  members_count: ch.members_count || 0,\n  niche: niche,\n  status: 'pending',\n  added_date: new Date().toISOString().split('T')[0]\n}));\n\nreturn rows.map(r => ({ json: r }));"
       },
-      "id": "9a8fa344-6583-4334-93b4-5bd093d95f72",
+      "id": "node-prepare-channels-for-sheets",
       "name": "Подготовить каналы для Sheets",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        880,
-        768
+        1760,
+        820
       ]
     },
     {
@@ -891,43 +838,78 @@
         },
         "sheetName": {
           "__rl": true,
-          "value": 427111597,
-          "mode": "list",
-          "cachedResultName": "sources",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw/edit#gid=427111597"
+          "value": "gid=427111597",
+          "mode": "id"
         },
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
+            "channel_id": "={{ $json.channel_id }}",
+            "username": "={{ $json.username }}",
+            "title": "={{ $json.title }}",
+            "description": "={{ $json.description }}",
+            "members_count": "={{ $json.members_count }}",
             "niche": "={{ $json.niche }}",
             "status": "={{ $json.status }}",
-            "channel_url": "={{ $json.channel_id || $json.username }}",
-            "channel_title": "={{ $json.title }}",
-            "score": "={{ $json.members_count }}",
-            "added_at": "={{ $json.added_date }}"
+            "added_date": "={{ $json.added_date }}"
           },
           "matchingColumns": [
-            "channel_url"
+            "channel_id"
           ],
           "schema": [
             {
-              "id": "channel_url",
-              "displayName": "channel_url",
+              "id": "channel_id",
+              "displayName": "channel_id",
               "required": false,
-              "defaultMatch": false,
+              "defaultMatch": true,
+              "canBeUsedToMatch": true,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true,
+              "readOnly": false,
               "removed": false
             },
             {
-              "id": "channel_title",
-              "displayName": "channel_title",
+              "id": "username",
+              "displayName": "username",
               "required": false,
               "defaultMatch": false,
+              "canBeUsedToMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true,
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "members_count",
+              "displayName": "members_count",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
               "removed": false
             },
             {
@@ -935,19 +917,10 @@
               "displayName": "niche",
               "required": false,
               "defaultMatch": false,
+              "canBeUsedToMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "score",
-              "displayName": "score",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
+              "readOnly": false,
               "removed": false
             },
             {
@@ -955,34 +928,34 @@
               "displayName": "status",
               "required": false,
               "defaultMatch": false,
+              "canBeUsedToMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true,
+              "readOnly": false,
               "removed": false
             },
             {
-              "id": "added_at",
-              "displayName": "added_at",
+              "id": "added_date",
+              "displayName": "added_date",
               "required": false,
               "defaultMatch": false,
+              "canBeUsedToMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true,
+              "readOnly": false,
               "removed": false
             }
-          ],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
+          ]
         },
         "options": {}
       },
-      "id": "6a347e1a-e392-44c3-abd2-c5cb603f129f",
+      "id": "node-save-sources",
       "name": "Сохранить источники",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        1104,
-        768
+        1980,
+        820
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -993,20 +966,20 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json;\nconst niche = item.niche;\nconst chatId = item.chatId;\nconst ai_keywords = [niche];\nconst lead_signals = ['куплю', 'ищу', 'нужен', 'порекомендуйте', 'помогите найти'];\nreturn [{ json: { niche, chatId, ai_keywords, lead_signals, date_added: new Date().toISOString().split('T')[0] } }];"
+        "jsCode": "// Сохраняем нишу в лист niches\nconst item = $input.first().json;\nconst niche = item.niche;\nconst chatId = item.chatId;\n\n// Здесь нужно было бы вызвать AI для генерации keywords и lead_signals\n// Используем заглушку\nconst ai_keywords = [niche];\nconst lead_signals = ['куплю', 'ищу', 'нужен', 'порекомендуйте', 'помогите найти'];\n\nreturn [{ json: { niche, chatId, ai_keywords, lead_signals, date_added: new Date().toISOString().split('T')[0] } }];"
       },
-      "id": "1fc1aa68-a71a-4653-be1d-26d8172341af",
+      "id": "node-prepare-niche-data",
       "name": "Подготовить данные ниши",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1328,
-        768
+        2200,
+        820
       ]
     },
     {
       "parameters": {
-        "operation": "append",
+        "operation": "appendOrUpdate",
         "documentId": {
           "__rl": true,
           "value": "1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw",
@@ -1014,98 +987,76 @@
         },
         "sheetName": {
           "__rl": true,
-          "value": 427111597,
-          "mode": "list",
-          "cachedResultName": "sources",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw/edit#gid=427111597"
+          "value": "gid=1524767002",
+          "mode": "id"
         },
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
             "niche": "={{ $json.niche }}",
-            "channel_url": "={{ $json.channel_url }}",
-            "channel_title": "={{ $json.channel_title }}",
-            "score": "={{ $json.score }}",
-            "status": "={{ $json.status }}",
-            "added_at": "={{ $json.added_at }}"
+            "keywords": "={{ $json.ai_keywords }}",
+            "lead_signals": "={{ $json.lead_signals }}",
+            "date_added": "={{ $json.date_added }}"
           },
           "matchingColumns": [
             "niche"
           ],
           "schema": [
             {
-              "id": "channel_url",
-              "displayName": "channel_url",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "channel_title",
-              "displayName": "channel_title",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
               "id": "niche",
               "displayName": "niche",
               "required": false,
-              "defaultMatch": false,
+              "defaultMatch": true,
+              "canBeUsedToMatch": true,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true,
+              "readOnly": false,
               "removed": false
             },
             {
-              "id": "score",
-              "displayName": "score",
+              "id": "keywords",
+              "displayName": "keywords",
               "required": false,
               "defaultMatch": false,
+              "canBeUsedToMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true,
+              "readOnly": false,
               "removed": false
             },
             {
-              "id": "status",
-              "displayName": "status",
+              "id": "lead_signals",
+              "displayName": "lead_signals",
               "required": false,
               "defaultMatch": false,
+              "canBeUsedToMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true,
+              "readOnly": false,
               "removed": false
             },
             {
-              "id": "added_at",
-              "displayName": "added_at",
+              "id": "date_added",
+              "displayName": "date_added",
               "required": false,
               "defaultMatch": false,
+              "canBeUsedToMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true,
+              "readOnly": false,
               "removed": false
             }
-          ],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
+          ]
         },
         "options": {}
       },
-      "id": "28b46d5e-2fe4-44ff-884b-c5a5aab1bd02",
+      "id": "node-save-niche",
       "name": "Сохранить нишу",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        1552,
-        768
+        2420,
+        820
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -1118,34 +1069,27 @@
       "parameters": {
         "chatId": "={{ $('Подготовить нишу').first().json.chatId }}",
         "text": "✅ Ниша сохранена! Каналы найдены и добавлены в очередь одобрения.\n\nПроверь список выше и одобри/отклони каналы кнопками.",
-        "replyMarkup": "inlineKeyboard",
-        "inlineKeyboard": {
-          "rows": [
-            {
-              "row": {
-                "buttons": [
-                  {
-                    "text": "🔍 Поиск лидов из найденных каналов",
-                    "additionalFields": {
-                      "callback_data": "start_parse"
-                    }
-                  }
-                ]
-              }
-            }
-          ]
-        },
-        "additionalFields": {}
+        "additionalFields": {
+          "reply_markup": {
+            "inline_keyboard": [
+              [
+                {
+                  "text": "🔍 Поиск лидов из найденных каналов",
+                  "callback_data": "start_parse"
+                }
+              ]
+            ]
+          }
+        }
       },
-      "id": "2841ec53-8232-4c8b-bd53-7849927e1290",
+      "id": "node-niche-saved-confirm",
       "name": "Подтверждение сохранения ниши",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1936,
-        768
+        2640,
+        820
       ],
-      "webhookId": "d5d602dd-7200-45f1-acf9-99d5fd6c5a59",
       "credentials": {
         "telegramApi": {
           "id": "kkySYqFIPRx85OPe",
@@ -1161,15 +1105,14 @@
           "parse_mode": "Markdown"
         }
       },
-      "id": "d906974e-4fae-4f4a-b129-7a03047bff8d",
+      "id": "node-bot-status-reply",
       "name": "Ответ статус бота",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        0,
-        1008
+        880,
+        940
       ],
-      "webhookId": "72452658-7a9a-418e-936e-e2b3ec42aef8",
       "credentials": {
         "telegramApi": {
           "id": "kkySYqFIPRx85OPe",
@@ -1179,15 +1122,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json;\nconst chatId = item.chatId;\nconst payload = item.payload || {};\nconst staticData = $getWorkflowStaticData('global');\nconst userState = staticData.users && staticData.users[chatId] ? staticData.users[chatId] : {};\nconst daysBack = item.days_back || payload.days_back || parseInt(userState.days_back || '7');\nconst keywords = item.keywords || payload.keywords || userState.keywords || [];\nif (staticData.users && staticData.users[chatId]) {\n  staticData.users[chatId].state = 'idle';\n  staticData.users[chatId].days_back = null;\n  staticData.users[chatId].keywords = null;\n}\nreturn [{ json: { chatId, days_back: daysBack, keywords } }];\n"
+        "jsCode": "// Обработка trigger_parse из waiting_keywords state\nconst item = $input.first().json;\nconst chatId = item.chatId;\nconst payload = item.payload || {};\n\nconst staticData = $getWorkflowStaticData('global');\nconst userState = staticData.users && staticData.users[chatId] ? staticData.users[chatId] : {};\n\nconst daysBack = payload.days_back || parseInt(userState.days_back || '7');\nconst keywords = payload.keywords || userState.keywords || [];\n\n// Сбрасываем состояние\nif (staticData.users && staticData.users[chatId]) {\n  staticData.users[chatId].state = 'idle';\n  staticData.users[chatId].days_back = null;\n  staticData.users[chatId].keywords = null;\n}\n\nreturn [{ json: { chatId, days_back: daysBack, keywords } }];"
       },
-      "id": "ade2904b-ffa2-4c82-8ab9-55d1960639f1",
+      "id": "node-prepare-trigger-parse",
       "name": "Подготовить запуск парсера",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        0,
-        1184
+        880,
+        1060
       ]
     },
     {
@@ -1199,13 +1142,13 @@
         "jsonBody": "={{ JSON.stringify({ days_back: $json.days_back, keywords: $json.keywords, chat_id: $json.chatId }) }}",
         "options": {}
       },
-      "id": "e690b4ef-1dd6-44e0-bb32-39beb4297d5f",
+      "id": "node-send-to-wf2",
       "name": "Отправить в WF2",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        224,
-        1184
+        1100,
+        1060
       ]
     },
     {
@@ -1214,15 +1157,14 @@
         "text": "⚙️ Парсинг запущен! Результаты придут сюда когда завершится.",
         "additionalFields": {}
       },
-      "id": "d6df6989-740c-4fdf-8979-31f845011265",
+      "id": "node-parse-started-msg",
       "name": "Сообщение о запуске парсера",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        432,
-        1184
+        1320,
+        1060
       ],
-      "webhookId": "539296a1-e6a8-4962-a7e2-8686b0f8a1fc",
       "credentials": {
         "telegramApi": {
           "id": "kkySYqFIPRx85OPe",
@@ -1239,61 +1181,13 @@
         "jsonBody": "={{ JSON.stringify({ chat_id: $json.chatId }) }}",
         "options": {}
       },
-      "id": "36423e1f-40c4-40e6-9bef-f2503a419913",
+      "id": "node-trigger-lead-execute",
       "name": "Запустить отправку лидам (execute)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        336,
-        560
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const item = $input.first().json;\nconst chatId = String(item.chatId);\nconst text = String(item.text || '').trim();\n\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.users) staticData.users = {};\nif (!staticData.users[chatId]) staticData.users[chatId] = {};\n\nconst days = parseInt(text, 10);\n\nif (isNaN(days) || days < 1 || days > 30) {\n  return [{ json: { action: 'days_invalid', chatId } }];\n}\n\nstaticData.users[chatId].days_back = days;\nstaticData.users[chatId].state = null;\n\nreturn [{ json: { action: 'days_ok', chatId, days } }];\n"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        0,
-        1392
-      ],
-      "id": "0c6bf3f7-aefd-41ad-86d2-d26078726fcc",
-      "name": "Обработать введённые дни"
-    },
-    {
-      "parameters": {
-        "chatId": "={{$json.chatId}}",
-        "text": "Нужно число от 1 до 30. Введи ещё раз",
-        "additionalFields": {}
-      },
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
-      "position": [
-        0,
-        1632
-      ],
-      "id": "c7fa63a1-2ca0-4957-90da-4c5abb7c95e7",
-      "name": "Сообщение об ошибке дней",
-      "webhookId": "89e182d8-aa68-437f-91b3-8dcaf5d65966",
-      "credentials": {
-        "telegramApi": {
-          "id": "Y0uLIw4WN9TJoj3X",
-          "name": "Telegram Прогрев Лида"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const item = $input.first().json;\nconst chatId = item.chatId;\nconst text = item.text;\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.users) staticData.users = {};\nif (!staticData.users[chatId]) staticData.users[chatId] = {};\n\nlet keywords = [];\nif (text && text.trim() !== '-') {\n  keywords = text.split(',').map(k => k.trim()).filter(k => k);\n}\nstaticData.users[chatId].keywords = keywords;\nstaticData.users[chatId].state = 'idle';\n\nreturn [{ json: { chatId, keywords, days_back: staticData.users[chatId].days_back || 7 } }];\n"
-      },
-      "id": "save-keywords-node-001",
-      "name": "Сохранить ключевые слова",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        368,
-        1392
+        1100,
+        580
       ]
     }
   ],
@@ -1435,6 +1329,11 @@
         ]
       ]
     },
+    "Триггер отправки лидам (WF3)": {
+      "main": [
+        []
+      ]
+    },
     "Извлечь команду": {
       "main": [
         [
@@ -1479,41 +1378,6 @@
         [
           {
             "node": "Ответ статус бота",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Триггер отправки лидам (WF3)",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Обработать введённые дни",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Спросить ключевые слова",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Сообщение об ошибке дней",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Сохранить ключевые слова",
             "type": "main",
             "index": 0
           }
@@ -1629,1690 +1493,12 @@
           }
         ]
       ]
-    },
-    "Обработать введённые дни": {
-      "main": [
-        [
-          {
-            "node": "Спросить ключевые слова",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Сохранить ключевые слова": {
-      "main": [
-        [
-          {
-            "node": "Подготовить запуск парсера",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
     }
   },
+  "active": true,
   "settings": {
-    "executionOrder": "v1",
-    "binaryMode": "separate",
-    "availableInMCP": false
+    "executionOrder": "v1"
   },
-  "staticData": {
-    "global": {
-      "users": {
-        "7984101063": {
-          "state": "await_days",
-          "found_channels": [
-            {
-              "username": "arendakv_msk",
-              "title": "Снять квартиру в Москве",
-              "subscribers": 12525,
-              "url": "https://t.me/arendakv_msk"
-            },
-            {
-              "username": "MskArenda24",
-              "title": "🏠 Аренда квартиры в Москве",
-              "subscribers": 13745,
-              "url": "https://t.me/MskArenda24"
-            },
-            {
-              "username": "nouckhouse",
-              "title": "Снять квартиру в Москве • Аренда жилья",
-              "subscribers": 28364,
-              "url": "https://t.me/nouckhouse"
-            },
-            {
-              "username": "arenda_v_mosk",
-              "title": "Квартиры в Москве",
-              "subscribers": 9857,
-              "url": "https://t.me/arenda_v_mosk"
-            },
-            {
-              "username": "living_in_moscow",
-              "title": "Жить в Москве | Аренда Жилья Москва | Снять квартиру",
-              "subscribers": 12708,
-              "url": "https://t.me/living_in_moscow"
-            },
-            {
-              "username": "arenda_mskh",
-              "title": "Снять Квартиру в Москве",
-              "subscribers": 2248,
-              "url": "https://t.me/arenda_mskh"
-            },
-            {
-              "username": "pkrp_moscow",
-              "title": "Посуточная аренда квартир в Москве",
-              "subscribers": 530,
-              "url": "https://t.me/pkrp_moscow"
-            }
-          ],
-          "days_back": null
-        }
-      }
-    }
-  },
-  "meta": {
-    "templateCredsSetupCompleted": true
-  },
-  "pinData": {},
-  "versionId": "61c4161a-ca61-45dd-ac6a-74299532f770",
-  "activeVersionId": "61c4161a-ca61-45dd-ac6a-74299532f770",
-  "triggerCount": 1,
-  "shared": [
-    {
-      "updatedAt": "2026-03-15T11:24:52.263Z",
-      "createdAt": "2026-03-15T11:24:52.263Z",
-      "role": "workflow:owner",
-      "workflowId": "87eNXDE1LReN1ZHs",
-      "projectId": "1XvAuC5DHrf1ytYs"
-    }
-  ],
-  "activeVersion": {
-    "updatedAt": "2026-03-16T06:38:00.000Z",
-    "createdAt": "2026-03-16T06:37:57.812Z",
-    "versionId": "61c4161a-ca61-45dd-ac6a-74299532f770",
-    "workflowId": "87eNXDE1LReN1ZHs",
-    "nodes": [
-      {
-        "parameters": {
-          "updates": [
-            "message",
-            "callback_query"
-          ],
-          "additionalFields": {}
-        },
-        "id": "7362542e-e715-47ba-b7f4-890fe25ac0f2",
-        "name": "TG Trigger",
-        "type": "n8n-nodes-base.telegramTrigger",
-        "typeVersion": 1.1,
-        "position": [
-          -880,
-          240
-        ],
-        "webhookId": "tg-main-bot-webhook",
-        "credentials": {
-          "telegramApi": {
-            "id": "kkySYqFIPRx85OPe",
-            "name": "Telegram ПАРСЕР"
-          }
-        }
-      },
-      {
-        "parameters": {
-          "conditions": {
-            "options": {
-              "caseSensitive": true,
-              "leftValue": "",
-              "typeValidation": "strict",
-              "version": 1
-            },
-            "conditions": [
-              {
-                "id": "cond-is-callback",
-                "leftValue": "={{ $json.callback_query ? $json.callback_query.data : '' }}",
-                "rightValue": "",
-                "operator": {
-                  "type": "string",
-                  "operation": "notEmpty",
-                  "singleValue": true
-                }
-              }
-            ],
-            "combinator": "and"
-          },
-          "options": {}
-        },
-        "id": "9205c612-3f51-4724-9310-bed8c8be458f",
-        "name": "Это callback?",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 2,
-        "position": [
-          -656,
-          240
-        ]
-      },
-      {
-        "parameters": {
-          "jsCode": "// Разбираем callback_query\nconst item = $input.first().json;\nconst callbackQuery = item.callback_query;\n\n// Защита от обычных сообщений (без callback)\nif (!callbackQuery) {\n  return [{\n    json: {\n      action: 'none',\n      channelId: '',\n      chatId: String(item.message?.chat?.id || ''),\n      callbackQueryId: '',\n      messageId: '',\n      callbackData: '',\n      extraData: {}\n    }\n  }];\n}\n\nconst callbackData = callbackQuery.data || '';\nconst chatId = String(callbackQuery.message.chat.id);\nconst callbackQueryId = callbackQuery.id;\nconst messageId = callbackQuery.message.message_id;\n\nlet action = '';\nlet channelId = '';\nlet extraData = {};\n\nif (callbackData.startsWith('approve_')) {\n  action = 'approve';\n  channelId = callbackData.replace('approve_', '');\n} else if (callbackData.startsWith('reject_')) {\n  action = 'reject';\n  channelId = callbackData.replace('reject_', '');\n} else if (callbackData === 'start_parse') {\n  action = 'start_parse';\n} else if (callbackData === 'confirm_send') {\n  action = 'confirm_send';\n} else if (callbackData === 'execute_send') {\n  action = 'execute_send';\n} else if (callbackData === 'cancel_send') {\n  action = 'cancel_send';\n} else if (callbackData === 'cancel_search') {\n  action = 'cancel_search';\n} else if (callbackData.startsWith('days_')) {\n  action = 'days_selected';\n  extraData.days = callbackData.replace('days_', '');\n} else {\n  action = 'unknown';\n}\n\nreturn [{\n  json: {\n    action,\n    channelId,\n    chatId,\n    callbackQueryId,\n    messageId,\n    callbackData,\n    extraData\n  }\n}];\n"
-        },
-        "id": "afa6dfa5-9019-48b7-84c5-de8c1cc9fd4c",
-        "name": "Разобрать callback",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          -448,
-          128
-        ]
-      },
-      {
-        "parameters": {
-          "rules": {
-            "values": [
-              {
-                "conditions": {
-                  "options": {
-                    "caseSensitive": true,
-                    "leftValue": "",
-                    "typeValidation": "strict",
-                    "version": 1
-                  },
-                  "conditions": [
-                    {
-                      "id": "rule-approve",
-                      "leftValue": "={{ $json.action }}",
-                      "rightValue": "approve",
-                      "operator": {
-                        "type": "string",
-                        "operation": "equals"
-                      }
-                    }
-                  ],
-                  "combinator": "and"
-                },
-                "renameOutput": true,
-                "outputKey": "approve"
-              },
-              {
-                "conditions": {
-                  "options": {
-                    "caseSensitive": true,
-                    "leftValue": "",
-                    "typeValidation": "strict",
-                    "version": 1
-                  },
-                  "conditions": [
-                    {
-                      "id": "rule-reject",
-                      "leftValue": "={{ $json.action }}",
-                      "rightValue": "reject",
-                      "operator": {
-                        "type": "string",
-                        "operation": "equals"
-                      }
-                    }
-                  ],
-                  "combinator": "and"
-                },
-                "renameOutput": true,
-                "outputKey": "reject"
-              },
-              {
-                "conditions": {
-                  "options": {
-                    "caseSensitive": true,
-                    "leftValue": "",
-                    "typeValidation": "strict",
-                    "version": 1
-                  },
-                  "conditions": [
-                    {
-                      "id": "rule-start-parse",
-                      "leftValue": "={{ $json.action }}",
-                      "rightValue": "start_parse",
-                      "operator": {
-                        "type": "string",
-                        "operation": "equals"
-                      }
-                    }
-                  ],
-                  "combinator": "and"
-                },
-                "renameOutput": true,
-                "outputKey": "start_parse"
-              },
-              {
-                "conditions": {
-                  "options": {
-                    "caseSensitive": true,
-                    "leftValue": "",
-                    "typeValidation": "strict",
-                    "version": 1
-                  },
-                  "conditions": [
-                    {
-                      "id": "rule-confirm-send",
-                      "leftValue": "={{ $json.action }}",
-                      "rightValue": "confirm_send",
-                      "operator": {
-                        "type": "string",
-                        "operation": "equals"
-                      }
-                    }
-                  ],
-                  "combinator": "and"
-                },
-                "renameOutput": true,
-                "outputKey": "confirm_send"
-              },
-              {
-                "conditions": {
-                  "options": {
-                    "caseSensitive": true,
-                    "leftValue": "",
-                    "typeValidation": "strict",
-                    "version": 1
-                  },
-                  "conditions": [
-                    {
-                      "id": "rule-cancel-send",
-                      "leftValue": "={{ $json.action }}",
-                      "rightValue": "cancel_send",
-                      "operator": {
-                        "type": "string",
-                        "operation": "equals"
-                      }
-                    }
-                  ],
-                  "combinator": "and"
-                },
-                "renameOutput": true,
-                "outputKey": "cancel_send"
-              },
-              {
-                "conditions": {
-                  "options": {
-                    "caseSensitive": true,
-                    "leftValue": "",
-                    "typeValidation": "strict",
-                    "version": 1
-                  },
-                  "conditions": [
-                    {
-                      "id": "rule-days-selected",
-                      "leftValue": "={{ $json.action }}",
-                      "rightValue": "days_selected",
-                      "operator": {
-                        "type": "string",
-                        "operation": "equals"
-                      }
-                    }
-                  ],
-                  "combinator": "and"
-                },
-                "renameOutput": true,
-                "outputKey": "days_selected"
-              },
-              {
-                "conditions": {
-                  "options": {
-                    "caseSensitive": true,
-                    "leftValue": "",
-                    "typeValidation": "strict",
-                    "version": 1
-                  },
-                  "conditions": [
-                    {
-                      "id": "rule-execute-send",
-                      "leftValue": "={{ $json.action }}",
-                      "rightValue": "execute_send",
-                      "operator": {
-                        "type": "string",
-                        "operation": "equals"
-                      }
-                    }
-                  ],
-                  "combinator": "and"
-                },
-                "renameOutput": true,
-                "outputKey": "execute_send"
-              }
-            ]
-          },
-          "options": {}
-        },
-        "id": "b78c20d9-2318-48f5-9543-6773867172b1",
-        "name": "Роутер callback",
-        "type": "n8n-nodes-base.switch",
-        "typeVersion": 3,
-        "position": [
-          -224,
-          128
-        ]
-      },
-      {
-        "parameters": {
-          "operation": "update",
-          "documentId": {
-            "__rl": true,
-            "value": "1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw",
-            "mode": "id"
-          },
-          "sheetName": {
-            "__rl": true,
-            "value": "gid=427111597",
-            "mode": "id"
-          },
-          "columns": {
-            "mappingMode": "defineBelow",
-            "value": {
-              "status": "approved"
-            },
-            "matchingColumns": [
-              "channel_id"
-            ],
-            "schema": [
-              {
-                "id": "channel_id",
-                "displayName": "channel_id",
-                "required": false,
-                "defaultMatch": true,
-                "canBeUsedToMatch": true,
-                "display": true,
-                "type": "string",
-                "readOnly": false,
-                "removed": false
-              },
-              {
-                "id": "status",
-                "displayName": "status",
-                "required": false,
-                "defaultMatch": false,
-                "canBeUsedToMatch": false,
-                "display": true,
-                "type": "string",
-                "readOnly": false,
-                "removed": false
-              }
-            ]
-          },
-          "options": {}
-        },
-        "id": "326e8016-b708-4d3b-affc-841d237d07e3",
-        "name": "Одобрить канал",
-        "type": "n8n-nodes-base.googleSheets",
-        "typeVersion": 4.5,
-        "position": [
-          0,
-          -320
-        ],
-        "credentials": {
-          "googleSheetsOAuth2Api": {
-            "id": "3tw79kiICQ7OPZI8",
-            "name": "Google Sheets ТЕЛЕГРАМ ПАРС"
-          }
-        }
-      },
-      {
-        "parameters": {
-          "operation": "update",
-          "documentId": {
-            "__rl": true,
-            "value": "1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw",
-            "mode": "id"
-          },
-          "sheetName": {
-            "__rl": true,
-            "value": "gid=427111597",
-            "mode": "id"
-          },
-          "columns": {
-            "mappingMode": "defineBelow",
-            "value": {
-              "status": "rejected"
-            },
-            "matchingColumns": [
-              "channel_id"
-            ],
-            "schema": [
-              {
-                "id": "channel_id",
-                "displayName": "channel_id",
-                "required": false,
-                "defaultMatch": true,
-                "canBeUsedToMatch": true,
-                "display": true,
-                "type": "string",
-                "readOnly": false,
-                "removed": false
-              },
-              {
-                "id": "status",
-                "displayName": "status",
-                "required": false,
-                "defaultMatch": false,
-                "canBeUsedToMatch": false,
-                "display": true,
-                "type": "string",
-                "readOnly": false,
-                "removed": false
-              }
-            ]
-          },
-          "options": {}
-        },
-        "id": "2f439138-41bf-4119-b223-330ab33adcdd",
-        "name": "Отклонить канал",
-        "type": "n8n-nodes-base.googleSheets",
-        "typeVersion": 4.5,
-        "position": [
-          0,
-          -80
-        ],
-        "credentials": {
-          "googleSheetsOAuth2Api": {
-            "id": "3tw79kiICQ7OPZI8",
-            "name": "Google Sheets ТЕЛЕГРАМ ПАРС"
-          }
-        }
-      },
-      {
-        "parameters": {
-          "resource": "callback",
-          "queryId": "={{ $json.callbackQueryId }}",
-          "additionalFields": {
-            "show_alert": false
-          }
-        },
-        "id": "801ea737-5cfa-4f55-9e45-5aa2273e598b",
-        "name": "Ответить на кнопку",
-        "type": "n8n-nodes-base.telegram",
-        "typeVersion": 1.2,
-        "position": [
-          384,
-          -176
-        ],
-        "webhookId": "d7c7703c-916b-46bc-bd29-ba64f9f37ac4",
-        "credentials": {
-          "telegramApi": {
-            "id": "kkySYqFIPRx85OPe",
-            "name": "Telegram ПАРСЕР"
-          }
-        }
-      },
-      {
-        "parameters": {
-          "jsCode": "const item = $input.first().json;\nconst chatId = String(item.chatId);   // уже приходит из \"Разобрать callback\"\n\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.users) staticData.users = {};\nif (!staticData.users[chatId]) staticData.users[chatId] = {};\n\n// ставим ожидание дней\nstaticData.users[chatId].state = 'await_days';\nstaticData.users[chatId].days_back = null;\n\nreturn [{ json: { chatId } }];\n"
-        },
-        "id": "de1f843c-f16c-4ced-a4a7-5cdb4ff004df",
-        "name": "Обработать start_parse callback",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          0,
-          128
-        ]
-      },
-      {
-        "parameters": {
-          "chatId": "={{ $json.chatId }}",
-          "text": "📅 Сколько дней назад искать посты? Введи число от 1 до 30",
-          "additionalFields": {}
-        },
-        "id": "8763b142-a315-4a5f-a3d6-3eeead264892",
-        "name": "Спросить дни",
-        "type": "n8n-nodes-base.telegram",
-        "typeVersion": 1.2,
-        "position": [
-          352,
-          160
-        ],
-        "webhookId": "63f7173e-8ccf-4517-bfa7-ad6ad0b719ef",
-        "credentials": {
-          "telegramApi": {
-            "id": "kkySYqFIPRx85OPe",
-            "name": "Telegram ПАРСЕР"
-          }
-        }
-      },
-      {
-        "parameters": {
-          "jsCode": "const item = $input.first().json;\nconst chatId = item.chatId;\nconst days = item.extraData.days;\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.users) staticData.users = {};\nif (!staticData.users[chatId]) staticData.users[chatId] = {};\nstaticData.users[chatId].state = 'waiting_keywords';\nstaticData.users[chatId].days_back = days;\nreturn [{ json: { chatId, days, callbackQueryId: item.callbackQueryId } }];"
-        },
-        "id": "909ee90d-7d4e-49fc-a82d-7d56d9ece1c7",
-        "name": "Сохранить дни",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          0,
-          320
-        ]
-      },
-      {
-        "parameters": {
-          "chatId": "={{ $json.chatId }}",
-          "text": "✏️ Введи ключевые слова (через запятую), по которым искать лидов. Или отправь \"-\" чтобы использовать ключевые слова ниши",
-          "additionalFields": {}
-        },
-        "id": "402f5362-4b98-4111-bdb4-fee78bf7699a",
-        "name": "Спросить ключевые слова",
-        "type": "n8n-nodes-base.telegram",
-        "typeVersion": 1.2,
-        "position": [
-          368,
-          352
-        ],
-        "webhookId": "d2a7dfc3-36eb-497d-9a2a-3310615b0911",
-        "credentials": {
-          "telegramApi": {
-            "id": "kkySYqFIPRx85OPe",
-            "name": "Telegram ПАРСЕР"
-          }
-        }
-      },
-      {
-        "parameters": {
-          "method": "POST",
-          "url": "https://n8n.arendadom24.ru/webhook/smart-lead-trigger",
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={\n    \"chat_id\": \"{{ $json.chatId }}\",\n    \"niche\": \"{{ $json.payload.replace('niche : ', '') }}\"\n}\n",
-          "options": {}
-        },
-        "id": "32e0befe-2955-4cfc-82b1-483efc1b7b38",
-        "name": "Триггер отправки лидам (WF3)",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          0,
-          512
-        ]
-      },
-      {
-        "parameters": {
-          "jsCode": "const item = $input.first().json;\nconst message = item.message || {};\nconst text = (message.text || '').trim();\nconst chatId = String(message.chat?.id || '');\n\n// workflow static data\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.users) staticData.users = {};\nif (!staticData.users[chatId]) staticData.users[chatId] = {};\n\nconst currentState = staticData.users[chatId].state || null;\n\nlet action = 'default_reply';\n\n// 1) старт\nif (text === '/start') {\n  action = 'start';\n\n// 2) любое обычное текстовое сообщение (без /) считаем вводом ниши\n} else if (text && !text.startsWith('/')) {\n  action = 'niche_input';\n}\n\n// 3) тут можешь добавить остальные команды/кнопки, если нужно\n// if (text === 'Поиск лидов из найденных каналов') action = 'trigger_parse';\n// if (text === 'Статус бота') action = 'bot_status';\n// и т.д.\n\nreturn [{\n  json: {\n    action,\n    chatId,\n    text,\n    payload: {},\n    currentState\n  }\n}];\n"
-        },
-        "id": "c37bfcff-3598-49c1-83ed-1df1b85e019b",
-        "name": "Извлечь команду",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          -448,
-          368
-        ]
-      },
-      {
-        "parameters": {
-          "rules": {
-            "values": [
-              {
-                "conditions": {
-                  "options": {
-                    "caseSensitive": true,
-                    "leftValue": "",
-                    "typeValidation": "strict",
-                    "version": 1
-                  },
-                  "conditions": [
-                    {
-                      "id": "rule-start",
-                      "leftValue": "={{ $json.action }}",
-                      "rightValue": "start",
-                      "operator": {
-                        "type": "string",
-                        "operation": "equals"
-                      }
-                    }
-                  ],
-                  "combinator": "and"
-                },
-                "renameOutput": true,
-                "outputKey": "start"
-              },
-              {
-                "conditions": {
-                  "options": {
-                    "caseSensitive": true,
-                    "leftValue": "",
-                    "typeValidation": "strict",
-                    "version": 1
-                  },
-                  "conditions": [
-                    {
-                      "id": "rule-niche",
-                      "leftValue": "={{ $json.action }}",
-                      "rightValue": "niche_input",
-                      "operator": {
-                        "type": "string",
-                        "operation": "equals"
-                      }
-                    }
-                  ],
-                  "combinator": "and"
-                },
-                "renameOutput": true,
-                "outputKey": "niche_input"
-              },
-              {
-                "conditions": {
-                  "options": {
-                    "caseSensitive": true,
-                    "leftValue": "",
-                    "typeValidation": "strict",
-                    "version": 1
-                  },
-                  "conditions": [
-                    {
-                      "id": "rule-trigger-parse",
-                      "leftValue": "={{ $json.action }}",
-                      "rightValue": "trigger_parse",
-                      "operator": {
-                        "type": "string",
-                        "operation": "equals"
-                      }
-                    }
-                  ],
-                  "combinator": "and"
-                },
-                "renameOutput": true,
-                "outputKey": "trigger_parse"
-              },
-              {
-                "conditions": {
-                  "options": {
-                    "caseSensitive": true,
-                    "leftValue": "",
-                    "typeValidation": "strict",
-                    "version": 1
-                  },
-                  "conditions": [
-                    {
-                      "id": "rule-leads-status",
-                      "leftValue": "={{ $json.action }}",
-                      "rightValue": "leads_status",
-                      "operator": {
-                        "type": "string",
-                        "operation": "equals"
-                      }
-                    }
-                  ],
-                  "combinator": "and"
-                },
-                "renameOutput": true,
-                "outputKey": "leads_status"
-              },
-              {
-                "conditions": {
-                  "options": {
-                    "caseSensitive": true,
-                    "leftValue": "",
-                    "typeValidation": "strict",
-                    "version": 1
-                  },
-                  "conditions": [
-                    {
-                      "id": "rule-bot-status",
-                      "leftValue": "={{ $json.action }}",
-                      "rightValue": "bot_status",
-                      "operator": {
-                        "type": "string",
-                        "operation": "equals"
-                      }
-                    }
-                  ],
-                  "combinator": "and"
-                },
-                "renameOutput": true,
-                "outputKey": "bot_status"
-              },
-              {
-                "conditions": {
-                  "options": {
-                    "caseSensitive": true,
-                    "leftValue": "",
-                    "typeValidation": "strict",
-                    "version": 1
-                  },
-                  "conditions": [
-                    {
-                      "id": "817f7dcd-2a38-4d2e-9d3f-e41d798953e7",
-                      "leftValue": "={{ $json.action }}",
-                      "rightValue": "confirm_save",
-                      "operator": {
-                        "type": "string",
-                        "operation": "equals",
-                        "name": "filter.operator.equals"
-                      }
-                    }
-                  ],
-                  "combinator": "and"
-                },
-                "renameOutput": true,
-                "outputKey": "confirm_save"
-              },
-              {
-                "conditions": {
-                  "options": {
-                    "caseSensitive": true,
-                    "leftValue": "",
-                    "typeValidation": "strict",
-                    "version": 1
-                  },
-                  "conditions": [
-                    {
-                      "id": "c140bd2a-2dfd-43a9-8266-33d79f85df95",
-                      "leftValue": "={{ $json.currentState }}",
-                      "rightValue": "await_days",
-                      "operator": {
-                        "type": "string",
-                        "operation": "equals",
-                        "name": "filter.operator.equals"
-                      }
-                    }
-                  ],
-                  "combinator": "and"
-                },
-                "renameOutput": true,
-                "outputKey": "await_days"
-              },
-              {
-                "conditions": {
-                  "options": {
-                    "caseSensitive": true,
-                    "leftValue": "",
-                    "typeValidation": "strict",
-                    "version": 1
-                  },
-                  "conditions": [
-                    {
-                      "id": "fc3122fd-7625-42d1-89dd-5db1236fcc9d",
-                      "leftValue": "={{ $json.action }}",
-                      "rightValue": "days_ok",
-                      "operator": {
-                        "type": "string",
-                        "operation": "equals",
-                        "name": "filter.operator.equals"
-                      }
-                    }
-                  ],
-                  "combinator": "and"
-                },
-                "renameOutput": true,
-                "outputKey": "days_ok"
-              },
-              {
-                "conditions": {
-                  "options": {
-                    "caseSensitive": true,
-                    "leftValue": "",
-                    "typeValidation": "strict",
-                    "version": 1
-                  },
-                  "conditions": [
-                    {
-                      "id": "626e96b2-4446-4518-b942-8a530b5029ee",
-                      "leftValue": "={{ $json.action }}",
-                      "rightValue": "days_invalid",
-                      "operator": {
-                        "type": "string",
-                        "operation": "equals",
-                        "name": "filter.operator.equals"
-                      }
-                    }
-                  ],
-                  "combinator": "and"
-                },
-                "renameOutput": true,
-                "outputKey": "days_invalid"
-              }
-            ]
-          },
-          "options": {}
-        },
-        "id": "5a531dec-d842-4b88-ba19-defc8cee5348",
-        "name": "Роутер состояний",
-        "type": "n8n-nodes-base.switch",
-        "typeVersion": 3,
-        "position": [
-          -432,
-          624
-        ]
-      },
-      {
-        "parameters": {
-          "chatId": "={{ $json.chatId }}",
-          "text": "👋 Привет! Я бот для поиска лидов в Telegram.\n\n🔍 Какую нишу искать? Опишите целевую аудиторию.\n\nНапример: *аренда квартир в Москве*, *ремонт и строительство*, *IT-специалисты фриланс*",
-          "additionalFields": {
-            "parse_mode": "Markdown"
-          }
-        },
-        "id": "4d840aed-154e-4d91-8f7e-48e004b4e387",
-        "name": "Ответ start",
-        "type": "n8n-nodes-base.telegram",
-        "typeVersion": 1.2,
-        "position": [
-          0,
-          704
-        ],
-        "webhookId": "08667831-5e65-46c0-a9fd-1b992e9b5f92",
-        "credentials": {
-          "telegramApi": {
-            "id": "kkySYqFIPRx85OPe",
-            "name": "Telegram ПАРСЕР"
-          }
-        }
-      },
-      {
-        "parameters": {
-          "jsCode": "const item = $input.first().json;\nconst chatId = item.chatId;\nconst niche = item.payload.niche;\nreturn [{ json: { chatId, niche, action: 'search_channels' } }];"
-        },
-        "id": "dfce3174-c1f4-4046-a41b-c4633cc3820e",
-        "name": "Подготовить нишу",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          0,
-          848
-        ]
-      },
-      {
-        "parameters": {
-          "method": "POST",
-          "url": "http://172.17.0.1:5000/search_channels",
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={\"keywords\":\"аренда квартир в Москве\",\"chat_id\":\"7984101063\",\"limit\":50,\"min_subscribers\":500}",
-          "options": {
-            "timeout": 60000
-          }
-        },
-        "id": "8fde190f-64b0-48d9-80ef-449128ccc21e",
-        "name": "Поиск каналов (Python)",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          224,
-          768
-        ]
-      },
-      {
-        "parameters": {
-          "jsCode": "const searchResult = $input.first().json;\nconst channels = searchResult.channels || [];\nconst chatId = $('Подготовить нишу').first().json.chatId;\nconst niche = $('Подготовить нишу').first().json.niche;\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.users) staticData.users = {};\nif (!staticData.users[chatId]) staticData.users[chatId] = {};\nstaticData.users[chatId].found_channels = channels;\nstaticData.users[chatId].current_niche = niche;\nreturn [{ json: { chatId, niche, channels, count: channels.length } }];"
-        },
-        "id": "5d293f09-fc47-4886-8e01-511f1ff3f5e7",
-        "name": "Обработать результат поиска",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          448,
-          768
-        ]
-      },
-      {
-        "parameters": {
-          "chatId": "={{ $json.chatId }}",
-          "text": "={{ '🔍 Найдено ' + $json.count + ' каналов по нише: *' + $json.niche + '*\\n\\nОтправить их на одобрение?' }}",
-          "additionalFields": {
-            "parse_mode": "Markdown"
-          }
-        },
-        "id": "417a4ac4-da4b-4915-ba55-b71bdd3ad0db",
-        "name": "Спросить про одобрение каналов",
-        "type": "n8n-nodes-base.telegram",
-        "typeVersion": 1.2,
-        "position": [
-          672,
-          768
-        ],
-        "webhookId": "ec4d01da-35ea-497e-9fda-a00a3818ca0b",
-        "credentials": {
-          "telegramApi": {
-            "id": "kkySYqFIPRx85OPe",
-            "name": "Telegram ПАРСЕР"
-          }
-        }
-      },
-      {
-        "parameters": {
-          "jsCode": "const item = $('Обработать результат поиска').first().json;\nconst channels = item.channels || [];\nconst niche = item.niche;\nconst rows = channels.map(ch => ({\n  channel_id: ch.id || ch.channel_id || '',\n  username: ch.username || '',\n  title: ch.title || '',\n  description: ch.description || '',\n  members_count: ch.members_count || 0,\n  niche: niche,\n  status: 'pending',\n  added_date: new Date().toISOString().split('T')[0]\n}));\nreturn rows.map(r => ({ json: r }));"
-        },
-        "id": "9a8fa344-6583-4334-93b4-5bd093d95f72",
-        "name": "Подготовить каналы для Sheets",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          880,
-          768
-        ]
-      },
-      {
-        "parameters": {
-          "operation": "appendOrUpdate",
-          "documentId": {
-            "__rl": true,
-            "value": "1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw",
-            "mode": "id"
-          },
-          "sheetName": {
-            "__rl": true,
-            "value": 427111597,
-            "mode": "list",
-            "cachedResultName": "sources",
-            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw/edit#gid=427111597"
-          },
-          "columns": {
-            "mappingMode": "defineBelow",
-            "value": {
-              "niche": "={{ $json.niche }}",
-              "status": "={{ $json.status }}",
-              "channel_url": "={{ $json.channel_id || $json.username }}",
-              "channel_title": "={{ $json.title }}",
-              "score": "={{ $json.members_count }}",
-              "added_at": "={{ $json.added_date }}"
-            },
-            "matchingColumns": [
-              "channel_url"
-            ],
-            "schema": [
-              {
-                "id": "channel_url",
-                "displayName": "channel_url",
-                "required": false,
-                "defaultMatch": false,
-                "display": true,
-                "type": "string",
-                "canBeUsedToMatch": true,
-                "removed": false
-              },
-              {
-                "id": "channel_title",
-                "displayName": "channel_title",
-                "required": false,
-                "defaultMatch": false,
-                "display": true,
-                "type": "string",
-                "canBeUsedToMatch": true,
-                "removed": false
-              },
-              {
-                "id": "niche",
-                "displayName": "niche",
-                "required": false,
-                "defaultMatch": false,
-                "display": true,
-                "type": "string",
-                "canBeUsedToMatch": true,
-                "removed": false
-              },
-              {
-                "id": "score",
-                "displayName": "score",
-                "required": false,
-                "defaultMatch": false,
-                "display": true,
-                "type": "string",
-                "canBeUsedToMatch": true,
-                "removed": false
-              },
-              {
-                "id": "status",
-                "displayName": "status",
-                "required": false,
-                "defaultMatch": false,
-                "display": true,
-                "type": "string",
-                "canBeUsedToMatch": true,
-                "removed": false
-              },
-              {
-                "id": "added_at",
-                "displayName": "added_at",
-                "required": false,
-                "defaultMatch": false,
-                "display": true,
-                "type": "string",
-                "canBeUsedToMatch": true,
-                "removed": false
-              }
-            ],
-            "attemptToConvertTypes": false,
-            "convertFieldsToString": false
-          },
-          "options": {}
-        },
-        "id": "6a347e1a-e392-44c3-abd2-c5cb603f129f",
-        "name": "Сохранить источники",
-        "type": "n8n-nodes-base.googleSheets",
-        "typeVersion": 4.5,
-        "position": [
-          1104,
-          768
-        ],
-        "credentials": {
-          "googleSheetsOAuth2Api": {
-            "id": "3tw79kiICQ7OPZI8",
-            "name": "Google Sheets ТЕЛЕГРАМ ПАРС"
-          }
-        }
-      },
-      {
-        "parameters": {
-          "jsCode": "const item = $input.first().json;\nconst niche = item.niche;\nconst chatId = item.chatId;\nconst ai_keywords = [niche];\nconst lead_signals = ['куплю', 'ищу', 'нужен', 'порекомендуйте', 'помогите найти'];\nreturn [{ json: { niche, chatId, ai_keywords, lead_signals, date_added: new Date().toISOString().split('T')[0] } }];"
-        },
-        "id": "1fc1aa68-a71a-4653-be1d-26d8172341af",
-        "name": "Подготовить данные ниши",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          1328,
-          768
-        ]
-      },
-      {
-        "parameters": {
-          "operation": "append",
-          "documentId": {
-            "__rl": true,
-            "value": "1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw",
-            "mode": "id"
-          },
-          "sheetName": {
-            "__rl": true,
-            "value": 427111597,
-            "mode": "list",
-            "cachedResultName": "sources",
-            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw/edit#gid=427111597"
-          },
-          "columns": {
-            "mappingMode": "defineBelow",
-            "value": {
-              "niche": "={{ $json.niche }}",
-              "channel_url": "={{ $json.channel_url }}",
-              "channel_title": "={{ $json.channel_title }}",
-              "score": "={{ $json.score }}",
-              "status": "={{ $json.status }}",
-              "added_at": "={{ $json.added_at }}"
-            },
-            "matchingColumns": [
-              "niche"
-            ],
-            "schema": [
-              {
-                "id": "channel_url",
-                "displayName": "channel_url",
-                "required": false,
-                "defaultMatch": false,
-                "display": true,
-                "type": "string",
-                "canBeUsedToMatch": true,
-                "removed": false
-              },
-              {
-                "id": "channel_title",
-                "displayName": "channel_title",
-                "required": false,
-                "defaultMatch": false,
-                "display": true,
-                "type": "string",
-                "canBeUsedToMatch": true,
-                "removed": false
-              },
-              {
-                "id": "niche",
-                "displayName": "niche",
-                "required": false,
-                "defaultMatch": false,
-                "display": true,
-                "type": "string",
-                "canBeUsedToMatch": true,
-                "removed": false
-              },
-              {
-                "id": "score",
-                "displayName": "score",
-                "required": false,
-                "defaultMatch": false,
-                "display": true,
-                "type": "string",
-                "canBeUsedToMatch": true,
-                "removed": false
-              },
-              {
-                "id": "status",
-                "displayName": "status",
-                "required": false,
-                "defaultMatch": false,
-                "display": true,
-                "type": "string",
-                "canBeUsedToMatch": true,
-                "removed": false
-              },
-              {
-                "id": "added_at",
-                "displayName": "added_at",
-                "required": false,
-                "defaultMatch": false,
-                "display": true,
-                "type": "string",
-                "canBeUsedToMatch": true,
-                "removed": false
-              }
-            ],
-            "attemptToConvertTypes": false,
-            "convertFieldsToString": false
-          },
-          "options": {}
-        },
-        "id": "28b46d5e-2fe4-44ff-884b-c5a5aab1bd02",
-        "name": "Сохранить нишу",
-        "type": "n8n-nodes-base.googleSheets",
-        "typeVersion": 4.5,
-        "position": [
-          1552,
-          768
-        ],
-        "credentials": {
-          "googleSheetsOAuth2Api": {
-            "id": "3tw79kiICQ7OPZI8",
-            "name": "Google Sheets ТЕЛЕГРАМ ПАРС"
-          }
-        }
-      },
-      {
-        "parameters": {
-          "chatId": "={{ $('Подготовить нишу').first().json.chatId }}",
-          "text": "✅ Ниша сохранена! Каналы найдены и добавлены в очередь одобрения.\n\nПроверь список выше и одобри/отклони каналы кнопками.",
-          "replyMarkup": "inlineKeyboard",
-          "inlineKeyboard": {
-            "rows": [
-              {
-                "row": {
-                  "buttons": [
-                    {
-                      "text": "🔍 Поиск лидов из найденных каналов",
-                      "additionalFields": {
-                        "callback_data": "start_parse"
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
-          },
-          "additionalFields": {}
-        },
-        "id": "2841ec53-8232-4c8b-bd53-7849927e1290",
-        "name": "Подтверждение сохранения ниши",
-        "type": "n8n-nodes-base.telegram",
-        "typeVersion": 1.2,
-        "position": [
-          1936,
-          768
-        ],
-        "webhookId": "d5d602dd-7200-45f1-acf9-99d5fd6c5a59",
-        "credentials": {
-          "telegramApi": {
-            "id": "kkySYqFIPRx85OPe",
-            "name": "Telegram ПАРСЕР"
-          }
-        }
-      },
-      {
-        "parameters": {
-          "chatId": "={{ $json.chatId }}",
-          "text": "📊 *Статус бота*\n\nЯ слежу за вашими нишами и ищу лидов в Telegram-каналах.\n\nИспользуй /leads для последних лидов\nИспользуй /niches для списка ниш",
-          "additionalFields": {
-            "parse_mode": "Markdown"
-          }
-        },
-        "id": "d906974e-4fae-4f4a-b129-7a03047bff8d",
-        "name": "Ответ статус бота",
-        "type": "n8n-nodes-base.telegram",
-        "typeVersion": 1.2,
-        "position": [
-          0,
-          1008
-        ],
-        "webhookId": "72452658-7a9a-418e-936e-e2b3ec42aef8",
-        "credentials": {
-          "telegramApi": {
-            "id": "kkySYqFIPRx85OPe",
-            "name": "Telegram ПАРСЕР"
-          }
-        }
-      },
-      {
-        "parameters": {
-          "jsCode": "const item = $input.first().json;\nconst chatId = item.chatId;\nconst payload = item.payload || {};\nconst staticData = $getWorkflowStaticData('global');\nconst userState = staticData.users && staticData.users[chatId] ? staticData.users[chatId] : {};\nconst daysBack = payload.days_back || parseInt(userState.days_back || '7');\nconst keywords = payload.keywords || userState.keywords || [];\nif (staticData.users && staticData.users[chatId]) {\n  staticData.users[chatId].state = 'idle';\n  staticData.users[chatId].days_back = null;\n  staticData.users[chatId].keywords = null;\n}\nreturn [{ json: { chatId, days_back: daysBack, keywords } }];"
-        },
-        "id": "ade2904b-ffa2-4c82-8ab9-55d1960639f1",
-        "name": "Подготовить запуск парсера",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          0,
-          1184
-        ]
-      },
-      {
-        "parameters": {
-          "method": "POST",
-          "url": "https://n8n.arendadom24.ru/webhook/ai-parse-trigger-v2",
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ days_back: $json.days_back, keywords: $json.keywords, chat_id: $json.chatId }) }}",
-          "options": {}
-        },
-        "id": "e690b4ef-1dd6-44e0-bb32-39beb4297d5f",
-        "name": "Отправить в WF2",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          224,
-          1184
-        ]
-      },
-      {
-        "parameters": {
-          "chatId": "={{ $('Подготовить запуск парсера').first().json.chatId }}",
-          "text": "⚙️ Парсинг запущен! Результаты придут сюда когда завершится.",
-          "additionalFields": {}
-        },
-        "id": "d6df6989-740c-4fdf-8979-31f845011265",
-        "name": "Сообщение о запуске парсера",
-        "type": "n8n-nodes-base.telegram",
-        "typeVersion": 1.2,
-        "position": [
-          432,
-          1184
-        ],
-        "webhookId": "539296a1-e6a8-4962-a7e2-8686b0f8a1fc",
-        "credentials": {
-          "telegramApi": {
-            "id": "kkySYqFIPRx85OPe",
-            "name": "Telegram ПАРСЕР"
-          }
-        }
-      },
-      {
-        "parameters": {
-          "method": "POST",
-          "url": "https://n8n.arendadom24.ru/webhook/smart-lead-execute",
-          "sendBody": true,
-          "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ chat_id: $json.chatId }) }}",
-          "options": {}
-        },
-        "id": "36423e1f-40c4-40e6-9bef-f2503a419913",
-        "name": "Запустить отправку лидам (execute)",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.2,
-        "position": [
-          336,
-          560
-        ]
-      },
-      {
-        "parameters": {
-          "jsCode": "const item = $input.first().json;\nconst chatId = String(item.chatId);\nconst text = String(item.text || '').trim();\n\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.users) staticData.users = {};\nif (!staticData.users[chatId]) staticData.users[chatId] = {};\n\nconst days = parseInt(text, 10);\n\nif (isNaN(days) || days < 1 || days > 30) {\n  return [{ json: { action: 'days_invalid', chatId } }];\n}\n\nstaticData.users[chatId].days_back = days;\nstaticData.users[chatId].state = null;\n\nreturn [{ json: { action: 'days_ok', chatId, days } }];\n"
-        },
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          0,
-          1392
-        ],
-        "id": "0c6bf3f7-aefd-41ad-86d2-d26078726fcc",
-        "name": "Обработать введённые дни"
-      },
-      {
-        "parameters": {
-          "chatId": "={{$json.chatId}}",
-          "text": "Нужно число от 1 до 30. Введи ещё раз",
-          "additionalFields": {}
-        },
-        "type": "n8n-nodes-base.telegram",
-        "typeVersion": 1.2,
-        "position": [
-          0,
-          1632
-        ],
-        "id": "c7fa63a1-2ca0-4957-90da-4c5abb7c95e7",
-        "name": "Сообщение об ошибке дней",
-        "webhookId": "89e182d8-aa68-437f-91b3-8dcaf5d65966",
-        "credentials": {
-          "telegramApi": {
-            "id": "Y0uLIw4WN9TJoj3X",
-            "name": "Telegram Прогрев Лида"
-          }
-        }
-      }
-    ],
-    "connections": {
-      "TG Trigger": {
-        "main": [
-          [
-            {
-              "node": "Это callback?",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Это callback?": {
-        "main": [
-          [
-            {
-              "node": "Разобрать callback",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "Извлечь команду",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Разобрать callback": {
-        "main": [
-          [
-            {
-              "node": "Роутер callback",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Роутер callback": {
-        "main": [
-          [
-            {
-              "node": "Одобрить канал",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "Отклонить канал",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "Обработать start_parse callback",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "Триггер отправки лидам (WF3)",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "Ответить на кнопку",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "Сохранить дни",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "Запустить отправку лидам (execute)",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Одобрить канал": {
-        "main": [
-          [
-            {
-              "node": "Ответить на кнопку",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Отклонить канал": {
-        "main": [
-          [
-            {
-              "node": "Ответить на кнопку",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Обработать start_parse callback": {
-        "main": [
-          [
-            {
-              "node": "Спросить дни",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Сохранить дни": {
-        "main": [
-          []
-        ]
-      },
-      "Извлечь команду": {
-        "main": [
-          [
-            {
-              "node": "Роутер состояний",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Роутер состояний": {
-        "main": [
-          [
-            {
-              "node": "Ответ start",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "Подготовить нишу",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "Подготовить запуск парсера",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "Ответ статус бота",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "Ответ статус бота",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "Триггер отправки лидам (WF3)",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "Обработать введённые дни",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "Спросить ключевые слова",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "Сообщение об ошибке дней",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Подготовить нишу": {
-        "main": [
-          [
-            {
-              "node": "Поиск каналов (Python)",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Поиск каналов (Python)": {
-        "main": [
-          [
-            {
-              "node": "Обработать результат поиска",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Обработать результат поиска": {
-        "main": [
-          [
-            {
-              "node": "Спросить про одобрение каналов",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Спросить про одобрение каналов": {
-        "main": [
-          [
-            {
-              "node": "Подготовить каналы для Sheets",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Подготовить каналы для Sheets": {
-        "main": [
-          [
-            {
-              "node": "Сохранить источники",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Сохранить источники": {
-        "main": [
-          [
-            {
-              "node": "Подготовить данные ниши",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Подготовить данные ниши": {
-        "main": [
-          [
-            {
-              "node": "Сохранить нишу",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Сохранить нишу": {
-        "main": [
-          [
-            {
-              "node": "Подтверждение сохранения ниши",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Подготовить запуск парсера": {
-        "main": [
-          [
-            {
-              "node": "Отправить в WF2",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Отправить в WF2": {
-        "main": [
-          [
-            {
-              "node": "Сообщение о запуске парсера",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      }
-    },
-    "authors": "Alex Groz",
-    "name": "Version 61c4161a",
-    "description": "",
-    "autosaved": true
-  },
+  "id": "",
   "tags": []
 }
