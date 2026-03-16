@@ -1,0 +1,2569 @@
+{
+  "updatedAt": "2026-03-16T03:04:59.887Z",
+  "createdAt": "2026-03-15T11:28:24.066Z",
+  "id": "thesORWPbtiJmD1u",
+  "name": "💬 Smart Lead -ПИШЕТ ЛИДАМ",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "smart-lead-trigger",
+        "options": {}
+      },
+      "id": "810b123e-79ff-4662-8162-e0aae77f12d3",
+      "name": "Webhook Trigger (превью)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1104,
+        128
+      ],
+      "webhookId": "smart-lead-trigger"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "smart-lead-execute",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "ca359a6b-031f-4163-9abb-641d21f09678",
+      "name": "Webhook Execute (отправка)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1104,
+        432
+      ],
+      "webhookId": "smart-lead-execute"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nlet chat_id = '7984101063';\nif (item.body && item.body.chat_id) chat_id = String(item.body.chat_id);\nelse if (item.chat_id) chat_id = String(item.chat_id);\nreturn [{ json: { chat_id } }];"
+      },
+      "id": "469319d4-73c5-4fcb-b1d9-762cf960038b",
+      "name": "Нормализовать chat_id (превью)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -976,
+        -144
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nlet chat_id = '7984101063';\nif (item.body && item.body.chat_id) chat_id = String(item.body.chat_id);\nelse if (item.chat_id) chat_id = String(item.chat_id);\nreturn [{ json: { chat_id } }];"
+      },
+      "id": "575fc509-9a24-4624-8f43-46437c1a9c8a",
+      "name": "Нормализовать chat_id (execute)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -880,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1alr08qWL2TTVF-1nuDeU4NVXoGgyODgLKeTsa16_kxE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1925947783,
+          "mode": "list",
+          "cachedResultName": "Telegram_Leads_Template",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1alr08qWL2TTVF-1nuDeU4NVXoGgyODgLKeTsa16_kxE/edit#gid=1925947783"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "ai_priority",
+              "lookupValue": "A"
+            },
+            {
+              "lookupColumn": "status",
+              "lookupValue": "new"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8ed72267-4e3d-4718-9ce7-65ba7ba075a8",
+      "name": "Получить A-лиды (превью)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -656,
+        128
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3tw79kiICQ7OPZI8",
+          "name": "Google Sheets ТЕЛЕГРАМ ПАРС"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1alr08qWL2TTVF-1nuDeU4NVXoGgyODgLKeTsa16_kxE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=1925947783",
+          "mode": "id"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "ai_priority",
+              "lookupValue": "A"
+            },
+            {
+              "lookupColumn": "status",
+              "lookupValue": "new"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "32e0dee8-87e1-4013-9334-9f5d8eef8f05",
+      "name": "Получить A-лиды (execute)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -656,
+        432
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3tw79kiICQ7OPZI8",
+          "name": "Google Sheets ТЕЛЕГРАМ ПАРС"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const allLeads = $input.all().map(i => i.json);\nconst chat_id = $('Нормализовать chat_id (превью)').first().json.chat_id;\nconst leadsWithUsername = allLeads.filter(l => l.username && l.username.trim() !== '');\nconst totalCount = leadsWithUsername.length;\nconst previewLeads = leadsWithUsername.slice(0, 3);\nif (totalCount === 0) return [{ json: { chat_id, totalCount: 0, previewText: 'Нет горячих лидов (A) с username для отправки.', noLeads: true } }];\nlet previewText = `👥 *Найдено ${totalCount} горячих лидов (A) с username*\\n\\n📋 *Примеры лидов:*\\n\\n`;\npreviewLeads.forEach((lead, idx) => {\n  const username = lead.username ? '@' + lead.username : 'нет';\n  const preview = (lead.text || '').substring(0, 150) + ((lead.text || '').length > 150 ? '...' : '');\n  previewText += `${idx + 1}. ${username}\\n   📢 ${lead.channel || ''}\\n   💬 ${preview}\\n   🎯 ${lead.ai_reason || ''}\\n\\n`;\n});\npreviewText += `\\n✉️ Буду отправлять персонализированные сообщения каждому.`;\nreturn [{ json: { chat_id, totalCount, previewText, noLeads: false } }];"
+      },
+      "id": "36735b07-3001-4243-9fe0-d344405b4862",
+      "name": "Сформировать превью",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-no-leads",
+              "leftValue": "={{ $json.noLeads }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c7d07818-61bb-4a9b-bdac-5a7bfae6d4d8",
+      "name": "Есть лиды для отправки?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "ℹ️ Нет горячих лидов (A) с username для отправки сообщений. Запусти парсинг для поиска новых лидов.",
+        "additionalFields": {}
+      },
+      "id": "f39eb298-2179-414c-80ba-c2ef670be635",
+      "name": "Нет лидов — сообщение",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        368,
+        0
+      ],
+      "webhookId": "de5fa9cf-5a34-4d6b-9f58-650ab019ee2d",
+      "credentials": {
+        "telegramApi": {
+          "id": "kkySYqFIPRx85OPe",
+          "name": "Telegram ПАРСЕР"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.previewText }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "020d5739-5d15-47b3-8fe3-f100b4597a2f",
+      "name": "Отправить превью в Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        368,
+        208
+      ],
+      "webhookId": "9a77e468-63b1-4bc7-bfd0-af792b140dad",
+      "credentials": {
+        "telegramApi": {
+          "id": "kkySYqFIPRx85OPe",
+          "name": "Telegram ПАРСЕР"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const allLeads = $input.all().map(i => i.json);\nconst chat_id = $('Нормализовать chat_id (execute)').first().json.chat_id;\nconst leadsWithUsername = allLeads.filter(l => l.username && l.username.trim() !== '');\nif (leadsWithUsername.length === 0) return [{ json: { chat_id, noLeads: true, totalCount: 0 } }];\nreturn leadsWithUsername.map(lead => ({ json: { ...lead, chat_id } }));"
+      },
+      "id": "3215033f-985b-4008-bfbb-a9f02b2388c5",
+      "name": "Фильтровать лидов с username",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-execute-no-leads",
+              "leftValue": "={{ $json.noLeads }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "336c9691-34b4-4863-8a19-9624c4e7d187",
+      "name": "Проверить наличие лидов (execute)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "ℹ️ Нет лидов для отправки. Все лиды уже обработаны или нет подходящих.",
+        "additionalFields": {}
+      },
+      "id": "bc5ed637-a261-49da-ae8e-7b1bf94afc19",
+      "name": "Execute — нет лидов",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        304
+      ],
+      "webhookId": "6f3c1040-6f38-4946-bc71-1c80a8ed5646",
+      "credentials": {
+        "telegramApi": {
+          "id": "kkySYqFIPRx85OPe",
+          "name": "Telegram ПАРСЕР"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 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"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "https://n8n.arendadom24.ru"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'google/gemini-2.0-flash-001',\n  messages: [\n    {role: 'system', content: 'Ты эксперт по персонализированным продажам. Пишешь короткие, дружелюбные первые сообщения потенциальным клиентам в Telegram. Сообщение должно быть естественным, не продажным, показывать что ты читал их пост, и предлагать помощь. Максимум 3-4 предложения. Не используй шаблонные фразы.'},\n    {role: 'user', content: `Напиши первое сообщение для лида из Telegram.\\n\\nПост лида:\\n${$json.text}\\n\\nUsername: @${$json.username}\\nКанал: ${$json.channel}\\nПричина интереса: ${$json.ai_reason || ''}\\nНамерение: ${$json.ai_intent || ''}\\n\\nТребования:\\n- Упомяни что-то конкретное из поста\\n- Представься как специалист в этой сфере\\n- Предложи помочь или обсудить\\n- Естественный, живой тон\\n- Максимум 4 предложения\\n\\nНапиши только текст сообщения, без пояснений.`}\n  ],\n  temperature: 0.7,\n  max_tokens: 300\n}) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "00516c0a-4348-4b3f-a373-cac155376f9e",
+      "name": "Claude генерирует сообщение",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiResult = $input.first().json;\n// FIX: use .item.json to get current lead, not always the first one\nconst leadData = $('Фильтровать лидов с username').item.json;\nlet messageText = '';\ntry {\n  messageText = aiResult.choices[0].message.content.trim();\n} catch(e) {\n  messageText = 'Здравствуйте! Увидел ваш пост и хотел бы обсудить возможное сотрудничество. Напишите, если интересно!';\n}\nreturn [{ json: { ...leadData, generated_message: messageText } }];\n"
+      },
+      "id": "54899b54-4edb-4127-b6f5-faa2b1e7a1a0",
+      "name": "Извлечь сгенерированное сообщение",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://172.17.0.1:5000/send_message",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ username: $json.username, message: $json.generated_message, post_url: $json.post_url }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "3f9482a1-1625-4fd2-bdd4-9cb51a5b68bc",
+      "name": "Отправить сообщение (Python)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        448,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const sendResult = $input.first().json;\n// FIX: use .item.json to get current lead, not always the first one\nconst leadData = $('Извлечь сгенерированное сообщение').item.json;\nconst success = sendResult.success === true || sendResult.status === 'ok' || sendResult.status === 'sent';\nconst error = sendResult.error || sendResult.message || '';\nreturn [{ json: { ...leadData, send_success: success, send_error: error, contacted_at: new Date().toISOString() } }];\n"
+      },
+      "id": "ebeae17f-f7f6-4fbc-ab8c-3d2142eb600a",
+      "name": "Проверить результат отправки",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1alr08qWL2TTVF-1nuDeU4NVXoGgyODgLKeTsa16_kxE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=1925947783",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "contacted",
+            "contacted_at": "={{ $json.contacted_at }}",
+            "send_success": "={{ $json.send_success }}"
+          },
+          "matchingColumns": [
+            "post_url"
+          ],
+          "schema": [
+            {
+              "id": "post_url",
+              "displayName": "post_url",
+              "required": false,
+              "defaultMatch": true,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "contacted_at",
+              "displayName": "contacted_at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "send_success",
+              "displayName": "send_success",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9a6baeac-188e-4fa5-8e60-d2688b404e3e",
+      "name": "Обновить статус → contacted",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        880,
+        528
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3tw79kiICQ7OPZI8",
+          "name": "Google Sheets ТЕЛЕГРАМ ПАРС"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const allUpdated = $input.all().map(i => i.json);\nconst chat_id = allUpdated.length > 0 ? (allUpdated[0].chat_id || '7984101063') : '7984101063';\nconst total = allUpdated.length;\nconst successful = allUpdated.filter(l => l.send_success === true).length;\nconst errors = total - successful;\nreturn [{ json: { chat_id, total, successful, errors } }];"
+      },
+      "id": "51410863-b596-4efe-bec3-a4a43d36b275",
+      "name": "Собрать статистику отправки",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ '✅ *Рассылка завершена!*\\n\\n📊 Написал: ' + $json.total + ' лидам\\n✅ Успешно: ' + $json.successful + '\\n❌ Ошибок: ' + $json.errors }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "a713c101-2c19-4005-b4ec-dfd840377ecb",
+      "name": "Итоговый отчёт рассылки",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1328,
+        528
+      ],
+      "webhookId": "412e0c02-96bf-4ee1-bf30-00306c814913",
+      "credentials": {
+        "telegramApi": {
+          "id": "kkySYqFIPRx85OPe",
+          "name": "Telegram ПАРСЕР"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://172.17.0.1:5000/webhook/n8n",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -352,
+        -144
+      ],
+      "id": "72713abc-dc59-49e7-a947-e5f2cee8c909",
+      "name": "ВЫЗВАТЬ ПАРСЕР"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1alr08qWL2TTVF-1nuDeU4NVXoGgyODgLKeTsa16_kxE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1925947783,
+          "mode": "list",
+          "cachedResultName": "Telegram_Leads_Template",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw/edit#gid=1925947783"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "post_url": "={{ $json.post_url }}",
+            "timestamp": "={{ $json.timestamp }}",
+            "channel_title": "={{ $json.channel_title }}",
+            "channel_username": "=\t{{ $json.channel_username }}",
+            "text": "={{ $json.text }}",
+            "text_preview": "={{ $json.text_preview }}",
+            "phones": "={{ $json.phones }}",
+            "emails": "={{ $json.emails }}",
+            "usernames": "={{ $json.usernames }}",
+            "username": "={{ $json.sender_username }}",
+            "views": "={{ $json.views }}",
+            "message_id": "=\t{{ $json.message_id }}",
+            "subscribers": "={{ $json.subscribers }}",
+            "sender_id": "={{ $json.sender_id }}",
+            "niche_name": "={{ $json.niche }}",
+            "keyword_matched": "={{ $json.keyword_matched }}",
+            "is_ad": "={{ $json.is_ad }}",
+            "lead_score": "={{ $json.lead_score }}",
+            "status": "new",
+            "follow_up_count": "0",
+            "chat_id": "={{ $('Нормализовать chat_id (превью)').first().json.chat_id }}"
+          },
+          "matchingColumns": [
+            "post_url"
+          ],
+          "schema": [
+            {
+              "id": "post_url",
+              "displayName": "post_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "channel_title",
+              "displayName": "channel_title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "channel_username",
+              "displayName": "channel_username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "text",
+              "displayName": "text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "text_preview",
+              "displayName": "text_preview",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "phones",
+              "displayName": "phones",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "emails",
+              "displayName": "emails",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "usernames",
+              "displayName": "usernames",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "username",
+              "displayName": "username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "views",
+              "displayName": "views",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "subscribers",
+              "displayName": "subscribers",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sender_id",
+              "displayName": "sender_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "niche_id",
+              "displayName": "niche_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "niche_name",
+              "displayName": "niche_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "keyword_matched",
+              "displayName": "keyword_matched",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "keywords_all",
+              "displayName": "keywords_all",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "keywords_count",
+              "displayName": "keywords_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "niches_matched",
+              "displayName": "niches_matched",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "niches_count",
+              "displayName": "niches_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "is_ad",
+              "displayName": "is_ad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lead_score",
+              "displayName": "lead_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "rooms",
+              "displayName": "rooms",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "budget",
+              "displayName": "budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "first_message_template",
+              "displayName": "first_message_template",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_priority",
+              "displayName": "ai_priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_summary",
+              "displayName": "ai_summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_urgency",
+              "displayName": "ai_urgency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_lead_type",
+              "displayName": "ai_lead_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_next_step",
+              "displayName": "ai_next_step",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_first_message",
+              "displayName": "ai_first_message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "contacted_at",
+              "displayName": "contacted_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "follow_up_count",
+              "displayName": "follow_up_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fail_reason",
+              "displayName": "fail_reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "last_followup_at",
+              "displayName": "last_followup_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        80,
+        -144
+      ],
+      "id": "d14bcd37-738b-483e-aaf3-8ad98f1667f0",
+      "name": "Записать лиды",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3tw79kiICQ7OPZI8",
+          "name": "Google Sheets ТЕЛЕГРАМ ПАРС"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const channels = $input.all()\n  .map(i => i.json.channel_url || i.json.username || '')\n  .map(c => c.replace('https://t.me/', '').replace('@','').trim())\n  .filter(c => c);\n\nconst chatId = $('Нормализовать chat_id (превью)').first().json.chat_id;\n\n// Get niche keywords from sources if available, else use generic lead signals\nconst sources = $input.all().map(i => i.json);\nconst nicheKeywords = sources\n  .map(s => s.niche || '')\n  .filter(k => k)\n  .slice(0, 10);\n\nreturn [{ json: {\n  channels: channels,\n  keywords: nicheKeywords.length > 0 ? nicheKeywords : ['ищу', 'нужен', 'куплю', 'ищем', 'требуется'],\n  days_back: 7,\n  messages_limit: 100,\n  chat_id: chatId\n}}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -560,
+        -144
+      ],
+      "id": "feb12527-20fa-4c63-bd3e-7690e53da582",
+      "name": "Подготовить запрос"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw",
+          "mode": "list",
+          "cachedResultName": "Копия Telegram Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 427111597,
+          "mode": "list",
+          "cachedResultName": "sources",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw/edit#gid=427111597"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status",
+              "lookupValue": "approved"
+            },
+            {
+              "lookupColumn": "niche",
+              "lookupValue": "={{ $json.niche }}\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -768,
+        -144
+      ],
+      "id": "5324f461-7e74-49f3-9c76-7bfa9ca0c2e1",
+      "name": "Читать каналы из sources",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3tw79kiICQ7OPZI8",
+          "name": "Google Sheets ТЕЛЕГРАМ ПАРС"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst leads = data.results || data.leads || data.raw_data || [];\nif (!leads || leads.length === 0) return [];\nreturn leads.map(l => ({ json: l }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -144,
+        -144
+      ],
+      "id": "b50a22ed-a450-42ec-8dcf-f8c750415afa",
+      "name": "Извлечь лиды"
+    }
+  ],
+  "connections": {
+    "Webhook Trigger (превью)": {
+      "main": [
+        [
+          {
+            "node": "Нормализовать chat_id (превью)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Execute (отправка)": {
+      "main": [
+        [
+          {
+            "node": "Нормализовать chat_id (execute)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Нормализовать chat_id (превью)": {
+      "main": [
+        [
+          {
+            "node": "Читать каналы из sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Нормализовать chat_id (execute)": {
+      "main": [
+        [
+          {
+            "node": "Получить A-лиды (execute)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Получить A-лиды (превью)": {
+      "main": [
+        [
+          {
+            "node": "Сформировать превью",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Получить A-лиды (execute)": {
+      "main": [
+        [
+          {
+            "node": "Фильтровать лидов с username",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Сформировать превью": {
+      "main": [
+        [
+          {
+            "node": "Есть лиды для отправки?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Есть лиды для отправки?": {
+      "main": [
+        [
+          {
+            "node": "Нет лидов — сообщение",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Отправить превью в Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Фильтровать лидов с username": {
+      "main": [
+        [
+          {
+            "node": "Проверить наличие лидов (execute)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Проверить наличие лидов (execute)": {
+      "main": [
+        [
+          {
+            "node": "Execute — нет лидов",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Claude генерирует сообщение",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude генерирует сообщение": {
+      "main": [
+        [
+          {
+            "node": "Извлечь сгенерированное сообщение",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Извлечь сгенерированное сообщение": {
+      "main": [
+        [
+          {
+            "node": "Отправить сообщение (Python)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Отправить сообщение (Python)": {
+      "main": [
+        [
+          {
+            "node": "Проверить результат отправки",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Проверить результат отправки": {
+      "main": [
+        [
+          {
+            "node": "Обновить статус → contacted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Обновить статус → contacted": {
+      "main": [
+        [
+          {
+            "node": "Собрать статистику отправки",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Собрать статистику отправки": {
+      "main": [
+        [
+          {
+            "node": "Итоговый отчёт рассылки",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ВЫЗВАТЬ ПАРСЕР": {
+      "main": [
+        [
+          {
+            "node": "Извлечь лиды",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Записать лиды": {
+      "main": [
+        [
+          {
+            "node": "Получить A-лиды (превью)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Подготовить запрос": {
+      "main": [
+        [
+          {
+            "node": "ВЫЗВАТЬ ПАРСЕР",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Читать каналы из sources": {
+      "main": [
+        [
+          {
+            "node": "Подготовить запрос",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Извлечь лиды": {
+      "main": [
+        [
+          {
+            "node": "Записать лиды",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "5dc4eb5f-fb88-40de-ba0c-159bf3741f89",
+  "activeVersionId": "5dc4eb5f-fb88-40de-ba0c-159bf3741f89",
+  "triggerCount": 2,
+  "shared": [
+    {
+      "updatedAt": "2026-03-15T11:28:24.068Z",
+      "createdAt": "2026-03-15T11:28:24.068Z",
+      "role": "workflow:owner",
+      "workflowId": "thesORWPbtiJmD1u",
+      "projectId": "1XvAuC5DHrf1ytYs"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-03-16T03:05:02.000Z",
+    "createdAt": "2026-03-16T03:04:59.888Z",
+    "versionId": "5dc4eb5f-fb88-40de-ba0c-159bf3741f89",
+    "workflowId": "thesORWPbtiJmD1u",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "smart-lead-trigger",
+          "options": {}
+        },
+        "id": "810b123e-79ff-4662-8162-e0aae77f12d3",
+        "name": "Webhook Trigger (превью)",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          -1104,
+          128
+        ],
+        "webhookId": "smart-lead-trigger"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "smart-lead-execute",
+          "responseMode": "lastNode",
+          "options": {}
+        },
+        "id": "ca359a6b-031f-4163-9abb-641d21f09678",
+        "name": "Webhook Execute (отправка)",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          -1104,
+          432
+        ],
+        "webhookId": "smart-lead-execute"
+      },
+      {
+        "parameters": {
+          "jsCode": "const item = $input.first().json;\nlet chat_id = '7984101063';\nif (item.body && item.body.chat_id) chat_id = String(item.body.chat_id);\nelse if (item.chat_id) chat_id = String(item.chat_id);\nreturn [{ json: { chat_id } }];"
+        },
+        "id": "469319d4-73c5-4fcb-b1d9-762cf960038b",
+        "name": "Нормализовать chat_id (превью)",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -976,
+          -144
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const item = $input.first().json;\nlet chat_id = '7984101063';\nif (item.body && item.body.chat_id) chat_id = String(item.body.chat_id);\nelse if (item.chat_id) chat_id = String(item.chat_id);\nreturn [{ json: { chat_id } }];"
+        },
+        "id": "575fc509-9a24-4624-8f43-46437c1a9c8a",
+        "name": "Нормализовать chat_id (execute)",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -880,
+          432
+        ]
+      },
+      {
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "value": "1alr08qWL2TTVF-1nuDeU4NVXoGgyODgLKeTsa16_kxE",
+            "mode": "id"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": 1925947783,
+            "mode": "list",
+            "cachedResultName": "Telegram_Leads_Template",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1alr08qWL2TTVF-1nuDeU4NVXoGgyODgLKeTsa16_kxE/edit#gid=1925947783"
+          },
+          "filtersUI": {
+            "values": [
+              {
+                "lookupColumn": "ai_priority",
+                "lookupValue": "A"
+              },
+              {
+                "lookupColumn": "status",
+                "lookupValue": "new"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "8ed72267-4e3d-4718-9ce7-65ba7ba075a8",
+        "name": "Получить A-лиды (превью)",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5,
+        "position": [
+          -656,
+          128
+        ],
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "3tw79kiICQ7OPZI8",
+            "name": "Google Sheets ТЕЛЕГРАМ ПАРС"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "value": "1alr08qWL2TTVF-1nuDeU4NVXoGgyODgLKeTsa16_kxE",
+            "mode": "id"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "gid=1925947783",
+            "mode": "id"
+          },
+          "filtersUI": {
+            "values": [
+              {
+                "lookupColumn": "ai_priority",
+                "lookupValue": "A"
+              },
+              {
+                "lookupColumn": "status",
+                "lookupValue": "new"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "32e0dee8-87e1-4013-9334-9f5d8eef8f05",
+        "name": "Получить A-лиды (execute)",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5,
+        "position": [
+          -656,
+          432
+        ],
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "3tw79kiICQ7OPZI8",
+            "name": "Google Sheets ТЕЛЕГРАМ ПАРС"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const allLeads = $input.all().map(i => i.json);\nconst chat_id = $('Нормализовать chat_id (превью)').first().json.chat_id;\nconst leadsWithUsername = allLeads.filter(l => l.username && l.username.trim() !== '');\nconst totalCount = leadsWithUsername.length;\nconst previewLeads = leadsWithUsername.slice(0, 3);\nif (totalCount === 0) return [{ json: { chat_id, totalCount: 0, previewText: 'Нет горячих лидов (A) с username для отправки.', noLeads: true } }];\nlet previewText = `👥 *Найдено ${totalCount} горячих лидов (A) с username*\\n\\n📋 *Примеры лидов:*\\n\\n`;\npreviewLeads.forEach((lead, idx) => {\n  const username = lead.username ? '@' + lead.username : 'нет';\n  const preview = (lead.text || '').substring(0, 150) + ((lead.text || '').length > 150 ? '...' : '');\n  previewText += `${idx + 1}. ${username}\\n   📢 ${lead.channel || ''}\\n   💬 ${preview}\\n   🎯 ${lead.ai_reason || ''}\\n\\n`;\n});\npreviewText += `\\n✉️ Буду отправлять персонализированные сообщения каждому.`;\nreturn [{ json: { chat_id, totalCount, previewText, noLeads: false } }];"
+        },
+        "id": "36735b07-3001-4243-9fe0-d344405b4862",
+        "name": "Сформировать превью",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -448,
+          128
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "cond-no-leads",
+                "leftValue": "={{ $json.noLeads }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "c7d07818-61bb-4a9b-bdac-5a7bfae6d4d8",
+        "name": "Есть лиды для отправки?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          -224,
+          128
+        ]
+      },
+      {
+        "parameters": {
+          "chatId": "={{ $json.chat_id }}",
+          "text": "ℹ️ Нет горячих лидов (A) с username для отправки сообщений. Запусти парсинг для поиска новых лидов.",
+          "additionalFields": {}
+        },
+        "id": "f39eb298-2179-414c-80ba-c2ef670be635",
+        "name": "Нет лидов — сообщение",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2,
+        "position": [
+          368,
+          0
+        ],
+        "webhookId": "de5fa9cf-5a34-4d6b-9f58-650ab019ee2d",
+        "credentials": {
+          "telegramApi": {
+            "id": "kkySYqFIPRx85OPe",
+            "name": "Telegram ПАРСЕР"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "chatId": "={{ $json.chat_id }}",
+          "text": "={{ $json.previewText }}",
+          "additionalFields": {
+            "parse_mode": "Markdown"
+          }
+        },
+        "id": "020d5739-5d15-47b3-8fe3-f100b4597a2f",
+        "name": "Отправить превью в Telegram",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2,
+        "position": [
+          368,
+          208
+        ],
+        "webhookId": "9a77e468-63b1-4bc7-bfd0-af792b140dad",
+        "credentials": {
+          "telegramApi": {
+            "id": "kkySYqFIPRx85OPe",
+            "name": "Telegram ПАРСЕР"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const allLeads = $input.all().map(i => i.json);\nconst chat_id = $('Нормализовать chat_id (execute)').first().json.chat_id;\nconst leadsWithUsername = allLeads.filter(l => l.username && l.username.trim() !== '');\nif (leadsWithUsername.length === 0) return [{ json: { chat_id, noLeads: true, totalCount: 0 } }];\nreturn leadsWithUsername.map(lead => ({ json: { ...lead, chat_id } }));"
+        },
+        "id": "3215033f-985b-4008-bfbb-a9f02b2388c5",
+        "name": "Фильтровать лидов с username",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -448,
+          432
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "cond-execute-no-leads",
+                "leftValue": "={{ $json.noLeads }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "336c9691-34b4-4863-8a19-9624c4e7d187",
+        "name": "Проверить наличие лидов (execute)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          -224,
+          432
+        ]
+      },
+      {
+        "parameters": {
+          "chatId": "={{ $json.chat_id }}",
+          "text": "ℹ️ Нет лидов для отправки. Все лиды уже обработаны или нет подходящих.",
+          "additionalFields": {}
+        },
+        "id": "bc5ed637-a261-49da-ae8e-7b1bf94afc19",
+        "name": "Execute — нет лидов",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2,
+        "position": [
+          0,
+          304
+        ],
+        "webhookId": "6f3c1040-6f38-4946-bc71-1c80a8ed5646",
+        "credentials": {
+          "telegramApi": {
+            "id": "kkySYqFIPRx85OPe",
+            "name": "Telegram ПАРСЕР"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://openrouter.ai/api/v1/chat/completions",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer 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"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "HTTP-Referer",
+                "value": "https://n8n.arendadom24.ru"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({\n  model: 'google/gemini-2.0-flash-001',\n  messages: [\n    {role: 'system', content: 'Ты эксперт по персонализированным продажам. Пишешь короткие, дружелюбные первые сообщения потенциальным клиентам в Telegram. Сообщение должно быть естественным, не продажным, показывать что ты читал их пост, и предлагать помощь. Максимум 3-4 предложения. Не используй шаблонные фразы.'},\n    {role: 'user', content: `Напиши первое сообщение для лида из Telegram.\\n\\nПост лида:\\n${$json.text}\\n\\nUsername: @${$json.username}\\nКанал: ${$json.channel}\\nПричина интереса: ${$json.ai_reason || ''}\\nНамерение: ${$json.ai_intent || ''}\\n\\nТребования:\\n- Упомяни что-то конкретное из поста\\n- Представься как специалист в этой сфере\\n- Предложи помочь или обсудить\\n- Естественный, живой тон\\n- Максимум 4 предложения\\n\\nНапиши только текст сообщения, без пояснений.`}\n  ],\n  temperature: 0.7,\n  max_tokens: 300\n}) }}",
+          "options": {
+            "timeout": 60000
+          }
+        },
+        "id": "00516c0a-4348-4b3f-a373-cac155376f9e",
+        "name": "Claude генерирует сообщение",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          0,
+          528
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const aiResult = $input.first().json;\nconst leadData = $('Фильтровать лидов с username').first().json;\nlet messageText = '';\ntry {\n  messageText = aiResult.choices[0].message.content.trim();\n} catch(e) {\n  messageText = 'Здравствуйте! Увидел ваш пост и хотел бы обсудить возможное сотрудничество. Напишите, если интересно!';\n}\nreturn [{ json: { ...leadData, generated_message: messageText } }];"
+        },
+        "id": "54899b54-4edb-4127-b6f5-faa2b1e7a1a0",
+        "name": "Извлечь сгенерированное сообщение",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          224,
+          528
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "http://172.17.0.1:5000/send_message",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ username: $json.username, message: $json.generated_message, post_url: $json.post_url }) }}",
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "id": "3f9482a1-1625-4fd2-bdd4-9cb51a5b68bc",
+        "name": "Отправить сообщение (Python)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          448,
+          528
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const sendResult = $input.first().json;\nconst leadData = $('Извлечь сгенерированное сообщение').first().json;\nconst success = sendResult.success === true || sendResult.status === 'ok' || sendResult.status === 'sent';\nconst error = sendResult.error || sendResult.message || '';\nreturn [{ json: { ...leadData, send_success: success, send_error: error, contacted_at: new Date().toISOString() } }];"
+        },
+        "id": "ebeae17f-f7f6-4fbc-ab8c-3d2142eb600a",
+        "name": "Проверить результат отправки",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          672,
+          528
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "update",
+          "documentId": {
+            "__rl": true,
+            "value": "1alr08qWL2TTVF-1nuDeU4NVXoGgyODgLKeTsa16_kxE",
+            "mode": "id"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "gid=1925947783",
+            "mode": "id"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "status": "contacted",
+              "contacted_at": "={{ $json.contacted_at }}",
+              "send_success": "={{ $json.send_success }}"
+            },
+            "matchingColumns": [
+              "post_url"
+            ],
+            "schema": [
+              {
+                "id": "post_url",
+                "displayName": "post_url",
+                "required": false,
+                "defaultMatch": true,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "status",
+                "displayName": "status",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": false,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "contacted_at",
+                "displayName": "contacted_at",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": false,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "send_success",
+                "displayName": "send_success",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": false,
+                "display": true,
+                "type": "boolean",
+                "readOnly": false,
+                "removed": false
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "9a6baeac-188e-4fa5-8e60-d2688b404e3e",
+        "name": "Обновить статус → contacted",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.5,
+        "position": [
+          880,
+          528
+        ],
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "3tw79kiICQ7OPZI8",
+            "name": "Google Sheets ТЕЛЕГРАМ ПАРС"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const allUpdated = $input.all().map(i => i.json);\nconst chat_id = allUpdated.length > 0 ? (allUpdated[0].chat_id || '7984101063') : '7984101063';\nconst total = allUpdated.length;\nconst successful = allUpdated.filter(l => l.send_success === true).length;\nconst errors = total - successful;\nreturn [{ json: { chat_id, total, successful, errors } }];"
+        },
+        "id": "51410863-b596-4efe-bec3-a4a43d36b275",
+        "name": "Собрать статистику отправки",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1104,
+          528
+        ]
+      },
+      {
+        "parameters": {
+          "chatId": "={{ $json.chat_id }}",
+          "text": "={{ '✅ *Рассылка завершена!*\\n\\n📊 Написал: ' + $json.total + ' лидам\\n✅ Успешно: ' + $json.successful + '\\n❌ Ошибок: ' + $json.errors }}",
+          "additionalFields": {
+            "parse_mode": "Markdown"
+          }
+        },
+        "id": "a713c101-2c19-4005-b4ec-dfd840377ecb",
+        "name": "Итоговый отчёт рассылки",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2,
+        "position": [
+          1328,
+          528
+        ],
+        "webhookId": "412e0c02-96bf-4ee1-bf30-00306c814913",
+        "credentials": {
+          "telegramApi": {
+            "id": "kkySYqFIPRx85OPe",
+            "name": "Telegram ПАРСЕР"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "http://172.17.0.1:5000/webhook/n8n",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ $json }}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          -352,
+          -144
+        ],
+        "id": "72713abc-dc59-49e7-a947-e5f2cee8c909",
+        "name": "ВЫЗВАТЬ ПАРСЕР"
+      },
+      {
+        "parameters": {
+          "operation": "appendOrUpdate",
+          "documentId": {
+            "__rl": true,
+            "value": "1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw",
+            "mode": "list",
+            "cachedResultName": "Копия Telegram Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": 1925947783,
+            "mode": "list",
+            "cachedResultName": "Telegram_Leads_Template",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw/edit#gid=1925947783"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "post_url": "={{ $json.post_url }}",
+              "timestamp": "={{ $json.timestamp }}",
+              "channel_title": "={{ $json.channel_title }}",
+              "channel_username": "=\t{{ $json.channel_username }}",
+              "text": "={{ $json.text }}",
+              "text_preview": "={{ $json.text_preview }}",
+              "phones": "={{ $json.phones }}",
+              "emails": "={{ $json.emails }}",
+              "usernames": "={{ $json.usernames }}",
+              "username": "={{ $json.sender_username }}",
+              "views": "={{ $json.views }}",
+              "message_id": "=\t{{ $json.message_id }}",
+              "subscribers": "={{ $json.subscribers }}",
+              "sender_id": "={{ $json.sender_id }}",
+              "niche_name": "={{ $json.niche }}",
+              "keyword_matched": "={{ $json.keyword_matched }}",
+              "is_ad": "={{ $json.is_ad }}",
+              "lead_score": "={{ $json.lead_score }}",
+              "status": "new",
+              "follow_up_count": "0",
+              "chat_id": "={{ $('Нормализовать chat_id (превью)').first().json.chat_id }}"
+            },
+            "matchingColumns": [
+              "post_url"
+            ],
+            "schema": [
+              {
+                "id": "post_url",
+                "displayName": "post_url",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "timestamp",
+                "displayName": "timestamp",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "channel_title",
+                "displayName": "channel_title",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "channel_username",
+                "displayName": "channel_username",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "text",
+                "displayName": "text",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "text_preview",
+                "displayName": "text_preview",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "phones",
+                "displayName": "phones",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "emails",
+                "displayName": "emails",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "usernames",
+                "displayName": "usernames",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "username",
+                "displayName": "username",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "views",
+                "displayName": "views",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "message_id",
+                "displayName": "message_id",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "subscribers",
+                "displayName": "subscribers",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "sender_id",
+                "displayName": "sender_id",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "user_id",
+                "displayName": "user_id",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "chat_id",
+                "displayName": "chat_id",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "niche_id",
+                "displayName": "niche_id",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "niche_name",
+                "displayName": "niche_name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "keyword_matched",
+                "displayName": "keyword_matched",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "keywords_all",
+                "displayName": "keywords_all",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "keywords_count",
+                "displayName": "keywords_count",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "niches_matched",
+                "displayName": "niches_matched",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "niches_count",
+                "displayName": "niches_count",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "is_ad",
+                "displayName": "is_ad",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "lead_score",
+                "displayName": "lead_score",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "rooms",
+                "displayName": "rooms",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "budget",
+                "displayName": "budget",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "first_message_template",
+                "displayName": "first_message_template",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "ai_priority",
+                "displayName": "ai_priority",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "ai_summary",
+                "displayName": "ai_summary",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "ai_urgency",
+                "displayName": "ai_urgency",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "ai_lead_type",
+                "displayName": "ai_lead_type",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "ai_next_step",
+                "displayName": "ai_next_step",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "ai_first_message",
+                "displayName": "ai_first_message",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "status",
+                "displayName": "status",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "contacted_at",
+                "displayName": "contacted_at",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "follow_up_count",
+                "displayName": "follow_up_count",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "fail_reason",
+                "displayName": "fail_reason",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "last_followup_at",
+                "displayName": "last_followup_at",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          80,
+          -144
+        ],
+        "id": "d14bcd37-738b-483e-aaf3-8ad98f1667f0",
+        "name": "Записать лиды",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "3tw79kiICQ7OPZI8",
+            "name": "Google Sheets ТЕЛЕГРАМ ПАРС"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const channels = $input.all()\n  .map(i => i.json.channel_url.replace('https://t.me/', '').replace('@',''))\n  .filter(c => c);\n\nconst chatId = $('Нормализовать chat_id (превью)').first().json.chat_id;\n\nreturn [{ json: {\n  channels: channels,\n  keywords: [\"сдам\",\"аренда\",\"снять\",\"квартира\",\"комната\",\"снимаю\"],\n  days_back: 7,\n  messages_limit: 100,\n  chat_id: chatId\n}}];\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -560,
+          -144
+        ],
+        "id": "feb12527-20fa-4c63-bd3e-7690e53da582",
+        "name": "Подготовить запрос"
+      },
+      {
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "value": "1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw",
+            "mode": "list",
+            "cachedResultName": "Копия Telegram Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": 427111597,
+            "mode": "list",
+            "cachedResultName": "sources",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw/edit#gid=427111597"
+          },
+          "filtersUI": {
+            "values": [
+              {
+                "lookupColumn": "status",
+                "lookupValue": " approved"
+              },
+              {
+                "lookupColumn": "niche",
+                "lookupValue": "={{ $json.niche }}\n"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          -768,
+          -144
+        ],
+        "id": "5324f461-7e74-49f3-9c76-7bfa9ca0c2e1",
+        "name": "Читать каналы из sources",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "3tw79kiICQ7OPZI8",
+            "name": "Google Sheets ТЕЛЕГРАМ ПАРС"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const data = $input.first().json;\nconst leads = data.results || data.leads || data.raw_data || [];\nif (!leads || leads.length === 0) return [];\nreturn leads.map(l => ({ json: l }));\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -144,
+          -144
+        ],
+        "id": "b50a22ed-a450-42ec-8dcf-f8c750415afa",
+        "name": "Извлечь лиды"
+      }
+    ],
+    "connections": {
+      "Webhook Trigger (превью)": {
+        "main": [
+          [
+            {
+              "node": "Нормализовать chat_id (превью)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Webhook Execute (отправка)": {
+        "main": [
+          [
+            {
+              "node": "Нормализовать chat_id (execute)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Нормализовать chat_id (превью)": {
+        "main": [
+          [
+            {
+              "node": "Читать каналы из sources",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Нормализовать chat_id (execute)": {
+        "main": [
+          [
+            {
+              "node": "Получить A-лиды (execute)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Получить A-лиды (превью)": {
+        "main": [
+          [
+            {
+              "node": "Сформировать превью",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Получить A-лиды (execute)": {
+        "main": [
+          [
+            {
+              "node": "Фильтровать лидов с username",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Сформировать превью": {
+        "main": [
+          [
+            {
+              "node": "Есть лиды для отправки?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Есть лиды для отправки?": {
+        "main": [
+          [
+            {
+              "node": "Нет лидов — сообщение",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Отправить превью в Telegram",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Фильтровать лидов с username": {
+        "main": [
+          [
+            {
+              "node": "Проверить наличие лидов (execute)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Проверить наличие лидов (execute)": {
+        "main": [
+          [
+            {
+              "node": "Execute — нет лидов",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Claude генерирует сообщение",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Claude генерирует сообщение": {
+        "main": [
+          [
+            {
+              "node": "Извлечь сгенерированное сообщение",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Извлечь сгенерированное сообщение": {
+        "main": [
+          [
+            {
+              "node": "Отправить сообщение (Python)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Отправить сообщение (Python)": {
+        "main": [
+          [
+            {
+              "node": "Проверить результат отправки",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Проверить результат отправки": {
+        "main": [
+          [
+            {
+              "node": "Обновить статус → contacted",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Обновить статус → contacted": {
+        "main": [
+          [
+            {
+              "node": "Собрать статистику отправки",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Собрать статистику отправки": {
+        "main": [
+          [
+            {
+              "node": "Итоговый отчёт рассылки",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "ВЫЗВАТЬ ПАРСЕР": {
+        "main": [
+          [
+            {
+              "node": "Извлечь лиды",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Записать лиды": {
+        "main": [
+          [
+            {
+              "node": "Получить A-лиды (превью)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Подготовить запрос": {
+        "main": [
+          [
+            {
+              "node": "ВЫЗВАТЬ ПАРСЕР",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Читать каналы из sources": {
+        "main": [
+          [
+            {
+              "node": "Подготовить запрос",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Извлечь лиды": {
+        "main": [
+          [
+            {
+              "node": "Записать лиды",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Alex Groz",
+    "name": "Version 5dc4eb5f",
+    "description": "",
+    "autosaved": true
+  },
+  "tags": []
+}
