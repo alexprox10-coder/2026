@@ -3,18 +3,21 @@
 Мини HTTP-сервер для отправки сообщений через Telethon userbot.
 n8n вызывает этот сервер через HTTP Request ноду.
 
-Запуск: python telethon_api.py
+Запуск: python3 telethon_api.py
 Порт: 5000
 
 Эндпоинты:
-  POST /send            — отправить сообщение по username
   GET  /health          — проверка работоспособности
   POST /search_channels — поиск Telegram-каналов по ключевым словам
+  POST /parse           — парсинг постов из списка каналов (для WF2)
+  POST /send            — отправить сообщение по username
+  POST /send_message    — то же самое (алиас для WF3, поле message вместо text)
 """
 
 import os
 import asyncio
 import logging
+from datetime import datetime, timezone, timedelta
 from threading import Thread
 from flask import Flask, request, jsonify
 from telethon import TelegramClient
@@ -111,11 +114,83 @@ def search_channels():
     return jsonify(result)
 
 
+@app.route('/parse', methods=['POST'])
+def parse_channels():
+    """
+    Тело запроса (JSON):
+      {
+        "channels": ["username1", "username2"],
+        "days_back": 7,
+        "keywords": ["аренда", "снять"],
+        "limit_per_channel": 50
+      }
+
+    Ответ:
+      {
+        "posts": [
+          {
+            "channel": "username1",
+            "post_id": 123,
+            "text": "текст поста",
+            "date": "2026-03-10T12:00:00",
+            "views": 500,
+            "url": "https://t.me/username1/123"
+          }
+        ],
+        "total": 12
+      }
+    """
+    data = request.get_json(force=True)
+    channels = data.get('channels', [])
+    days_back = int(data.get('days_back', 7))
+    keywords = [k.lower() for k in data.get('keywords', [])]
+    limit_per_channel = int(data.get('limit_per_channel', 50))
+
+    if not channels:
+        return jsonify({'posts': [], 'total': 0})
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days_back)
+
+    async def _parse():
+        all_posts = []
+        for username in channels:
+            try:
+                username = username.strip().lstrip('@').lstrip('https://t.me/').split('/')[0]
+                entity = await client.get_entity(username)
+                async for msg in client.iter_messages(entity, limit=limit_per_channel):
+                    if msg.date < cutoff:
+                        break
+                    if not msg.text:
+                        continue
+                    text_lower = msg.text.lower()
+                    if keywords and not any(kw in text_lower for kw in keywords):
+                        continue
+                    all_posts.append({
+                        'channel': username,
+                        'post_id': msg.id,
+                        'text': msg.text,
+                        'date': msg.date.isoformat(),
+                        'views': getattr(msg, 'views', 0) or 0,
+                        'url': f'https://t.me/{username}/{msg.id}'
+                    })
+            except Exception as e:
+                logger.warning(f"Ошибка парсинга канала @{username}: {e}")
+                continue
+        return {'posts': all_posts, 'total': len(all_posts)}
+
+    future = asyncio.run_coroutine_threadsafe(_parse(), loop)
+    result = future.result(timeout=120)
+    return jsonify(result)
+
+
 @app.route('/send', methods=['POST'])
+@app.route('/send_message', methods=['POST'])
 def send_message():
     """
     Тело запроса (JSON):
       { "username": "someuser", "text": "Привет..." }
+      или (WF3):
+      { "username": "someuser", "message": "Привет...", "post_url": "https://t.me/..." }
 
     Ответ:
       { "success": true, "chat_id": 123456789 }
@@ -123,7 +198,8 @@ def send_message():
     """
     data     = request.get_json(force=True)
     username = data.get('username', '').strip().lstrip('@')
-    text     = data.get('text', '').strip()
+    # WF3 передаёт поле "message", WF1/WF2 — "text"
+    text     = (data.get('text') or data.get('message') or '').strip()
 
     if not username or not text:
         return jsonify({'success': False, 'error': 'username and text required'}), 400
