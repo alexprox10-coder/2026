@@ -91,7 +91,7 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "1alr08qWL2TTVF-1nuDeU4NVXoGgyODgLKeTsa16_kxE",
+          "value": "1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw",
           "mode": "id"
         },
         "sheetName": {
@@ -102,30 +102,21 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "approved": "yes",
+            "channel_url": "={{ 'https://t.me/' + $('Разобрать callback').item.json.param }}",
             "status": "approved"
           },
           "matchingColumns": [
-            "username"
+            "channel_url"
           ],
           "schema": [
             {
-              "id": "username",
-              "displayName": "username",
+              "id": "channel_url",
+              "displayName": "channel_url",
               "required": false,
               "defaultMatch": true,
               "display": true,
               "type": "string",
               "canBeUsedToMatch": true
-            },
-            {
-              "id": "approved",
-              "displayName": "approved",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": false
             },
             {
               "id": "status",
@@ -160,7 +151,7 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "1alr08qWL2TTVF-1nuDeU4NVXoGgyODgLKeTsa16_kxE",
+          "value": "1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw",
           "mode": "id"
         },
         "sheetName": {
@@ -171,15 +162,16 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "approved": "rejected"
+            "channel_url": "={{ 'https://t.me/' + $('Разобрать callback').item.json.param }}",
+            "status": "rejected"
           },
           "matchingColumns": [
-            "username"
+            "channel_url"
           ],
           "schema": [
             {
-              "id": "username",
-              "displayName": "username",
+              "id": "channel_url",
+              "displayName": "channel_url",
               "required": false,
               "defaultMatch": true,
               "display": true,
@@ -187,8 +179,8 @@
               "canBeUsedToMatch": true
             },
             {
-              "id": "approved",
-              "displayName": "approved",
+              "id": "status",
+              "displayName": "status",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -673,7 +665,7 @@
         "operation": "appendOrUpdate",
         "documentId": {
           "__rl": true,
-          "value": "1alr08qWL2TTVF-1nuDeU4NVXoGgyODgLKeTsa16_kxE",
+          "value": "1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw",
           "mode": "id"
         },
         "sheetName": {
@@ -684,20 +676,20 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "url": "={{ $json.url }}",
-            "title": "={{ $json.title }}",
-            "username": "={{ $json.username }}",
-            "ai_score": "={{ $json.ai_score }}",
+            "channel_url": "={{ $json.url }}",
+            "channel_title": "={{ $json.title }}",
+            "niche": "={{ $json.niche_name }}",
+            "score": "={{ $json.ai_score }}",
             "status": "={{ $json.approved }}",
-            "created_at": "={{ $json.created_at }}"
+            "added_at": "={{ $json.created_at }}"
           },
           "matchingColumns": [
-            "url"
+            "channel_url"
           ],
           "schema": [
             {
-              "id": "url",
-              "displayName": "url",
+              "id": "channel_url",
+              "displayName": "channel_url",
               "required": false,
               "defaultMatch": true,
               "display": true,
@@ -705,8 +697,8 @@
               "canBeUsedToMatch": true
             },
             {
-              "id": "title",
-              "displayName": "title",
+              "id": "channel_title",
+              "displayName": "channel_title",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -714,8 +706,8 @@
               "canBeUsedToMatch": false
             },
             {
-              "id": "username",
-              "displayName": "username",
+              "id": "niche",
+              "displayName": "niche",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -723,8 +715,8 @@
               "canBeUsedToMatch": false
             },
             {
-              "id": "ai_score",
-              "displayName": "ai_score",
+              "id": "score",
+              "displayName": "score",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -741,8 +733,8 @@
               "canBeUsedToMatch": false
             },
             {
-              "id": "created_at",
-              "displayName": "created_at",
+              "id": "added_at",
+              "displayName": "added_at",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -770,7 +762,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst chatId = items[0] ? items[0].json.chat_id : 0;\nconst pending = items.filter(function(i){ return i.json.approved === 'pending'; });\nconst top = pending.slice(0, 8).map(function(i, n){\n  const sc = Math.round(i.json.ai_score * 100);\n  const sub = i.json.subscribers >= 1000 ? (i.json.subscribers/1000).toFixed(1)+'k' : String(i.json.subscribers || 0);\n  return (n+1) + '. @' + i.json.username + ' ' + sub + ' | ' + sc + '%';\n}).join('\\n');\nreturn [{ json: {\n  chat_id: chatId,\n  text: '🔍 Поиск завершён!\\n\\n📊 Найдено: ' + items.length + '\\n✅ На утверждение: ' + pending.length + '\\n\\n' + top + '\\n\\nОтправь /approve\\_sources чтобы утвердить'\n}}];"
+        "jsCode": "const items = $input.all();\nconst chatId = items[0] ? items[0].json.chat_id : 0;\nconst pending = items.filter(function(i){ return i.json.approved === 'pending'; });\nconst top = pending.slice(0, 8).map(function(i, n){\n  const sc = Math.round((i.json.ai_score || 0) * 100);\n  const username = (i.json.url || '').replace('https://t.me/', '') || i.json.username || '';\n  return (n+1) + '. @' + username + ' | ' + sc + '%';\n}).join('\\n');\nreturn [{ json: {\n  chat_id: chatId,\n  text: '🔍 Поиск завершён!\\n\\n📊 Найдено: ' + items.length + '\\n✅ На утверждение: ' + pending.length + '\\n\\n' + top + '\\n\\nОтправь /approve\\_sources чтобы утвердить'\n}}];"
       },
       "id": "ffc97dd5-ae8e-465e-a801-ec2c3b1f89df",
       "name": "Итог ниши",
@@ -837,7 +829,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst chatId = $('Извлечь команду').first().json.chat_id;\nconst pending = items.filter(function(i){ return i.json.approved === 'pending'; });\nif (pending.length === 0) {\n  return [{ json: { chat_id: chatId, text: '✅ Нет каналов на утверждении', reply_markup: '' } }];\n}\nreturn pending.slice(0, 10).map(function(item){\n  const ch = item.json;\n  const sc = Math.round((parseFloat(ch.ai_score) || 0) * 100);\n  const sub = parseInt(ch.subscribers || 0) >= 1000 ? (parseInt(ch.subscribers)/1000).toFixed(1)+'k' : String(ch.subscribers || '?');\n  return { json: {\n    chat_id: chatId,\n    text: '📢 *' + (ch.title || ch.username) + '*\\n🔗 @' + ch.username + '\\n👥 ' + sub + ' | 🎯 ' + sc + '%\\n💬 ' + (ch.ai_reason || '') + '\\n🏷 ' + (ch.niche_name || ''),\n    reply_markup: JSON.stringify({ inline_keyboard: [[ { text: '✅ Добавить', callback_data: 'approve_' + ch.username }, { text: '❌ Пропустить', callback_data: 'reject_' + ch.username } ]] })\n  }};\n});"
+        "jsCode": "const items = $input.all();\nconst chatId = $('Извлечь команду').first().json.chat_id;\nconst pending = items.filter(function(i){ return i.json.status === 'pending'; });\nif (pending.length === 0) {\n  return [{ json: { chat_id: chatId, text: '✅ Нет каналов на утверждении', reply_markup: '' } }];\n}\nreturn pending.slice(0, 10).map(function(item){\n  const ch = item.json;\n  const sc = Math.round((parseFloat(ch.score) || 0) * 100);\n  const username = (ch.channel_url || '').replace('https://t.me/', '');\n  return { json: {\n    chat_id: chatId,\n    text: '📢 *' + (ch.channel_title || username) + '*\\n🔗 @' + username + '\\n🎯 ' + sc + '%\\n🏷 ' + (ch.niche || ''),\n    reply_markup: JSON.stringify({ inline_keyboard: [[ { text: '✅ Добавить', callback_data: 'approve_' + username }, { text: '❌ Пропустить', callback_data: 'reject_' + username } ]] })\n  }};\n});"
       },
       "id": "0eb26e47-19be-4aff-87e8-6edb2f8ea949",
       "name": "Сформировать карточки",
@@ -1016,7 +1008,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const sources = $input.all();\nconst chatId = $('Извлечь команду').first().json.chat_id;\nconst approved = sources.filter(function(s){ return s.json.approved === 'yes'; }).length;\nconst pending = sources.filter(function(s){ return s.json.approved === 'pending'; }).length;\nconst rejected = sources.filter(function(s){ return s.json.approved === 'rejected' || s.json.approved === 'auto_rejected'; }).length;\nreturn [{ json: {\n  chat_id: chatId,\n  text: '📊 *Статус системы*\\n\\n✅ Одобрено: ' + approved + '\\n⏳ Ожидают: ' + pending + '\\n❌ Отклонено: ' + rejected + '\\n\\n/approve\\_sources — утвердить\\n/start\\_parse — парсить\\n/leads — лиды'\n}}];"
+        "jsCode": "const sources = $input.all();\nconst chatId = $('Извлечь команду').first().json.chat_id;\nconst approved = sources.filter(function(s){ return s.json.status === 'approved'; }).length;\nconst pending = sources.filter(function(s){ return s.json.status === 'pending'; }).length;\nconst rejected = sources.filter(function(s){ return s.json.status === 'rejected' || s.json.status === 'auto_rejected'; }).length;\nreturn [{ json: {\n  chat_id: chatId,\n  text: '📊 *Статус системы*\\n\\n✅ Одобрено: ' + approved + '\\n⏳ Ожидают: ' + pending + '\\n❌ Отклонено: ' + rejected + '\\n\\n/approve\\_sources — утвердить\\n/start\\_parse — парсить\\n/leads — лиды'\n}}];"
       },
       "id": "5157a740-714b-4528-9f8e-8904f96c6b48",
       "name": "Сформировать статус",
