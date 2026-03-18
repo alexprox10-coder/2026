@@ -269,7 +269,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const niche = $('Извлечь команду').first().json.args;\nconst prompt = 'Ты эксперт по Telegram-маркетингу. Создай профиль ниши.\\n\\nНиша: ' + niche + '\\n\\nВерни ТОЛЬКО валидный JSON без пояснений:\\n{\\n  \"search_keywords\": [\"30 фраз\"],\\n  \"lead_signals\": [\"15 фраз горячего лида\"],\\n  \"spam_signals\": [\"5 признаков спама\"],\\n  \"niche_type\": \"аренда|продажа|услуги|товары\",\\n  \"region\": \"регион или пусто\",\\n  \"first_message_template\": \"шаблон сообщения\"\\n}';\nreturn [{ json: {\n  model: 'google/gemini-2.0-flash-lite',\n  max_tokens: 2000,\n  messages: [{ role: 'user', content: prompt }]\n}}];"
+        "jsCode": "const niche = $('Извлечь команду').first().json.args;\nconst prompt = 'Ты эксперт по Telegram-маркетингу. Создай профиль ниши.\\n\\nНиша: ' + niche + '\\n\\nВерни ТОЛЬКО валидный JSON без пояснений:\\n{\\n  \"search_keywords\": [\"30 фраз\"],\\n  \"lead_signals\": [\"15 фраз горячего лида\"],\\n  \"spam_signals\": [\"5 признаков спама\"],\\n  \"niche_type\": \"аренда|продажа|услуги|товары\",\\n  \"region\": \"регион или пусто\",\\n  \"first_message_template\": \"шаблон сообщения\"\\n}';\nreturn [{ json: {\n  model: 'google/gemini-2.0-flash-001',\n  max_tokens: 2000,\n  messages: [{ role: 'user', content: prompt }]\n}}];"
       },
       "id": "e81c4a06-13af-4250-9eeb-01661ffca85d",
       "name": "Подготовить запрос Claude ниша",
@@ -376,7 +376,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const searchResp = $input.first().json;\nconst nicheData = $('Парсинг профиля ниши').first().json;\nconst channels = (searchResp.channels || []).slice(0, 30);\nconst prompt = 'Оцени Telegram каналы для ниши \"' + nicheData.name + '\".\\nКаналы: ' + JSON.stringify(channels) + '\\nВерни ТОЛЬКО валидный JSON массив: [{\"username\":\"...\",\"score\":0.85,\"reason\":\"кратко\"}]\\n0.8+ по теме, 0.5-0.8 частично, <0.5 нет';\nreturn [{ json: {\n  model: 'google/gemini-2.0-flash-lite',\n  max_tokens: 3000,\n  messages: [{ role: 'user', content: prompt }]\n}}];"
+        "jsCode": "const searchResp = $input.first().json;\nconst nicheData = $('Парсинг профиля ниши').first().json;\nconst channels = (searchResp.channels || []).slice(0, 30);\nconst prompt = 'Оцени Telegram каналы для ниши \"' + nicheData.name + '\".\\nКаналы: ' + JSON.stringify(channels) + '\\nВерни ТОЛЬКО валидный JSON массив: [{\"username\":\"...\",\"score\":0.85,\"reason\":\"кратко\"}]\\n0.8+ по теме, 0.5-0.8 частично, <0.5 нет';\nreturn [{ json: {\n  model: 'google/gemini-2.0-flash-001',\n  max_tokens: 3000,\n  messages: [{ role: 'user', content: prompt }]\n}}];"
       },
       "id": "19527543-bce3-46ec-b733-8a19be1571c5",
       "name": "Подготовить запрос скоринга",
