@@ -1,0 +1,430 @@
+{
+  "name": "⚙️ AI Parser + Поиск Лидов [FIXED]",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-parse-trigger",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "5431fb3d-1c42-4264-a6b9-9ec49ce40e96",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-2640, 128],
+      "webhookId": "ai-parse-trigger"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "hours","hoursInterval": 6}]
+        }
+      },
+      "id": "4fbb3a6c-4c4c-4a80-b209-34039425b44d",
+      "name": "Schedule Trigger (6ч)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-2640, 304]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"status\": \"ok\", \"message\": \"parsing started\" }",
+        "options": {}
+      },
+      "id": "respond-webhook-001",
+      "name": "Ответить на вебхук",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [-2420, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "let days_back = 7;\nlet keywords = [];\nlet chat_id = '7984101063';\nconst allItems = $input.all();\nif (allItems.length > 0) {\n  const item = allItems[0].json;\n  let raw_keywords = [];\n  if (item.body) {\n    days_back = parseInt(item.body.days_back || 7);\n    raw_keywords = item.body.keywords || [];\n    chat_id = item.body.chat_id || '7984101063';\n  } else if (item.days_back !== undefined) {\n    days_back = parseInt(item.days_back || 7);\n    raw_keywords = item.keywords || [];\n    chat_id = item.chat_id || '7984101063';\n  }\n  if (typeof raw_keywords === 'string' && raw_keywords.trim()) {\n    keywords = raw_keywords.split(',').map(k => k.trim()).filter(k => k);\n  } else if (Array.isArray(raw_keywords)) {\n    keywords = raw_keywords;\n  }\n}\nreturn [{ json: { days_back, keywords, chat_id } }];"
+      },
+      "id": "47a10ae9-b300-4dc7-b86d-3cfb36c2fd90",
+      "name": "Нормализовать входные данные",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-2416, 128]
+    },
+    {
+      "parameters": {
+        "documentId": {"__rl": true,"value": "1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw","mode": "id"},
+        "sheetName": {"__rl": true,"value": 427111597,"mode": "list","cachedResultName": "sources"},
+        "filtersUI": {
+          "values": [{"lookupColumn": "status","lookupValue": "approved"}]
+        },
+        "options": {}
+      },
+      "id": "b2cdcaf4-6ed0-499b-82a3-457ab6d4c812",
+      "name": "Получить источники (approved)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [-2208, 128],
+      "credentials": {
+        "googleSheetsOAuth2Api": {"id": "3tw79kiICQ7OPZI8","name": "Google Sheets ТЕЛЕГРАМ ПАРС"}
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {"__rl": true,"value": "1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw","mode": "id"},
+        "sheetName": {"__rl": true,"value": "gid=1524767002","mode": "id"},
+        "options": {}
+      },
+      "id": "eb78d628-b084-4c57-a92a-f44df78a8fe0",
+      "name": "Получить ниши",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [-2208, 288],
+      "credentials": {
+        "googleSheetsOAuth2Api": {"id": "3tw79kiICQ7OPZI8","name": "Google Sheets ТЕЛЕГРАМ ПАРС"}
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const sourcesItems = $('Получить источники (approved)').all();\nconst nichesItems = $('Получить ниши').all();\nconst paramsItem = $('Нормализовать входные данные').first().json;\nconst days_back = paramsItem.days_back || 7;\nconst chat_id = paramsItem.chat_id || '7984101063';\nlet keywords_from_request = paramsItem.keywords || [];\nconst channels = sourcesItems.map(item => item.json).filter(s => s.channel_url || s.username).map(s => {\n  if (s.username) return s.username;\n  return (s.channel_url || '').trim().replace(/^@/, '').replace(/^https:\\/\\/t\\.me\\//i, '');\n}).filter(Boolean);\nconst niche_keywords = [];\nconst lead_signals = [];\nnichesItems.forEach(item => {\n  const n = item.json;\n  // FIX: поле называется ai_keywords (не keywords)\n  if (n.ai_keywords) {\n    const kws = Array.isArray(n.ai_keywords) ? n.ai_keywords : String(n.ai_keywords).split(',');\n    kws.forEach(k => { if (k.trim()) niche_keywords.push(k.trim()); });\n  }\n  if (n.lead_signals) {\n    const ls = Array.isArray(n.lead_signals) ? n.lead_signals : String(n.lead_signals).split(',');\n    ls.forEach(s => { if (s.trim()) lead_signals.push(s.trim()); });\n  }\n});\nconst keywords = keywords_from_request.length > 0 ? keywords_from_request : niche_keywords;\nif (channels.length === 0) throw new Error('Нет одобренных каналов для парсинга!');\nreturn [{ json: { channels, keywords, lead_signals, days_back, chat_id, total_channels: channels.length } }];"
+      },
+      "id": "d6f50ff9-bda1-4a88-a52d-1470eb67e05a",
+      "name": "Сформировать запрос парсера",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1984, 208]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true,"leftValue": "","typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "cond-has-channels",
+              "leftValue": "={{ $json.total_channels }}",
+              "rightValue": 0,
+              "operator": {"type": "number","operation": "gt"}
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9b755aca-2700-4a5a-9b14-10ac9c683bcf",
+      "name": "Есть каналы?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-1760, 208]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Нормализовать входные данные').first().json.chat_id }}",
+        "text": "❌ Ошибка парсинга: нет одобренных каналов.\n\nДобавьте и одобрите каналы через команду /start.",
+        "additionalFields": {}
+      },
+      "id": "1668448c-534f-4af9-bf01-d56e8707383c",
+      "name": "Уведомить об ошибке",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [-1536, 320],
+      "webhookId": "b060bc35-e0b5-4b1d-b767-f61f7f74282f",
+      "credentials": {
+        "telegramApi": {"id": "kkySYqFIPRx85OPe","name": "Telegram ПАРСЕР"}
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://172.17.0.1:5000/parse",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ channels: $json.channels, keywords: $json.keywords, lead_signals: $json.lead_signals, days_back: $json.days_back }) }}",
+        "options": {"timeout": 300000}
+      },
+      "id": "5c8aa81b-9810-4a74-96a0-04eb0848fc90",
+      "name": "Вызов парсера (Python)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-1536, 128]
+    },
+    {
+      "parameters": {
+        "jsCode": "const parserResult = $input.first().json;\nconst paramsItem = $('Нормализовать входные данные').first().json;\nconst posts = parserResult.posts || parserResult.messages || parserResult.results || [];\nconst chat_id = paramsItem.chat_id || '7984101063';\nconst keywords = paramsItem.keywords || [];\nconst lead_signals = $('Сформировать запрос парсера').first().json.lead_signals || [];\nif (posts.length === 0) return [{ json: { empty: true, chat_id, message: 'Парсер не вернул постов' } }];\nconst leads = posts.map(post => ({\n  post_url: post.url || post.post_url || '',\n  channel: post.channel || post.channel_username || '',\n  author: post.author || post.from_user || '',\n  username: post.username || post.user_username || '',\n  text: post.text || post.message || '',\n  date: post.date || post.timestamp || '',\n  views: post.views || 0,\n  chat_id,\n  keywords_found: keywords.filter(k => (post.text || '').toLowerCase().includes(k.toLowerCase())),\n  signals_found: lead_signals.filter(s => (post.text || '').toLowerCase().includes(s.toLowerCase()))\n}));\nreturn leads.map(lead => ({ json: lead }));"
+      },
+      "id": "0595fbbc-b2bd-4084-8158-9ce06cc946cf",
+      "name": "Подготовить лиды",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1328, 128]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true,"leftValue": "","typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "cond-has-text",
+              "leftValue": "={{ $json.text }}",
+              "rightValue": "",
+              "operator": {"type": "string","operation": "notEmpty"}
+            },
+            {
+              "id": "cond-has-url",
+              "leftValue": "={{ $json.post_url }}",
+              "rightValue": "",
+              "operator": {"type": "string","operation": "notEmpty"}
+            },
+            {
+              "id": "cond-not-empty",
+              "leftValue": "={{ $json.empty }}",
+              "rightValue": true,
+              "operator": {"type": "boolean","operation": "notEquals"}
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "bcbadd3d-e3c2-4b7a-866a-5c062e6ecbf4",
+      "name": "Фильтр пустых лидов",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [-1104, 128]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization","value": "Bearer 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"},
+            {"name": "Content-Type","value": "application/json"},
+            {"name": "HTTP-Referer","value": "https://n8n.arendadom24.ru"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'google/gemini-2.0-flash-001',\n  messages: [\n    {role: 'system', content: 'Ты эксперт по анализу лидов. Анализируй пост из Telegram и определи качество лида. Отвечай ТОЛЬКО в формате JSON без markdown блоков.'},\n    {role: 'user', content: `Проанализируй этот пост из Telegram-канала и определи, является ли автор потенциальным клиентом (лидом).\\n\\nПост:\\n${$json.text}\\n\\nАвтор: ${$json.author || 'неизвестен'}\\nUsername: ${$json.username || 'нет'}\\nКанал: ${$json.channel}\\nСигналы лида найдены: ${JSON.stringify($json.signals_found)}\\nКлючевые слова: ${JSON.stringify($json.keywords_found)}\\n\\nОтветь в JSON формате:\\n{\\n  \"is_lead\": true/false,\\n  \"priority\": \"A\"/\"B\"/\"C\",\\n  \"reason\": \"краткое объяснение (1-2 предложения)\",\\n  \"intent\": \"buying\"/\"asking\"/\"info\"/\"other\",\\n  \"urgency\": \"high\"/\"medium\"/\"low\"\\n}\\n\\nПриоритет A = горячий лид (явное намерение купить/заказать), B = тёплый (интерес есть), C = холодный (слабый сигнал).`}\n  ],\n  temperature: 0.3,\n  max_tokens: 300\n}) }}",
+        "options": {"timeout": 60000}
+      },
+      "id": "9e2467d3-4fe0-4518-a04d-49ae711789fd",
+      "name": "Claude анализ лида (Gemini)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-880, 128]
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiResult = $input.first().json;\n// FIX: .item.json — берём ТЕКУЩИЙ лид, а не всегда первый\nconst leadData = $('Фильтр пустых лидов').item.json;\nlet aiAnalysis = {is_lead: false, priority: 'C', reason: 'Не удалось проанализировать', intent: 'other', urgency: 'low'};\ntry {\n  const content = aiResult.choices[0].message.content;\n  const cleaned = content.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  aiAnalysis = JSON.parse(cleaned);\n} catch(e) {\n  try {\n    const content = aiResult.choices[0].message.content;\n    const match = content.match(/\\{[\\s\\S]*\\}/);\n    if (match) aiAnalysis = JSON.parse(match[0]);\n  } catch(e2) {}\n}\nreturn [{ json: {\n  ...leadData,\n  is_lead: aiAnalysis.is_lead,\n  ai_priority: aiAnalysis.priority || 'C',\n  ai_reason: aiAnalysis.reason || '',\n  ai_intent: aiAnalysis.intent || 'other',\n  ai_urgency: aiAnalysis.urgency || 'low',\n  status: 'new',\n  analyzed_at: new Date().toISOString()\n} }];"
+      },
+      "id": "3ea872aa-6a00-42d5-9264-646614784f14",
+      "name": "Парсинг AI ответа",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-656, 128]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {"__rl": true,"value": "1alr08qWL2TTVF-1nuDeU4NVXoGgyODgLKeTsa16_kxE","mode": "id"},
+        "sheetName": {"__rl": true,"value": "gid=1925947783","mode": "id"},
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "post_url": "={{ $json.post_url }}",
+            "channel": "={{ $json.channel }}",
+            "author": "={{ $json.author }}",
+            "username": "={{ $json.username }}",
+            "text": "={{ $json.text }}",
+            "date": "={{ $json.date }}",
+            "views": "={{ $json.views }}",
+            "is_lead": "={{ $json.is_lead }}",
+            "ai_priority": "={{ $json.ai_priority }}",
+            "ai_reason": "={{ $json.ai_reason }}",
+            "ai_intent": "={{ $json.ai_intent }}",
+            "ai_urgency": "={{ $json.ai_urgency }}",
+            "status": "={{ $json.status }}",
+            "analyzed_at": "={{ $json.analyzed_at }}"
+          },
+          "matchingColumns": ["post_url"],
+          "schema": [
+            {"id": "post_url","displayName": "post_url","required": false,"defaultMatch": true,"canBeUsedToMatch": true,"display": true,"type": "string","readOnly": false,"removed": false},
+            {"id": "channel","displayName": "channel","required": false,"defaultMatch": false,"canBeUsedToMatch": false,"display": true,"type": "string","readOnly": false,"removed": false},
+            {"id": "author","displayName": "author","required": false,"defaultMatch": false,"canBeUsedToMatch": false,"display": true,"type": "string","readOnly": false,"removed": false},
+            {"id": "username","displayName": "username","required": false,"defaultMatch": false,"canBeUsedToMatch": false,"display": true,"type": "string","readOnly": false,"removed": false},
+            {"id": "text","displayName": "text","required": false,"defaultMatch": false,"canBeUsedToMatch": false,"display": true,"type": "string","readOnly": false,"removed": false},
+            {"id": "date","displayName": "date","required": false,"defaultMatch": false,"canBeUsedToMatch": false,"display": true,"type": "string","readOnly": false,"removed": false},
+            {"id": "views","displayName": "views","required": false,"defaultMatch": false,"canBeUsedToMatch": false,"display": true,"type": "number","readOnly": false,"removed": false},
+            {"id": "is_lead","displayName": "is_lead","required": false,"defaultMatch": false,"canBeUsedToMatch": false,"display": true,"type": "boolean","readOnly": false,"removed": false},
+            {"id": "ai_priority","displayName": "ai_priority","required": false,"defaultMatch": false,"canBeUsedToMatch": false,"display": true,"type": "string","readOnly": false,"removed": false},
+            {"id": "ai_reason","displayName": "ai_reason","required": false,"defaultMatch": false,"canBeUsedToMatch": false,"display": true,"type": "string","readOnly": false,"removed": false},
+            {"id": "ai_intent","displayName": "ai_intent","required": false,"defaultMatch": false,"canBeUsedToMatch": false,"display": true,"type": "string","readOnly": false,"removed": false},
+            {"id": "ai_urgency","displayName": "ai_urgency","required": false,"defaultMatch": false,"canBeUsedToMatch": false,"display": true,"type": "string","readOnly": false,"removed": false},
+            {"id": "status","displayName": "status","required": false,"defaultMatch": false,"canBeUsedToMatch": false,"display": true,"type": "string","readOnly": false,"removed": false},
+            {"id": "analyzed_at","displayName": "analyzed_at","required": false,"defaultMatch": false,"canBeUsedToMatch": false,"display": true,"type": "string","readOnly": false,"removed": false}
+          ]
+        },
+        "options": {}
+      },
+      "id": "f83b2256-6316-4a83-90cf-93cfa402b921",
+      "name": "Сохранить лид",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [-448, 128],
+      "credentials": {
+        "googleSheetsOAuth2Api": {"id": "3tw79kiICQ7OPZI8","name": "Google Sheets ТЕЛЕГРАМ ПАРС"}
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true,"leftValue": "","typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "cond-is-hot",
+              "leftValue": "={{ $json.ai_priority }}",
+              "rightValue": "A",
+              "operator": {"type": "string","operation": "equals"}
+            },
+            {
+              "id": "cond-is-lead",
+              "leftValue": "={{ $json.is_lead }}",
+              "rightValue": true,
+              "operator": {"type": "boolean","operation": "equals"}
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f58ea498-6fba-4ca8-aa20-07dfaac6d9ec",
+      "name": "Горячий лид A?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-224, 128]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ '🔥 *Горячий лид A!*\\n\\n👤 Автор: ' + ($json.author || 'неизвестен') + '\\n🔗 Username: ' + ($json.username ? '@' + $json.username : 'нет') + '\\n📢 Канал: ' + $json.channel + '\\n\\n📝 *Пост:*\\n' + ($json.text || '').substring(0, 300) + (($json.text || '').length > 300 ? '...' : '') + '\\n\\n💡 *Причина:* ' + ($json.ai_reason || '') + '\\n\\n🔗 ' + ($json.post_url || '') }}",
+        "additionalFields": {"parse_mode": "Markdown"}
+      },
+      "id": "a36ccf0e-a3ef-41b6-83c0-f64698609405",
+      "name": "Уведомление горячего лида",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [0, -16],
+      "webhookId": "2b9375bf-886c-410a-b5a8-c059068dc55b",
+      "credentials": {
+        "telegramApi": {"id": "kkySYqFIPRx85OPe","name": "Telegram ПАРСЕР"}
+      }
+    },
+    {
+      "parameters": {
+        "mode": "append"
+      },
+      "id": "merge-leads-node-001",
+      "name": "Объединить ветки лидов",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [-120, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// FIX: агрегируем ВСЕ лиды за один запуск через Merge-ноду\nconst allLeads = $input.all().map(i => i.json);\nconst chat_id = $('Нормализовать входные данные').first().json.chat_id || '7984101063';\nconst total = allLeads.length;\nconst hotA = allLeads.filter(l => l.ai_priority === 'A' && (l.is_lead === true || l.is_lead === 'TRUE')).length;\nconst warmB = allLeads.filter(l => l.ai_priority === 'B').length;\nconst coldC = allLeads.filter(l => l.ai_priority === 'C' || !l.ai_priority).length;\nreturn [{ json: { chat_id, total_posts: total, hot_a: hotA, warm_b: warmB, cold_c: coldC } }];"
+      },
+      "id": "d0685c72-c16f-4f31-811f-9d72f200233a",
+      "name": "Агрегировать все лиды",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [120, 200]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ '✅ *Парсинг завершён!*\\n\\n📊 Обработано постов: ' + $json.total_posts + '\\n🔥 Горячих лидов (A): ' + $json.hot_a + '\\n🌡 Тёплых (B): ' + $json.warm_b + '\\n❄️ Холодных (C): ' + $json.cold_c + ($json.hot_a > 0 ? '\\n\\n/send\\_leads — написать горячим лидам' : '') }}",
+        "additionalFields": {"parse_mode": "Markdown"}
+      },
+      "id": "25a64240-2b8f-4fbd-8447-323099d5b38f",
+      "name": "Отправить итоговый отчёт",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [360, 200],
+      "webhookId": "cd593e2d-4f9a-4cd7-9b99-507062c087ef",
+      "credentials": {
+        "telegramApi": {"id": "kkySYqFIPRx85OPe","name": "Telegram ПАРСЕР"}
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {"node": "Ответить на вебхук","type": "main","index": 0},
+          {"node": "Нормализовать входные данные","type": "main","index": 0}
+        ]
+      ]
+    },
+    "Schedule Trigger (6ч)": {
+      "main": [[{"node": "Нормализовать входные данные","type": "main","index": 0}]]
+    },
+    "Нормализовать входные данные": {
+      "main": [
+        [
+          {"node": "Получить источники (approved)","type": "main","index": 0},
+          {"node": "Получить ниши","type": "main","index": 0}
+        ]
+      ]
+    },
+    "Получить источники (approved)": {
+      "main": [[{"node": "Сформировать запрос парсера","type": "main","index": 0}]]
+    },
+    "Получить ниши": {
+      "main": [[{"node": "Сформировать запрос парсера","type": "main","index": 0}]]
+    },
+    "Сформировать запрос парсера": {
+      "main": [[{"node": "Есть каналы?","type": "main","index": 0}]]
+    },
+    "Есть каналы?": {
+      "main": [
+        [{"node": "Вызов парсера (Python)","type": "main","index": 0}],
+        [{"node": "Уведомить об ошибке","type": "main","index": 0}]
+      ]
+    },
+    "Вызов парсера (Python)": {
+      "main": [[{"node": "Подготовить лиды","type": "main","index": 0}]]
+    },
+    "Подготовить лиды": {
+      "main": [[{"node": "Фильтр пустых лидов","type": "main","index": 0}]]
+    },
+    "Фильтр пустых лидов": {
+      "main": [[{"node": "Claude анализ лида (Gemini)","type": "main","index": 0}]]
+    },
+    "Claude анализ лида (Gemini)": {
+      "main": [[{"node": "Парсинг AI ответа","type": "main","index": 0}]]
+    },
+    "Парсинг AI ответа": {
+      "main": [[{"node": "Сохранить лид","type": "main","index": 0}]]
+    },
+    "Сохранить лид": {
+      "main": [[{"node": "Горячий лид A?","type": "main","index": 0}]]
+    },
+    "Горячий лид A?": {
+      "main": [
+        [{"node": "Уведомление горячего лида","type": "main","index": 0}],
+        [{"node": "Объединить ветки лидов","type": "main","index": 0}]
+      ]
+    },
+    "Уведомление горячего лида": {
+      "main": [[{"node": "Объединить ветки лидов","type": "main","index": 1}]]
+    },
+    "Объединить ветки лидов": {
+      "main": [[{"node": "Агрегировать все лиды","type": "main","index": 0}]]
+    },
+    "Агрегировать все лиды": {
+      "main": [[{"node": "Отправить итоговый отчёт","type": "main","index": 0}]]
+    }
+  },
+  "active": true,
+  "settings": {"executionOrder": "v1","binaryMode": "separate","availableInMCP": false},
+  "meta": {}
+}

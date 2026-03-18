@@ -1,0 +1,862 @@
+{
+  "name": "🤖 AI Agent — Bot Поиск Каналов V6 [FIXED]",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message","callback_query"],
+        "additionalFields": {}
+      },
+      "id": "e4ea761f-0951-493b-8c3d-f187db5936e4",
+      "name": "TG Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [-960, 240],
+      "webhookId": "039b1672-ea2b-485a-b478-6fbff838e4e1",
+      "credentials": {
+        "telegramApi": {"id": "kkySYqFIPRx85OPe","name": "Telegram ПАРСЕР"}
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [{"value1": "={{ !!$json.callback_query }}","value2": true}]
+        }
+      },
+      "id": "906679c6-645a-45c9-8913-193a350480c3",
+      "name": "Это кнопка?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [-720, 240]
+    },
+    {
+      "parameters": {
+        "jsCode": "const cb = $json.callback_query;\nconst data = cb.data || '';\nconst idx = data.indexOf('_');\nconst action = idx > -1 ? data.substring(0, idx) : data;\nconst param = idx > -1 ? data.substring(idx + 1) : '';\nreturn [{ json: {\n  action: action,\n  param: param,\n  raw_data: data,\n  callback_id: cb.id,\n  chat_id: cb.message.chat.id,\n  message_id: cb.message.message_id,\n  from_id: cb.from.id\n}}];"
+      },
+      "id": "ef776ea3-b2e7-43c0-aa7e-abd9114f07b3",
+      "name": "Разобрать callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-480, 128]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.action }}",
+        "rules": {
+          "rules": [
+            {"value2": "approve"},
+            {"value2": "reject"},
+            {"value2": "send"}
+          ]
+        },
+        "fallbackOutput": 3
+      },
+      "id": "fd02c3e9-a054-4fbc-a232-9d9e1ccf6d37",
+      "name": "Роутер callback",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [-240, 128]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {"__rl": true,"value": "1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw","mode": "id"},
+        "sheetName": {"__rl": true,"value": "sources","mode": "name"},
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "channel_url": "={{ 'https://t.me/' + $('Разобрать callback').item.json.param }}",
+            "status": "approved"
+          },
+          "matchingColumns": ["channel_url"],
+          "schema": [
+            {"id": "channel_url","displayName": "channel_url","required": false,"defaultMatch": true,"display": true,"type": "string","canBeUsedToMatch": true},
+            {"id": "status","displayName": "status","required": false,"defaultMatch": false,"display": true,"type": "string","canBeUsedToMatch": false}
+          ]
+        },
+        "options": {}
+      },
+      "id": "bc8ea5c8-cdc9-43be-b164-08c0a3ec538f",
+      "name": "Одобрить канал",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [0, -416],
+      "credentials": {
+        "googleSheetsOAuth2Api": {"id": "3tw79kiICQ7OPZI8","name": "Google Sheets ТЕЛЕГРАМ ПАРС"}
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {"__rl": true,"value": "1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw","mode": "id"},
+        "sheetName": {"__rl": true,"value": "sources","mode": "name"},
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "channel_url": "={{ 'https://t.me/' + $('Разобрать callback').item.json.param }}",
+            "status": "rejected"
+          },
+          "matchingColumns": ["channel_url"],
+          "schema": [
+            {"id": "channel_url","displayName": "channel_url","required": false,"defaultMatch": true,"display": true,"type": "string","canBeUsedToMatch": true},
+            {"id": "status","displayName": "status","required": false,"defaultMatch": false,"display": true,"type": "string","canBeUsedToMatch": false}
+          ]
+        },
+        "options": {}
+      },
+      "id": "8c6db51f-56ea-46cb-9df0-b3ef5d186194",
+      "name": "Отклонить канал",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [0, -208],
+      "credentials": {
+        "googleSheetsOAuth2Api": {"id": "3tw79kiICQ7OPZI8","name": "Google Sheets ТЕЛЕГРАМ ПАРС"}
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {"__rl": true,"value": "1alr08qWL2TTVF-1nuDeU4NVXoGgyODgLKeTsa16_kxE","mode": "id"},
+        "sheetName": {"__rl": true,"value": "Telegram_Leads_Template","mode": "name"},
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {"status": "message_sent"},
+          "matchingColumns": ["post_url"],
+          "schema": [
+            {"id": "post_url","displayName": "post_url","required": false,"defaultMatch": true,"display": true,"type": "string","canBeUsedToMatch": true},
+            {"id": "status","displayName": "status","required": false,"defaultMatch": false,"display": true,"type": "string","canBeUsedToMatch": false}
+          ]
+        },
+        "options": {}
+      },
+      "id": "2d47c303-2f75-49cb-9668-f0727acb956d",
+      "name": "Отметить отправлено",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [0, 0],
+      "credentials": {
+        "googleSheetsOAuth2Api": {"id": "3tw79kiICQ7OPZI8","name": "Google Sheets ТЕЛЕГРАМ ПАРС"}
+      }
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $('Разобрать callback').item.json.callback_id }}",
+        "additionalFields": {"show_alert": false}
+      },
+      "id": "6420d8fe-dbdc-4c80-bf70-d8eed2d12e54",
+      "name": "Ответить на кнопку",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [336, -208],
+      "webhookId": "481a58b8-bfdb-4e4e-840a-90e4908c6c1c",
+      "credentials": {
+        "telegramApi": {"id": "kkySYqFIPRx85OPe","name": "Telegram ПАРСЕР"}
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $json.message;\nconst text = (msg.text || '').trim();\nconst chatId = msg.chat.id;\nconst fromId = msg.from ? msg.from.id : null;\n\nlet cmd = '';\nlet args = '';\n\nif (text.startsWith('/')) {\n  const parts = text.split(' ');\n  cmd = parts[0].toLowerCase().replace(/^\\//, '');\n  args = parts.slice(1).join(' ').trim();\n} else {\n  cmd = '__text__';\n  args = text;\n}\n\nreturn [{ json: { cmd, args, chat_id: chatId, from_id: fromId, raw_text: text } }];"
+      },
+      "id": "c4df67c3-98c1-4301-8dfd-1e71799189f0",
+      "name": "Извлечь команду",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-480, 368]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.cmd }}",
+        "rules": {
+          "rules": [
+            {"value2": "start"},
+            {"value2": "add_niche"},
+            {"value2": "approve_sources"},
+            {"value2": "start_parse"},
+            {"value2": "leads"},
+            {"value2": "status"},
+            {"value2": "niches"},
+            {"value2": "send_leads"},
+            {"value2": "__text__"}
+          ]
+        },
+        "fallbackOutput": 8
+      },
+      "id": "85b4b084-976a-4bb5-a411-37799fd32b65",
+      "name": "Роутер команд",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [-240, 368]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "🤖 *AI Parser Agent*\n\n*Команды:*\n/add\\_niche \\[ниша\\] — добавить нишу и найти каналы\n_Пример: /add\\_niche аренда квартир Москва_\n\n/approve\\_sources — каналы на утверждение\n/start\\_parse — запустить парсинг\n/leads — горячие лиды за 24ч\n/send\\_leads — написать горячим лидам\n/niches — активные ниши\n/status — статус системы",
+        "additionalFields": {"parse_mode": "Markdown"}
+      },
+      "id": "55875f46-a16c-4c23-a085-41a5b5dd3ee3",
+      "name": "Ответ start",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [0, 208],
+      "webhookId": "416eb7fc-e936-4aef-99fb-32f93a916da5",
+      "credentials": {
+        "telegramApi": {"id": "kkySYqFIPRx85OPe","name": "Telegram ПАРСЕР"}
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true,"leftValue": "","typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "args-not-empty",
+              "leftValue": "={{ $json.args }}",
+              "rightValue": "",
+              "operator": {"type": "string","operation": "notEmpty"}
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-args-check-001",
+      "name": "Есть аргумент?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [0, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "❗ Укажи нишу после команды:\n\n`/add\\_niche аренда квартир Москва`",
+        "additionalFields": {"parse_mode": "Markdown"}
+      },
+      "id": "ask-niche-node-001",
+      "name": "Укажи нишу",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [240, 288],
+      "credentials": {
+        "telegramApi": {"id": "kkySYqFIPRx85OPe","name": "Telegram ПАРСЕР"}
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ '⏳ Анализирую нишу *' + $json.args + '*...' }}",
+        "additionalFields": {"parse_mode": "Markdown"}
+      },
+      "id": "1cf23006-00a1-4b7b-a53e-e86575717efd",
+      "name": "Уведомление о старте",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [240, 512],
+      "webhookId": "b260e5de-3a17-49d8-93fd-7a70d21cacc7",
+      "credentials": {
+        "telegramApi": {"id": "kkySYqFIPRx85OPe","name": "Telegram ПАРСЕР"}
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const niche = $('Извлечь команду').first().json.args;\nconst prompt = 'Ты эксперт по Telegram-маркетингу. Создай профиль ниши.\\n\\nНиша: ' + niche + '\\n\\nВерни ТОЛЬКО валидный JSON без пояснений:\\n{\\n  \"search_keywords\": [\"30 фраз\"],\\n  \"lead_signals\": [\"15 фраз горячего лида\"],\\n  \"spam_signals\": [\"5 признаков спама\"],\\n  \"niche_type\": \"аренда|продажа|услуги|товары\",\\n  \"region\": \"регион или пусто\",\\n  \"first_message_template\": \"шаблон сообщения\"\\n}';\nreturn [{ json: {\n  model: 'google/gemini-2.0-flash-lite',\n  max_tokens: 2000,\n  messages: [{ role: 'user', content: prompt }]\n}}];"
+      },
+      "id": "e81c4a06-13af-4250-9eeb-01661ffca85d",
+      "name": "Подготовить запрос Claude ниша",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 512]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization","value": "=Bearer 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"},
+            {"name": "content-type","value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {"timeout": 30000}
+      },
+      "id": "60a2e808-25af-4c1b-a0b3-2c8a83cce9bd",
+      "name": "Claude профиль ниши",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 512]
+    },
+    {
+      "parameters": {
+        "jsCode": "const resp = $input.first().json;\nconst text = resp.choices[0].message.content;\nconst match = text.match(/\\{[\\s\\S]*\\}/);\nif (!match) throw new Error('Claude: нет JSON в ответе: ' + text.substring(0, 200));\nconst p = JSON.parse(match[0]);\nconst base = $('Извлечь команду').first().json;\nreturn [{ json: {\n  niche_id: 'niche_' + Date.now(),\n  name: base.args,\n  ai_keywords: (p.search_keywords || []).join(','),\n  lead_signals: (p.lead_signals || []).join(','),\n  spam_signals: (p.spam_signals || []).join(','),\n  niche_type: p.niche_type || '',\n  region: p.region || '',\n  first_message_template: p.first_message_template || '',\n  active: 'yes',\n  created_at: new Date().toISOString(),\n  chat_id: base.chat_id\n}}];"
+      },
+      "id": "8ed92b7c-751d-4f81-ac97-4c737d8dcb60",
+      "name": "Парсинг профиля ниши",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 512]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {"__rl": true,"value": "1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw","mode": "id"},
+        "sheetName": {"__rl": true,"value": "ниши","mode": "name"},
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "91886376-de25-40fc-a15b-8ca2fc0f6b00",
+      "name": "Сохранить нишу",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1200, 512],
+      "credentials": {
+        "googleSheetsOAuth2Api": {"id": "3tw79kiICQ7OPZI8","name": "Google Sheets ТЕЛЕГРАМ ПАРС"}
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Парсинг профиля ниши').item.json.chat_id }}",
+        "text": "={{ '✅ Ниша *' + $('Парсинг профиля ниши').item.json.name + '* создана!\\n🔍 Ищу каналы...' }}",
+        "additionalFields": {"parse_mode": "Markdown"}
+      },
+      "id": "c9473d68-2676-469c-9e38-fc027b7c8151",
+      "name": "Уведомление ниша сохранена",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1440, 512],
+      "webhookId": "bf4e6a7d-09da-4d9f-a843-4f4052c16fa6",
+      "credentials": {
+        "telegramApi": {"id": "kkySYqFIPRx85OPe","name": "Telegram ПАРСЕР"}
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const nicheData = $('Парсинг профиля ниши').first().json;\nconst keywords = (nicheData.ai_keywords || '').split(',').slice(0, 15).map(function(k){ return k.trim(); }).filter(function(k){ return k; });\nreturn [{ json: {\n  keywords: keywords,\n  limit: 10,\n  min_subscribers: 100\n}}];"
+      },
+      "id": "2b119a2c-0f0f-4f62-980b-c7ad4be305d6",
+      "name": "Подготовить запрос поиска",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1680, 512]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://172.17.0.1:5000/search_channels",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {"timeout": 120000}
+      },
+      "id": "a9f1fb4e-ee6e-48e0-b82c-033364db1d16",
+      "name": "Поиск каналов",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1920, 512]
+    },
+    {
+      "parameters": {
+        "jsCode": "const searchResp = $input.first().json;\nconst nicheData = $('Парсинг профиля ниши').first().json;\nconst channels = (searchResp.channels || []).slice(0, 30);\nconst prompt = 'Оцени Telegram каналы для ниши \"' + nicheData.name + '\".\\nКаналы: ' + JSON.stringify(channels) + '\\nВерни ТОЛЬКО валидный JSON массив: [{\"username\":\"...\",\"score\":0.85,\"reason\":\"кратко\"}]\\n0.8+ по теме, 0.5-0.8 частично, <0.5 нет';\nreturn [{ json: {\n  model: 'google/gemini-2.0-flash-lite',\n  max_tokens: 3000,\n  messages: [{ role: 'user', content: prompt }]\n}}];"
+      },
+      "id": "19527543-bce3-46ec-b733-8a19be1571c5",
+      "name": "Подготовить запрос скоринга",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2160, 512]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization","value": "=Bearer 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"},
+            {"name": "content-type","value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {"timeout": 30000}
+      },
+      "id": "d54c4bfd-ea6c-4dc4-a6ca-e6d28ed789c4",
+      "name": "Claude скоринг каналов",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2400, 512]
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiResp = $input.first().json;\nconst searchResp = $('Поиск каналов').first().json;\nconst nicheData = $('Парсинг профиля ниши').first().json;\nconst content = aiResp.choices[0].message.content;\nconst match = content.match(/\\[[\\s\\S]*\\]/);\nif (!match) return [];\nconst scores = JSON.parse(match[0]);\nconst channelMap = {};\n(searchResp.channels || []).forEach(function(ch){ channelMap[ch.username] = ch; });\n\n// FIX: score >= 0.8 → approved, 0.5-0.8 → pending (ручная проверка), <0.5 → auto_rejected\nreturn scores.map(function(s){\n  const ch = channelMap[s.username] || {};\n  let status = 'auto_rejected';\n  if (s.score >= 0.8) status = 'approved';\n  else if (s.score >= 0.5) status = 'pending';\n  return { json: {\n    niche_id: nicheData.niche_id,\n    niche_name: nicheData.name,\n    title: ch.title || s.username,\n    username: s.username,\n    url: 'https://t.me/' + s.username,\n    subscribers: ch.subscribers || 0,\n    description: (ch.description || '').substring(0, 200),\n    ai_score: s.score,\n    ai_reason: s.reason,\n    status: status,\n    created_at: new Date().toISOString(),\n    chat_id: nicheData.chat_id\n  }};\n});"
+      },
+      "id": "b0275306-5c2c-4da9-a156-d551bda63d02",
+      "name": "Объединить оценки",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2640, 512]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {"__rl": true,"value": "1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw","mode": "id"},
+        "sheetName": {"__rl": true,"value": "sources","mode": "name"},
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "channel_url": "={{ $json.url }}",
+            "channel_title": "={{ $json.title }}",
+            "niche": "={{ $json.niche_name }}",
+            "score": "={{ $json.ai_score }}",
+            "status": "={{ $json.status }}",
+            "added_at": "={{ $json.created_at }}",
+            "username": "={{ $json.username }}"
+          },
+          "matchingColumns": ["channel_url"],
+          "schema": [
+            {"id": "channel_url","displayName": "channel_url","required": false,"defaultMatch": true,"display": true,"type": "string","canBeUsedToMatch": true},
+            {"id": "channel_title","displayName": "channel_title","required": false,"defaultMatch": false,"display": true,"type": "string","canBeUsedToMatch": false},
+            {"id": "niche","displayName": "niche","required": false,"defaultMatch": false,"display": true,"type": "string","canBeUsedToMatch": false},
+            {"id": "score","displayName": "score","required": false,"defaultMatch": false,"display": true,"type": "string","canBeUsedToMatch": false},
+            {"id": "status","displayName": "status","required": false,"defaultMatch": false,"display": true,"type": "string","canBeUsedToMatch": false},
+            {"id": "added_at","displayName": "added_at","required": false,"defaultMatch": false,"display": true,"type": "string","canBeUsedToMatch": false},
+            {"id": "username","displayName": "username","required": false,"defaultMatch": false,"display": true,"type": "string","canBeUsedToMatch": false}
+          ]
+        },
+        "options": {}
+      },
+      "id": "ceac8c2e-7a5f-4884-8283-d027d51b0852",
+      "name": "Сохранить источники",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2880, 512],
+      "credentials": {
+        "googleSheetsOAuth2Api": {"id": "3tw79kiICQ7OPZI8","name": "Google Sheets ТЕЛЕГРАМ ПАРС"}
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst chatId = items[0] ? items[0].json.chat_id : 0;\nconst approved = items.filter(function(i){ return i.json.status === 'approved'; });\nconst pending = items.filter(function(i){ return i.json.status === 'pending'; });\nconst rejected = items.filter(function(i){ return i.json.status === 'auto_rejected'; });\nconst top = approved.slice(0, 5).concat(pending.slice(0, 3)).map(function(i, n){\n  const sc = Math.round((i.json.ai_score || 0) * 100);\n  const username = i.json.username || '';\n  const tag = i.json.status === 'pending' ? ' ⏳' : '';\n  return (n+1) + '. @' + username + ' | ' + sc + '%' + tag;\n}).join('\\n');\nreturn [{ json: {\n  chat_id: chatId,\n  text: '🔍 Поиск завершён!\\n\\n📊 Найдено: ' + items.length + '\\n✅ Авто-одобрено: ' + approved.length + '\\n⏳ На проверку: ' + pending.length + '\\n❌ Отклонено AI: ' + rejected.length + (top ? '\\n\\n' + top : '') + (pending.length > 0 ? '\\n\\n/approve\\_sources — утвердить каналы' : '') + '\\n\\nЗапусти /start\\_parse для парсинга лидов'\n}}];"
+      },
+      "id": "ffc97dd5-ae8e-465e-a801-ec2c3b1f89df",
+      "name": "Итог ниши",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3120, 512]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {"parse_mode": "Markdown"}
+      },
+      "id": "b5f5e2de-e561-47f3-8e69-ff7ce22b3577",
+      "name": "Итоговое уведомление",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [3360, 512],
+      "webhookId": "6553fa3c-ce97-4c5b-a0f3-86316a304662",
+      "credentials": {
+        "telegramApi": {"id": "kkySYqFIPRx85OPe","name": "Telegram ПАРСЕР"}
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "documentId": {"__rl": true,"value": "1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw","mode": "id"},
+        "sheetName": {"__rl": true,"value": "sources","mode": "name"},
+        "options": {}
+      },
+      "id": "e7e826af-e700-411c-8be5-245179d9f20b",
+      "name": "Получить все источники",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [0, 608],
+      "credentials": {
+        "googleSheetsOAuth2Api": {"id": "3tw79kiICQ7OPZI8","name": "Google Sheets ТЕЛЕГРАМ ПАРС"}
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst chatId = $('Извлечь команду').first().json.chat_id;\n// FIX: теперь pending каналы есть (score 0.5-0.8)\nconst pending = items.filter(function(i){ return i.json.status === 'pending'; });\nif (pending.length === 0) {\n  return [{ json: { chat_id: chatId, text: '✅ Нет каналов на проверке. Все каналы уже обработаны.', reply_markup: '' } }];\n}\nreturn pending.slice(0, 10).map(function(item){\n  const ch = item.json;\n  const sc = Math.round((parseFloat(ch.score) || 0) * 100);\n  const username = (ch.channel_url || '').replace('https://t.me/', '');\n  return { json: {\n    chat_id: chatId,\n    text: '📢 *' + (ch.channel_title || username) + '*\\n🔗 @' + username + '\\n🎯 ' + sc + '%\\n🏷 ' + (ch.niche || ''),\n    reply_markup: JSON.stringify({ inline_keyboard: [[ { text: '✅ Добавить', callback_data: 'approve_' + username }, { text: '❌ Пропустить', callback_data: 'reject_' + username } ]] })\n  }};\n});"
+      },
+      "id": "0eb26e47-19be-4aff-87e8-6edb2f8ea949",
+      "name": "Сформировать карточки",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 704]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "reply_markup": "={{ $json.reply_markup }}"
+        }
+      },
+      "id": "3270ab8a-4291-4797-9789-8277afe63ed6",
+      "name": "Отправить карточку",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [480, 704],
+      "webhookId": "46bb3c5c-ee5a-4721-a758-a8fa01bad593",
+      "credentials": {
+        "telegramApi": {"id": "kkySYqFIPRx85OPe","name": "Telegram ПАРСЕР"}
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const chatId = $json.chat_id;\nconst state = $getWorkflowStaticData('global');\nstate[`dialog_${chatId}`] = { step: 'waiting_days' };\nreturn [{ json: { chat_id: chatId, text: '📅 Сколько дней назад искать посты?\\n\\nВведите число (например: 30)' }}];"
+      },
+      "id": "dialog-start-node-001",
+      "name": "Начать диалог парсинга",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 600]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {}
+      },
+      "id": "dialog-ask-days-001",
+      "name": "Спросить дни",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1020, 600],
+      "webhookId": "b2c3d4e5-f6a7-8901-bcde-f23456789012",
+      "credentials": {
+        "telegramApi": {"id": "kkySYqFIPRx85OPe","name": "Telegram ПАРСЕР"}
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const chatId = $json.chat_id;\nconst text = ($json.args || '').trim();\nconst state = $getWorkflowStaticData('global');\nconst dialog = state[`dialog_${chatId}`] || {};\n\nif (dialog.step === 'waiting_days') {\n  const days = parseInt(text);\n  if (isNaN(days) || days < 1 || days > 365) {\n    return [{ json: { chat_id: chatId, reply: '❌ Введите число от 1 до 365', action: 'reply' } }];\n  }\n  dialog.days_back = days;\n  dialog.step = 'waiting_keywords';\n  state[`dialog_${chatId}`] = dialog;\n  return [{ json: { chat_id: chatId, reply: '🔑 Введите ключевые слова через запятую:\\n\\nПример: аренда, квартира, сниму', action: 'reply' } }];\n} else if (dialog.step === 'waiting_keywords') {\n  const days_back = dialog.days_back;\n  delete state[`dialog_${chatId}`];\n  return [{ json: { chat_id: chatId, days_back: days_back, keywords: text, action: 'run' } }];\n} else {\n  return [{ json: { chat_id: chatId, reply: '❓ Используйте /start_parse для запуска', action: 'reply' } }];\n}"
+      },
+      "id": "dialog-process-text-001",
+      "name": "Обработать текст диалога",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 800]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{"value1": "={{ $json.action }}","value2": "run","operation": "equal"}]
+        }
+      },
+      "id": "dialog-done-check-001",
+      "name": "Диалог завершён?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1020, 800]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.arendadom24.ru/webhook/ai-parse-trigger",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ trigger: \"manual\", chat_id: $json.chat_id, days_back: $json.days_back, keywords: typeof $json.keywords === \"string\" ? $json.keywords.split(\",\").map(k => k.trim()).filter(k => k) : ($json.keywords || []) }) }}",
+        "options": {"timeout": 60000}
+      },
+      "id": "0e1aee61-e0ec-4edf-a455-429d3e5004f5",
+      "name": "Запустить парсинг",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [0, 832]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Извлечь команду').item.json.chat_id }}",
+        "text": "⚙️ *Парсинг запущен!*\n\nСобираю посты из одобренных каналов...\nГорячие лиды придут автоматически 🔥",
+        "additionalFields": {"parse_mode": "Markdown"}
+      },
+      "id": "f245a450-c9f5-4fb1-9ffe-5ecd0015b602",
+      "name": "Уведомление запуск парсинга",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [240, 832],
+      "webhookId": "9136750a-2f8d-49eb-850f-e5982cf4b42f",
+      "credentials": {
+        "telegramApi": {"id": "kkySYqFIPRx85OPe","name": "Telegram ПАРСЕР"}
+      }
+    },
+    {
+      "parameters": {
+        "dialog-reply-001": "Ответить диалог",
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.reply }}",
+        "additionalFields": {}
+      },
+      "id": "dialog-reply-001",
+      "name": "Ответить диалог",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1240, 900],
+      "webhookId": "c6f7a8b9-d0e1-2345-fabc-678901234567",
+      "credentials": {
+        "telegramApi": {"id": "kkySYqFIPRx85OPe","name": "Telegram ПАРСЕР"}
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "documentId": {"__rl": true,"value": "1alr08qWL2TTVF-1nuDeU4NVXoGgyODgLKeTsa16_kxE","mode": "id"},
+        "sheetName": {"__rl": true,"value": "Telegram_Leads_Template","mode": "name"},
+        "options": {}
+      },
+      "id": "ac6ab70f-e091-4f69-ad89-189dabfaa30c",
+      "name": "Получить все лиды",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [0, 1008],
+      "credentials": {
+        "googleSheetsOAuth2Api": {"id": "3tw79kiICQ7OPZI8","name": "Google Sheets ТЕЛЕГРАМ ПАРС"}
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst chatId = $('Извлечь команду').first().json.chat_id;\nconst hotLeads = items.filter(function(i){ return i.json.ai_priority === 'A'; });\nif (hotLeads.length === 0) {\n  return [{ json: { chat_id: chatId, text: '📭 Горячих лидов пока нет\\n\\nЗапусти: /start\\_parse' } }];\n}\nconst show = hotLeads.slice(0, 5);\nconst msgs = show.map(function(i, n){\n  const l = i.json;\n  return (n+1) + '. 📢 ' + (l.channel_title || l.channel_username || '') + '\\n📝 ' + (l.text_preview || l.text || '').substring(0, 100) + '\\n📞 ' + (l.phones || '—') + ' | 👤 ' + (l.usernames || '—') + '\\n🔗 ' + (l.post_url || '');\n}).join('\\n\\n');\nreturn [{ json: { chat_id: chatId, text: '🔥 *Горячие лиды A: ' + hotLeads.length + '*\\n\\n' + msgs + '\\n\\n/send\\_leads — написать им' } }];"
+      },
+      "id": "66c1c63a-054b-4e35-9857-cf7dbe219902",
+      "name": "Сформировать лиды",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 1008]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {"parse_mode": "Markdown"}
+      },
+      "id": "c15275b1-02bc-4d23-99a3-195c4d840ba2",
+      "name": "Отправить лиды",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [464, 1008],
+      "webhookId": "22c7203f-3253-4659-aaf3-22a459ae9134",
+      "credentials": {
+        "telegramApi": {"id": "kkySYqFIPRx85OPe","name": "Telegram ПАРСЕР"}
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "documentId": {"__rl": true,"value": "1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw","mode": "id"},
+        "sheetName": {"__rl": true,"value": "sources","mode": "name"},
+        "options": {}
+      },
+      "id": "b59069f2-a3d4-4c72-8335-5d034bba7bd0",
+      "name": "Статус источники",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [0, 1168],
+      "credentials": {
+        "googleSheetsOAuth2Api": {"id": "3tw79kiICQ7OPZI8","name": "Google Sheets ТЕЛЕГРАМ ПАРС"}
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const sources = $input.all();\nconst chatId = $('Извлечь команду').first().json.chat_id;\nconst approved = sources.filter(function(s){ return s.json.status === 'approved'; }).length;\nconst pending = sources.filter(function(s){ return s.json.status === 'pending'; }).length;\nconst rejected = sources.filter(function(s){ return s.json.status === 'rejected' || s.json.status === 'auto_rejected'; }).length;\nreturn [{ json: {\n  chat_id: chatId,\n  text: '📊 *Статус системы*\\n\\n✅ Одобрено: ' + approved + '\\n⏳ На проверке: ' + pending + '\\n❌ Отклонено: ' + rejected + '\\n\\n/approve\\_sources — утвердить\\n/start\\_parse — парсить\\n/leads — лиды\\n/send\\_leads — написать лидам'\n}}];"
+      },
+      "id": "5157a740-714b-4528-9f8e-8904f96c6b48",
+      "name": "Сформировать статус",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 1168]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {"parse_mode": "Markdown"}
+      },
+      "id": "dcb7b65a-df94-4e96-bb7e-fdf05041fd37",
+      "name": "Отправить статус",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [464, 1168],
+      "webhookId": "b1bfc355-5124-4539-b669-87a16b2ae6ee",
+      "credentials": {
+        "telegramApi": {"id": "kkySYqFIPRx85OPe","name": "Telegram ПАРСЕР"}
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "documentId": {"__rl": true,"value": "1lCyk_zZTwq0_Nssk8skUHETpelS6zmxg2a0p2-0N_sw","mode": "id"},
+        "sheetName": {"__rl": true,"value": "ниши","mode": "name"},
+        "options": {}
+      },
+      "id": "146bf1b7-bf3c-4feb-ba4a-6bb2c14f71a7",
+      "name": "Получить ниши",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [0, 1328],
+      "credentials": {
+        "googleSheetsOAuth2Api": {"id": "3tw79kiICQ7OPZI8","name": "Google Sheets ТЕЛЕГРАМ ПАРС"}
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst chatId = $('Извлечь команду').first().json.chat_id;\nconst active = items.filter(function(i){ return i.json.active === 'yes'; });\nif (active.length === 0) {\n  return [{ json: { chat_id: chatId, text: '📭 Ниш нет\\n\\n/add\\_niche \\[ниша\\] — добавить' } }];\n}\nconst list = active.map(function(i, n){\n  const ni = i.json;\n  return (n+1) + '. *' + ni.name + '* (' + (ni.niche_type || '?') + ')\\n   📍 ' + (ni.region || 'не указан');\n}).join('\\n\\n');\nreturn [{ json: { chat_id: chatId, text: '🗂 *Активные ниши (' + active.length + '):*\\n\\n' + list } }];"
+      },
+      "id": "11626828-4c04-403d-9e24-ee33fe170bd6",
+      "name": "Сформировать ниши",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 1328]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {"parse_mode": "Markdown"}
+      },
+      "id": "8e895a41-d3c9-4f11-92f4-84072b1423e8",
+      "name": "Отправить ниши",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [464, 1328],
+      "webhookId": "1b1328c6-278f-4ff7-abb5-b7af863f3339",
+      "credentials": {
+        "telegramApi": {"id": "kkySYqFIPRx85OPe","name": "Telegram ПАРСЕР"}
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "❓ Неизвестная команда. Используй /start",
+        "additionalFields": {}
+      },
+      "id": "43878659-bff1-410a-a71d-f9a03da5b9a2",
+      "name": "Неизвестная команда",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [0, 1520],
+      "webhookId": "5b27e072-d602-45ae-80fc-f2f06c36a581",
+      "credentials": {
+        "telegramApi": {"id": "kkySYqFIPRx85OPe","name": "Telegram ПАРСЕР"}
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.arendadom24.ru/webhook/smart-lead-trigger",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $json.chat_id }) }}",
+        "options": {"timeout": 30000}
+      },
+      "id": "send-leads-node-001",
+      "name": "Запустить Smart Lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [0, 1680]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Извлечь команду').item.json.chat_id }}",
+        "text": "💬 *Поиск горячих лидов...*\n\nАнализирую лиды и готовлю превью сообщений.",
+        "additionalFields": {"parse_mode": "Markdown"}
+      },
+      "id": "send-leads-notify-001",
+      "name": "Уведомление Smart Lead",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [240, 1680],
+      "credentials": {
+        "telegramApi": {"id": "kkySYqFIPRx85OPe","name": "Telegram ПАРСЕР"}
+      }
+    }
+  ],
+  "connections": {
+    "TG Trigger": {"main": [[{"node": "Это кнопка?","type": "main","index": 0}]]},
+    "Это кнопка?": {
+      "main": [
+        [{"node": "Разобрать callback","type": "main","index": 0}],
+        [{"node": "Извлечь команду","type": "main","index": 0}]
+      ]
+    },
+    "Разобрать callback": {"main": [[{"node": "Роутер callback","type": "main","index": 0}]]},
+    "Роутер callback": {
+      "main": [
+        [{"node": "Одобрить канал","type": "main","index": 0}],
+        [{"node": "Отклонить канал","type": "main","index": 0}],
+        [{"node": "Отметить отправлено","type": "main","index": 0}],
+        [{"node": "Ответить на кнопку","type": "main","index": 0}]
+      ]
+    },
+    "Одобрить канал": {"main": [[{"node": "Ответить на кнопку","type": "main","index": 0}]]},
+    "Отклонить канал": {"main": [[{"node": "Ответить на кнопку","type": "main","index": 0}]]},
+    "Отметить отправлено": {"main": [[{"node": "Ответить на кнопку","type": "main","index": 0}]]},
+    "Извлечь команду": {"main": [[{"node": "Роутер команд","type": "main","index": 0}]]},
+    "Роутер команд": {
+      "main": [
+        [{"node": "Ответ start","type": "main","index": 0}],
+        [{"node": "Есть аргумент?","type": "main","index": 0}],
+        [{"node": "Получить все источники","type": "main","index": 0}],
+        [{"node": "Начать диалог парсинга","type": "main","index": 0}],
+        [{"node": "Получить все лиды","type": "main","index": 0}],
+        [{"node": "Статус источники","type": "main","index": 0}],
+        [{"node": "Получить ниши","type": "main","index": 0}],
+        [{"node": "Запустить Smart Lead","type": "main","index": 0}],
+        [{"node": "Обработать текст диалога","type": "main","index": 0}]
+      ]
+    },
+    "Есть аргумент?": {
+      "main": [
+        [{"node": "Уведомление о старте","type": "main","index": 0}],
+        [{"node": "Укажи нишу","type": "main","index": 0}]
+      ]
+    },
+    "Уведомление о старте": {"main": [[{"node": "Подготовить запрос Claude ниша","type": "main","index": 0}]]},
+    "Подготовить запрос Claude ниша": {"main": [[{"node": "Claude профиль ниши","type": "main","index": 0}]]},
+    "Claude профиль ниши": {"main": [[{"node": "Парсинг профиля ниши","type": "main","index": 0}]]},
+    "Парсинг профиля ниши": {"main": [[{"node": "Сохранить нишу","type": "main","index": 0}]]},
+    "Сохранить нишу": {"main": [[{"node": "Уведомление ниша сохранена","type": "main","index": 0}]]},
+    "Уведомление ниша сохранена": {"main": [[{"node": "Подготовить запрос поиска","type": "main","index": 0}]]},
+    "Подготовить запрос поиска": {"main": [[{"node": "Поиск каналов","type": "main","index": 0}]]},
+    "Поиск каналов": {"main": [[{"node": "Подготовить запрос скоринга","type": "main","index": 0}]]},
+    "Подготовить запрос скоринга": {"main": [[{"node": "Claude скоринг каналов","type": "main","index": 0}]]},
+    "Claude скоринг каналов": {"main": [[{"node": "Объединить оценки","type": "main","index": 0}]]},
+    "Объединить оценки": {"main": [[{"node": "Сохранить источники","type": "main","index": 0}]]},
+    "Сохранить источники": {"main": [[{"node": "Итог ниши","type": "main","index": 0}]]},
+    "Итог ниши": {"main": [[{"node": "Итоговое уведомление","type": "main","index": 0}]]},
+    "Получить все источники": {"main": [[{"node": "Сформировать карточки","type": "main","index": 0}]]},
+    "Сформировать карточки": {"main": [[{"node": "Отправить карточку","type": "main","index": 0}]]},
+    "Запустить парсинг": {"main": [[{"node": "Уведомление запуск парсинга","type": "main","index": 0}]]},
+    "Получить все лиды": {"main": [[{"node": "Сформировать лиды","type": "main","index": 0}]]},
+    "Сформировать лиды": {"main": [[{"node": "Отправить лиды","type": "main","index": 0}]]},
+    "Статус источники": {"main": [[{"node": "Сформировать статус","type": "main","index": 0}]]},
+    "Сформировать статус": {"main": [[{"node": "Отправить статус","type": "main","index": 0}]]},
+    "Получить ниши": {"main": [[{"node": "Сформировать ниши","type": "main","index": 0}]]},
+    "Сформировать ниши": {"main": [[{"node": "Отправить ниши","type": "main","index": 0}]]},
+    "Начать диалог парсинга": {"main": [[{"node": "Спросить дни","type": "main","index": 0}]]},
+    "Обработать текст диалога": {"main": [[{"node": "Диалог завершён?","type": "main","index": 0}]]},
+    "Диалог завершён?": {
+      "main": [
+        [{"node": "Запустить парсинг","type": "main","index": 0}],
+        [{"node": "Ответить диалог","type": "main","index": 0}]
+      ]
+    },
+    "Запустить Smart Lead": {"main": [[{"node": "Уведомление Smart Lead","type": "main","index": 0}]]}
+  },
+  "active": true,
+  "settings": {"executionOrder": "v1","binaryMode": "separate","availableInMCP": false},
+  "meta": {"instanceId": "1e78502629771f0b659858013815cae9c05b0fb9c5886961060641ded36b92e9"}
+}
