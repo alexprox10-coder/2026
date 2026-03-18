@@ -228,15 +228,25 @@
     },
     {
       "parameters": {
+        "jsCode": "const chatId = $json.chat_id;\nconst state = $getWorkflowStaticData('global');\nstate[`dialog_${chatId}`] = { step: 'waiting_niche' };\nreturn [{ json: { chat_id: chatId, text: '✍️ Введите нишу следующим сообщением:\\n\\nПример: аренда квартир Москва' } }];"
+      },
+      "id": "start-niche-dialog-001",
+      "name": "Начать диалог ниши",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 288]
+    },
+    {
+      "parameters": {
         "chatId": "={{ $json.chat_id }}",
-        "text": "❗ Укажи нишу после команды:\n\n`/add\\_niche аренда квартир Москва`",
-        "additionalFields": {"parse_mode": "Markdown"}
+        "text": "={{ $json.text }}",
+        "additionalFields": {}
       },
       "id": "ask-niche-node-001",
       "name": "Укажи нишу",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [240, 288],
+      "position": [460, 288],
       "credentials": {
         "telegramApi": {"id": "kkySYqFIPRx85OPe","name": "Telegram ПАРСЕР"}
       }
@@ -543,7 +553,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const chatId = $json.chat_id;\nconst text = ($json.args || '').trim();\nconst state = $getWorkflowStaticData('global');\nconst dialog = state[`dialog_${chatId}`] || {};\n\nif (dialog.step === 'waiting_days') {\n  const days = parseInt(text);\n  if (isNaN(days) || days < 1 || days > 365) {\n    return [{ json: { chat_id: chatId, reply: '❌ Введите число от 1 до 365', action: 'reply' } }];\n  }\n  dialog.days_back = days;\n  dialog.step = 'waiting_keywords';\n  state[`dialog_${chatId}`] = dialog;\n  return [{ json: { chat_id: chatId, reply: '🔑 Введите ключевые слова через запятую:\\n\\nПример: аренда, квартира, сниму', action: 'reply' } }];\n} else if (dialog.step === 'waiting_keywords') {\n  const days_back = dialog.days_back;\n  delete state[`dialog_${chatId}`];\n  return [{ json: { chat_id: chatId, days_back: days_back, keywords: text, action: 'run' } }];\n} else {\n  return [{ json: { chat_id: chatId, reply: '❓ Используйте /start_parse для запуска', action: 'reply' } }];\n}"
+        "jsCode": "const chatId = $json.chat_id;\nconst text = ($json.args || '').trim();\nconst state = $getWorkflowStaticData('global');\nconst dialog = state[`dialog_${chatId}`] || {};\n\nif (dialog.step === 'waiting_niche') {\n  delete state[`dialog_${chatId}`];\n  return [{ json: { chat_id: chatId, args: text, action: 'add_niche' } }];\n} else if (dialog.step === 'waiting_days') {\n  const days = parseInt(text);\n  if (isNaN(days) || days < 1 || days > 365) {\n    return [{ json: { chat_id: chatId, reply: '❌ Введите число от 1 до 365', action: 'reply' } }];\n  }\n  dialog.days_back = days;\n  dialog.step = 'waiting_keywords';\n  state[`dialog_${chatId}`] = dialog;\n  return [{ json: { chat_id: chatId, reply: '🔑 Введите ключевые слова через запятую:\\n\\nПример: аренда, квартира, сниму', action: 'reply' } }];\n} else if (dialog.step === 'waiting_keywords') {\n  const days_back = dialog.days_back;\n  delete state[`dialog_${chatId}`];\n  return [{ json: { chat_id: chatId, days_back: days_back, keywords: text, action: 'run' } }];\n} else {\n  return [{ json: { chat_id: chatId, reply: '❓ Используйте /start_parse для запуска', action: 'reply' } }];\n}"
       },
       "id": "dialog-process-text-001",
       "name": "Обработать текст диалога",
@@ -593,6 +603,18 @@
       "credentials": {
         "telegramApi": {"id": "kkySYqFIPRx85OPe","name": "Telegram ПАРСЕР"}
       }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{"value1": "={{ $json.action }}","value2": "add_niche","operation": "equal"}]
+        }
+      },
+      "id": "is-niche-check-001",
+      "name": "Это ниша?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1240, 800]
     },
     {
       "parameters": {
@@ -821,9 +843,10 @@
     "Есть аргумент?": {
       "main": [
         [{"node": "Уведомление о старте","type": "main","index": 0}],
-        [{"node": "Укажи нишу","type": "main","index": 0}]
+        [{"node": "Начать диалог ниши","type": "main","index": 0}]
       ]
     },
+    "Начать диалог ниши": {"main": [[{"node": "Укажи нишу","type": "main","index": 0}]]},
     "Уведомление о старте": {"main": [[{"node": "Подготовить запрос Claude ниша","type": "main","index": 0}]]},
     "Подготовить запрос Claude ниша": {"main": [[{"node": "Claude профиль ниши","type": "main","index": 0}]]},
     "Claude профиль ниши": {"main": [[{"node": "Парсинг профиля ниши","type": "main","index": 0}]]},
@@ -851,6 +874,12 @@
     "Диалог завершён?": {
       "main": [
         [{"node": "Запустить парсинг","type": "main","index": 0}],
+        [{"node": "Это ниша?","type": "main","index": 0}]
+      ]
+    },
+    "Это ниша?": {
+      "main": [
+        [{"node": "Уведомление о старте","type": "main","index": 0}],
         [{"node": "Ответить диалог","type": "main","index": 0}]
       ]
     },
